@@ -1,7 +1,7 @@
 fastapi
 uvicorn
 sqlalchemy
-psycopg2-binary
+mysql-connector-python
 python-dotenv
 requests
 beautifulsoup4
