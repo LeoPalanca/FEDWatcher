@@ -1,8 +1,10 @@
 import os
+import re
 import requests
 from bs4 import BeautifulSoup
 import mysql.connector
 from dotenv import load_dotenv
+from datetime import datetime
 
 load_dotenv()
 
@@ -19,30 +21,82 @@ def get_db_connection():
     )
 
 
-def fetch_fomc_links():
+def extract_release_date(url: str):
+    match = re.search(r"(20\d{6})", url)
+    if match:
+        date_str = match.group(1)
+        try:
+            return datetime.strptime(date_str, "%Y%m%d")
+        except ValueError:
+            return None
+    return None
+
+
+def classify_doc_type(url: str):
+    url_lower = url.lower()
+    if "fomcstatement" in url_lower:
+        return "statement"
+    if "minutes" in url_lower:
+        return "minutes"
+    return None
+
+
+def build_full_url(href: str):
+    if href.startswith("http"):
+        return href
+    return f"https://www.federalreserve.gov{href}"
+
+
+def fetch_candidate_documents():
     response = requests.get(FED_URL, timeout=30)
     response.raise_for_status()
 
     soup = BeautifulSoup(response.text, "html.parser")
-    links = []
+    candidates = []
 
     for a in soup.find_all("a", href=True):
         href = a["href"]
+        full_url = build_full_url(href)
+        doc_type = classify_doc_type(full_url)
 
-        if "fomcstatement" in href.lower() or "minutes" in href.lower():
-            full_url = href if href.startswith("http") else f"https://www.federalreserve.gov{href}"
-            doc_type = "statement" if "fomcstatement" in href.lower() else "minutes"
-
-            links.append({
+        if doc_type:
+            candidates.append({
                 "central_bank": "FED",
                 "doc_type": doc_type,
                 "url": full_url,
-                "release_date": None,
+                "release_date": extract_release_date(full_url),
                 "raw_text": None,
                 "processed": False,
             })
 
-    return links
+    return candidates
+
+
+def canonical_key(doc):
+    date_part = doc["release_date"].strftime("%Y-%m-%d") if doc["release_date"] else "unknown"
+    return f'{doc["central_bank"]}_{doc["doc_type"]}_{date_part}'
+
+
+def is_html(url: str):
+    return url.lower().endswith(".htm") or url.lower().endswith(".html")
+
+
+def deduplicate_documents(documents):
+    deduped = {}
+
+    for doc in documents:
+        key = canonical_key(doc)
+
+        if key not in deduped:
+            deduped[key] = doc
+        else:
+            existing = deduped[key]
+
+            # Prefer HTML over PDF
+            if is_html(doc["url"]) and not is_html(existing["url"]):
+                deduped[key] = doc
+
+    return list(deduped.values())
 
 
 def save_documents(documents):
@@ -66,6 +120,7 @@ def save_documents(documents):
             doc["processed"],
         )
         cursor.execute(sql, values)
+
         if cursor.rowcount > 0:
             inserted += 1
 
@@ -77,7 +132,10 @@ def save_documents(documents):
 
 
 if __name__ == "__main__":
-    docs = fetch_fomc_links()
-    inserted = save_documents(docs)
-    print(f"Fetched {len(docs)} documents.")
+    candidates = fetch_candidate_documents()
+    clean_docs = deduplicate_documents(candidates)
+    inserted = save_documents(clean_docs)
+
+    print(f"Fetched {len(candidates)} candidate documents.")
+    print(f"Reduced to {len(clean_docs)} canonical documents.")
     print(f"Inserted {inserted} new documents into database.")
