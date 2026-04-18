@@ -1,26 +1,44 @@
 import os
 from dotenv import load_dotenv
-import psycopg2
+import mysql.connector
 
 load_dotenv()
 
-database_url = os.getenv("DATABASE_URL")
+db_host = os.getenv("DB_HOST")
+db_user = os.getenv("DB_USER")
+db_password = os.getenv("DB_PASSWORD")
+db_name = os.getenv("DB_NAME")
+db_port = int(os.getenv("DB_PORT", "3306"))
 
-if not database_url:
-    raise ValueError("DATABASE_URL is not set. Add it to your .env file.")
+missing = []
+for key, value in {
+    "DB_HOST": db_host,
+    "DB_USER": db_user,
+    "DB_PASSWORD": db_password,
+    "DB_NAME": db_name,
+}.items():
+    if not value:
+        missing.append(key)
 
-try:
-    conn = psycopg2.connect(database_url)
-    cur = conn.cursor()
-    cur.execute("SELECT 1;")
-    result = cur.fetchone()
+if missing:
+    raise ValueError(f"Missing environment variables: {', '.join(missing)}")
 
-    print("Database connection successful.")
-    print("Test query result:", result)
+conn = mysql.connector.connect(
+    host=db_host,
+    user=db_user,
+    password=db_password,
+    database=db_name,
+    port=db_port,
+)
 
-    cur.close()
-    conn.close()
+cursor = conn.cursor()
+cursor.execute("SELECT DATABASE();")
+print("Current database:", cursor.fetchone()[0])
 
-except Exception as e:
-    print("Database connection failed.")
-    print("Error:", e)
+cursor.execute("SELECT 1;")
+print("Test query result:", cursor.fetchone())
+
+cursor.close()
+conn.close()
+
+print("Database connection successful.")

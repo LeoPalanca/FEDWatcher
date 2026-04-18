@@ -1,31 +1,33 @@
 CREATE TABLE IF NOT EXISTS documents (
-    id SERIAL PRIMARY KEY,
+    id INT AUTO_INCREMENT PRIMARY KEY,
     central_bank VARCHAR(10),
     doc_type VARCHAR(50),
-    release_date TIMESTAMP,
-    url TEXT UNIQUE,
-    raw_text TEXT,
-    processed BOOLEAN DEFAULT FALSE
+    release_date DATETIME,
+    url TEXT,
+    raw_text LONGTEXT,
+    processed BOOLEAN DEFAULT FALSE,
+    UNIQUE KEY unique_url (url(255))
 );
 
 CREATE TABLE IF NOT EXISTS sentiment (
-    id SERIAL PRIMARY KEY,
-    document_id INTEGER REFERENCES documents(id),
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    document_id INT,
     overall_tone VARCHAR(10),
     tone_score FLOAT,
     inflation_assessment TEXT,
     labor_market_assessment TEXT,
     forward_guidance TEXT,
-    key_phrases TEXT[],
+    key_phrases JSON,
     confidence FLOAT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (document_id) REFERENCES documents(id)
 );
 
 CREATE TABLE IF NOT EXISTS market_data (
-    id SERIAL PRIMARY KEY,
-    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
     sofr_rate FLOAT,
-    ff_futures_implied FLOAT[],
+    ff_futures_implied JSON,
     ois_1m FLOAT,
     ois_3m FLOAT,
     ois_6m FLOAT,
@@ -35,13 +37,15 @@ CREATE TABLE IF NOT EXISTS market_data (
 );
 
 CREATE TABLE IF NOT EXISTS signals (
-    id SERIAL PRIMARY KEY,
-    document_id INTEGER REFERENCES documents(id),
-    market_snapshot_id INTEGER REFERENCES market_data(id),
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    document_id INT,
+    market_snapshot_id INT,
     tone_implied_next_rate FLOAT,
     market_implied_next_rate FLOAT,
     divergence FLOAT,
     signal_direction VARCHAR(20),
     narrative TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (document_id) REFERENCES documents(id),
+    FOREIGN KEY (market_snapshot_id) REFERENCES market_data(id)
 );
