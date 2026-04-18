@@ -2,7 +2,7 @@
 
 > **MSc Economics — Programming in Finance II, 2026**  
 > USI Università della Svizzera italiana  
-> GitHub repository: `https://github.com/LeoPalanca/FEDWatcher.git`
+> GitHub repository: 'https://github.com/LeoPalanca/FEDWatcher'
 
 ---
 
