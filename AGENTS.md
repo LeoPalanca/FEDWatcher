@@ -18,7 +18,6 @@ nowcast/dashboard for policy-rate decisions.
 Before making substantial changes, review:
 
 - `README.md` for the public project description, setup, usage, and criteria coverage.
-- `ARCHITECTURE_SIMPLIFIED.md` for the preferred lean scope.
 - `/Users/leonardo/FEDWatcher_Hide` for teacher/course guidelines and slides.
 
 The hidden folder is local-only context. Do not commit files from `FEDWatcher_Hide`.
