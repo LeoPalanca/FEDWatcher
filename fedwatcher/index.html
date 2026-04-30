@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FedWatcher Dashboard</title>
+  <link rel="stylesheet" href="/assets/fedwatcher.css">
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <div class="topbar__inner">
+        <div class="brand">
+          <div class="brand-mark">FW</div>
+          <div>
+            <div class="brand-title">FedWatcher</div>
+            <div class="brand-subtitle">Agentic sentiment analysis and monetary-policy nowcasting</div>
+          </div>
+        </div>
+        <div class="source-switch" aria-label="data source">
+          <span class="pill active">Official Fed</span>
+          <span class="pill">FakeFed demo</span>
+          <span class="pill">Admin locked</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="page">
+      <section class="status-row" aria-label="summary metrics">
+        <div class="panel metric">
+          <div class="metric__label">Pipeline</div>
+          <div class="metric__value">Ready</div>
+          <div class="metric__note">Monitor, analyst, strategist workflow target</div>
+        </div>
+        <div class="panel metric hawkish">
+          <div class="metric__label">Tone Score</div>
+          <div class="metric__value">+0.31</div>
+          <div class="metric__note">Moderately hawkish</div>
+        </div>
+        <div class="panel metric warn">
+          <div class="metric__label">Core CPI</div>
+          <div class="metric__value">3.1%</div>
+          <div class="metric__note">FRED CPILFESL, YoY</div>
+        </div>
+        <div class="panel metric">
+          <div class="metric__label">Unemployment</div>
+          <div class="metric__value">4.0%</div>
+          <div class="metric__note">FRED UNRATE</div>
+        </div>
+        <div class="panel metric good">
+          <div class="metric__label">Next Move</div>
+          <div class="metric__value">Hold</div>
+          <div class="metric__note">Highest model bucket</div>
+        </div>
+      </section>
+
+      <section class="main-grid">
+        <div>
+          <section class="panel section">
+            <div class="section-header">
+              <div>
+                <div class="section-title">Policy Signal</div>
+                <div class="section-meta">Latest document: FOMC statement, May 7 2026</div>
+              </div>
+              <div class="section-meta">Source: Official Fed</div>
+            </div>
+            <div class="hero-panel">
+              <div class="gauge">
+                <div class="gauge-ring"><div class="gauge-value">+0.31</div></div>
+                <div class="gauge-caption">Moderately Hawkish</div>
+              </div>
+              <div class="narrative">
+                <h1>FedWatcher estimates a cautious hold with hawkish inflation language.</h1>
+                <p>The dashboard combines Fed statement tone, CPI, unemployment, and rate proxies to estimate probabilities over rate-move buckets instead of a simple hike/no-hike output.</p>
+                <div class="tags">
+                  <span class="tag">Outcomes: -50, -25, 0, +25, +50 bps</span>
+                  <span class="tag">FRED: CPILFESL, UNRATE</span>
+                  <span class="tag">FastAPI backend target</span>
+                  <span class="tag">Educational FakeFed mode planned</span>
+                </div>
+              </div>
+            </div>
+            <div class="chart" aria-label="tone history mock chart">
+              <div class="bar" style="height: 38%"></div>
+              <div class="bar" style="height: 42%"></div>
+              <div class="bar gold" style="height: 50%"></div>
+              <div class="bar" style="height: 45%"></div>
+              <div class="bar red" style="height: 64%"></div>
+              <div class="bar red" style="height: 70%"></div>
+              <div class="bar gold" style="height: 55%"></div>
+              <div class="bar red" style="height: 62%"></div>
+              <div class="bar" style="height: 48%"></div>
+              <div class="bar red" style="height: 68%"></div>
+            </div>
+          </section>
+
+          <div class="two-col">
+            <section class="panel section">
+              <div class="section-title">Rate Move Probabilities</div>
+              <div class="prob-row"><span>-25</span><div class="track"><div class="fill green" style="width: 14%"></div></div><strong>14%</strong></div>
+              <div class="prob-row"><span>0</span><div class="track"><div class="fill" style="width: 55%"></div></div><strong>55%</strong></div>
+              <div class="prob-row"><span>+25</span><div class="track"><div class="fill red" style="width: 26%"></div></div><strong>26%</strong></div>
+              <div class="prob-row"><span>+50</span><div class="track"><div class="fill red" style="width: 5%"></div></div><strong>5%</strong></div>
+            </section>
+            <section class="panel section">
+              <div class="section-title">Macro Context</div>
+              <div class="prob-row"><span>CPI</span><div class="track"><div class="fill red" style="width: 62%"></div></div><strong>High</strong></div>
+              <div class="prob-row"><span>Labor</span><div class="track"><div class="fill" style="width: 46%"></div></div><strong>Solid</strong></div>
+              <div class="prob-row"><span>Rates</span><div class="track"><div class="fill" style="width: 51%"></div></div><strong>Tight</strong></div>
+              <p class="metric__note">Placeholder values until FRED ingestion and model runs are wired into FastAPI.</p>
+            </section>
+          </div>
+        </div>
+
+        <aside>
+          <section class="panel section">
+            <div class="section-header">
+              <div class="section-title">Document Feed</div>
+              <div class="section-meta">Latest first</div>
+            </div>
+            <div class="timeline">
+              <div class="event">
+                <strong>FOMC statement</strong>
+                <span>May 7, 2026 - tone +0.31 - source ready</span>
+              </div>
+              <div class="event">
+                <strong>FOMC statement</strong>
+                <span>March 18, 2026 - synthetic FakeFed fixture</span>
+              </div>
+              <div class="event">
+                <strong>Minutes</strong>
+                <span>Planned ingestion target</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel section" style="margin-top: 16px;">
+            <div class="section-title">Project Brief</div>
+            <p>FedWatcher monitors Federal Reserve communication, extracts policy tone with an LLM-backed analyst agent, joins macro data from FRED, and presents rate-move probabilities through a FastAPI-backed dashboard.</p>
+            <p class="metric__note">This static page is the brief homepage/dashboard placeholder for `fedwatcher.ellep.it` while the API and Streamlit/FastAPI app are implemented.</p>
+          </section>
+
+          <div class="admin-strip">
+            <div>
+              <strong>Educational mode</strong><br>
+              FakeFed source selection and statement writing will be admin-only.
+            </div>
+            <button class="button" type="button">Admin</button>
+          </div>
+        </aside>
+      </section>
+
+      <div class="footer">FedWatcher course prototype - not investment advice - data values shown here are dashboard placeholders.</div>
+    </main>
+  </div>
+</body>
+</html>

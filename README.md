@@ -40,6 +40,8 @@ Implemented:
 - Dashboard mockup in `dashboard_mockup.html`.
 - Agent/contributor workflow in `AGENTS.md`.
 - Static FakeFed fixture site in `fakefed/` for end-to-end fake statement tests.
+- Static FedWatcher brief homepage/dashboard in `fedwatcher/` for the first
+  `fedwatcher.ellep.it` deployment.
 
 Planned next:
 
@@ -134,6 +136,7 @@ FEDWatcher/
 ├── requirements.txt
 │
 ├── fakefed/                    # Static synthetic Fed website fixture
+├── fedwatcher/                 # Static homepage/dashboard placeholder
 ├── deploy/
 │   └── nginx/                  # Nginx templates for VM deployment
 ├── docs/
@@ -410,6 +413,17 @@ The final dashboard should support two modes:
 - educational demo mode with admin-only FakeFed controls for writing synthetic statements.
 
 The mode split is documented in `docs/dashboard_modes.md`.
+
+## FedWatcher Homepage Dashboard
+
+`fedwatcher/` contains a static brief homepage/dashboard for the first public deployment at
+`https://fedwatcher.ellep.it`. It presents the project concept, current placeholder signal
+panels, macro context, rate-move buckets, document feed, and the planned admin-only
+educational FakeFed mode.
+
+This static page is temporary. The final version should read from the FastAPI backend and
+replace placeholder values with database-backed documents, FRED data, sentiment results,
+and model probabilities.
 
 ## Course Criteria Coverage
 

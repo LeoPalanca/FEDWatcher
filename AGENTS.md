@@ -97,7 +97,19 @@ Before committing:
 5. Do not commit `.DS_Store`, secrets, local databases, API keys, or files from
    `/Users/leonardo/FEDWatcher_Hide`.
 
-Commit messages should be meaningful and specific, for example:
+Commit messages should include both a short summary line and a brief description body.
+The description should explain what changed, why it changed, and what was verified.
+
+Example format:
+
+```text
+Add FakeFed deployment site
+
+Create a synthetic Fed-like static site for scraper testing and document how it is
+deployed through Nginx. Verified parser tests and live FakeFed HTTPS smoke checks.
+```
+
+Summary lines should be meaningful and specific, for example:
 
 - `Add FRED macro data ingestion plan`
 - `Implement ordered nowcast baseline`
