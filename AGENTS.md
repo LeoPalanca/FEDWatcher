@@ -61,6 +61,8 @@ Prefer the lean architecture unless the user explicitly asks to expand scope:
   unemployment, SOFR, and Treasury yields.
 - Treat CME FedWatch, Fed Funds futures, OIS, and social media data carefully because API
   availability and terms can change.
+- Keep `fakefed/` as a synthetic static test fixture for scraper tests. Do not put secrets,
+  real credentials, or scraped full-site mirrors there.
 
 Important model guardrails:
 

@@ -39,6 +39,7 @@ Implemented:
 - Initial SQL schema and database scripts.
 - Dashboard mockup in `dashboard_mockup.html`.
 - Agent/contributor workflow in `AGENTS.md`.
+- Static FakeFed fixture site in `fakefed/` for end-to-end fake statement tests.
 
 Planned next:
 
@@ -131,6 +132,12 @@ FEDWatcher/
 ├── README.md
 ├── .env.example
 ├── requirements.txt
+│
+├── fakefed/                    # Static synthetic Fed website fixture
+├── deploy/
+│   └── nginx/                  # Nginx templates for VM deployment
+├── docs/
+│   └── fakefed_deployment.md
 │
 ├── api/
 │   └── main.py                 # FastAPI app
@@ -338,15 +345,8 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 
-The current `.env.example` still reflects the earlier MySQL prototype. The next architecture
-milestone is to update it for:
-
-```text
-FRED_API_KEY=
-OPENAI_API_KEY=        # or ANTHROPIC_API_KEY
-DATABASE_URL=sqlite:///fedwatcher.db
-API_TOKEN=
-```
+The `.env.example` contains the target SQLite/API/FRED variables plus legacy MySQL fields
+needed by the original prototype scripts.
 
 ## Usage
 
@@ -355,6 +355,13 @@ Current prototype commands:
 ```bash
 python agents/monitor.py
 python scripts/fetch_document_text.py
+```
+
+FakeFed test target:
+
+```bash
+FED_BASE_URL=https://fakefed.ellep.it python agents/monitor.py
+FED_BASE_URL=https://fakefed.ellep.it python scripts/fetch_document_text.py
 ```
 
 Target commands:
@@ -382,6 +389,27 @@ Important rules:
 - Keep `/Users/leonardo/FEDWatcher_Hide` as local-only teacher/course context; do not commit it.
 - Do not commit `.env`, `.DS_Store`, local databases, generated outputs, or secrets.
 - Commit regularly with meaningful messages.
+
+## FakeFed Test Site
+
+`fakefed/` is a synthetic static website that preserves the Fed URL paths needed by the
+scraper. It is used to test fake statements without touching the live Federal Reserve
+website.
+
+Important URLs:
+
+- `https://fakefed.ellep.it/monetarypolicy/fomccalendars.htm`
+- `https://fakefed.ellep.it/newsevents/pressreleases/monetary20260507a.htm`
+
+Deployment notes and the Nginx template are in
+`docs/fakefed_deployment.md` and `deploy/nginx/fakefed.ellep.it.conf`.
+
+The final dashboard should support two modes:
+
+- clean app mode using the official Federal Reserve source;
+- educational demo mode with admin-only FakeFed controls for writing synthetic statements.
+
+The mode split is documented in `docs/dashboard_modes.md`.
 
 ## Course Criteria Coverage
 
@@ -423,4 +451,3 @@ monetary-policy literature. Candidate references:
 
 The literature section should be checked carefully before final submission so every citation
 supports the claim being made.
-

@@ -2,16 +2,20 @@ import os
 import re
 import requests
 from bs4 import BeautifulSoup
-import mysql.connector
 from dotenv import load_dotenv
 from datetime import datetime
+from urllib.parse import urljoin
 
 load_dotenv()
 
-FED_URL = "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
+FED_BASE_URL = os.getenv("FED_BASE_URL", "https://www.federalreserve.gov").rstrip("/")
+FED_CALENDAR_PATH = os.getenv("FED_CALENDAR_PATH", "/monetarypolicy/fomccalendars.htm")
+FED_URL = urljoin(f"{FED_BASE_URL}/", FED_CALENDAR_PATH.lstrip("/"))
 
 
 def get_db_connection():
+    import mysql.connector
+
     return mysql.connector.connect(
         host=os.getenv("DB_HOST"),
         user=os.getenv("DB_USER"),
@@ -32,19 +36,25 @@ def extract_release_date(url: str):
     return None
 
 
-def classify_doc_type(url: str):
+def classify_doc_type(url: str, link_text: str = ""):
     url_lower = url.lower()
+    text_lower = link_text.lower()
+
     if "fomcstatement" in url_lower:
         return "statement"
-    if "minutes" in url_lower:
+    if "fomc statement" in text_lower:
+        return "statement"
+    if "/newsevents/pressreleases/monetary20" in url_lower and "implementation note" not in text_lower:
+        return "statement"
+
+    if "minutes" in url_lower or "minutes" in text_lower:
         return "minutes"
+
     return None
 
 
 def build_full_url(href: str):
-    if href.startswith("http"):
-        return href
-    return f"https://www.federalreserve.gov{href}"
+    return urljoin(f"{FED_BASE_URL}/", href)
 
 
 def fetch_candidate_documents():
@@ -57,7 +67,7 @@ def fetch_candidate_documents():
     for a in soup.find_all("a", href=True):
         href = a["href"]
         full_url = build_full_url(href)
-        doc_type = classify_doc_type(full_url)
+        doc_type = classify_doc_type(full_url, a.get_text(" ", strip=True))
 
         if doc_type:
             candidates.append({
