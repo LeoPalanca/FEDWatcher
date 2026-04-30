@@ -4,6 +4,8 @@
 > USI Università della Svizzera italiana  
 > GitHub repository: 'https://github.com/LeoPalanca/FEDWatcher'
 
+Project workflow: [agent instructions](AGENTS.md)
+
 ---
 
 ## Table of Contents
