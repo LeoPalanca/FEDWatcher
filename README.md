@@ -42,12 +42,13 @@ Implemented:
 - Static FakeFed fixture site in `fakefed/` for end-to-end fake statement tests.
 - Static FedWatcher brief homepage/dashboard in `fedwatcher/` for the first
   `fedwatcher.ellep.it` deployment.
+- `AnalystAgent` document segmentation in `agents/analyst.py`: splits FOMC statements and minutes into weighted sections (`forward_guidance`, `inflation`, `labor_market`,`general` / `policy_discussion`) for downstream tone scoring.
 
 Planned next:
 
 - Migrate the prototype database layer from MySQL-style scripts to SQLite.
 - Add FRED ingestion for `CPILFESL`, `UNRATE`, policy-rate series, and market-rate proxies.
-- Implement `AnalystAgent` and `StrategistAgent`.
+- Complete `AnalystAgent` (LLM tone scoring, EWMA smoothing) and implement `StrategistAgent`.
 - Add FastAPI endpoints.
 - Build the dashboard against the FastAPI API.
 - Add backtesting and academic documentation.
