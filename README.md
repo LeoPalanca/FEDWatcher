@@ -42,13 +42,14 @@ Implemented:
 - Static FakeFed fixture site in `fakefed/` for end-to-end fake statement tests.
 - Static FedWatcher brief homepage/dashboard in `fedwatcher/` for the first
   `fedwatcher.ellep.it` deployment.
-- `AnalystAgent` document segmentation in `agents/analyst.py`: splits FOMC statements and minutes into weighted sections (`forward_guidance`, `inflation`, `labor_market`,`general` / `policy_discussion`) for downstream tone scoring.
+- `AnalystAgent` document segmentation in `agents/analyst.py`: splits FOMC statements and minutes into weighted sections (`forward_guidance`, `inflation`, `labor_market`, `general` / `policy_discussion`) for downstream tone scoring.
+- `AnalystAgent` LLM tone scoring in `agents/analyst.py`: calls the Anthropic API (`claude-sonnet-4-6`) with the segmented sections and extracts a numeric `tone_score` in `[-1.0, +1.0]` (dovish → hawkish), plus `overall_tone`, `inflation_assessment`, `labor_market_assessment`, `forward_guidance`, `key_phrases`, and `confidence`. Returns a typed `ToneResult` with a `to_db_row()` helper ready for the `sentiment` table.
 
 Planned next:
 
 - Migrate the prototype database layer from MySQL-style scripts to SQLite.
 - Add FRED ingestion for `CPILFESL`, `UNRATE`, policy-rate series, and market-rate proxies.
-- Complete `AnalystAgent` (LLM tone scoring, EWMA smoothing) and implement `StrategistAgent`.
+- Implement `StrategistAgent` (EWMA tone smoothing, multinomial nowcast, tone-implied rate, divergence signals).
 - Add FastAPI endpoints.
 - Build the dashboard against the FastAPI API.
 - Add backtesting and academic documentation.
@@ -101,16 +102,14 @@ Responsibilities:
 
 ### AnalystAgent
 
-Uses an LLM as a text-analysis model.
+Uses an LLM as a text-analysis model. **Implemented.**
 
 Responsibilities:
 
-- Call the LLM API (model TBD)
-- Read cleaned Fed document text.
-- Extract hawkish/neutral/dovish tone.
-- Return a numeric `tone_score` between -1 (dovish) and +1 (hawkish), where 0 is neutral.
-- Return evidence phrases and a short interpretation.
-- Produce structured JSON that can be validated and stored.
+- Segment the document into weighted sections (`forward_guidance`, `inflation`, `labor_market`, `general` / `policy_discussion`).
+- Call the Anthropic API (`claude-sonnet-4-6`) with the segmented sections.
+- Extract a numeric `tone_score` in `[-1.0, +1.0]` (dovish → hawkish) plus `overall_tone`, `inflation_assessment`, `labor_market_assessment`, `forward_guidance`, `key_phrases`, and `confidence`.
+- Return a typed `ToneResult`; call `result.to_db_row()` to get a dict ready for the `sentiment` table.
 
 ### StrategistAgent
 
@@ -335,7 +334,7 @@ Prerequisites:
 
 - Python 3.10+
 - FRED API key
-- OpenAI or Anthropic API key for LLM sentiment extraction
+- Anthropic API key for LLM sentiment extraction (`ANTHROPIC_API_KEY`)
 
 Setup:
 
