@@ -334,7 +334,8 @@ Prerequisites:
 
 - Python 3.10+
 - FRED API key
-- Anthropic API key for LLM sentiment extraction (`ANTHROPIC_API_KEY`)
+- Anthropic API key for LLM sentiment extraction (`ANTHROPIC_API_KEY`), or
+  OpenRouter API key (`OPENROUTER_API_KEY`) when testing OpenRouter-hosted models.
 
 Setup:
 
@@ -351,6 +352,14 @@ cp .env.example .env
 
 The `.env.example` contains the target SQLite/API/FRED variables plus legacy MySQL fields
 needed by the original prototype scripts.
+
+For AI calls, use one provider key:
+
+```text
+OPENAI_API_KEY=
+ANTHROPIC_API_KEY=
+OPENROUTER_API_KEY=
+```
 
 ## Usage
 
