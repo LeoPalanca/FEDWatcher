@@ -22,6 +22,19 @@ CREATE TABLE IF NOT EXISTS sentiment (
     FOREIGN KEY (document_id) REFERENCES documents(id)
 );
 
+CREATE TABLE IF NOT EXISTS macro_data (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    observation_month TEXT UNIQUE NOT NULL,
+    core_cpi_index REAL,
+    core_cpi_mom REAL,
+    core_cpi_yoy REAL,
+    unemployment_rate REAL,
+    us2y_yield REAL,
+    source TEXT DEFAULT 'FRED',
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS market_data (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     timestamp TEXT DEFAULT CURRENT_TIMESTAMP,

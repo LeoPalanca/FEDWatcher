@@ -42,13 +42,16 @@ Implemented:
 - Static FakeFed fixture site in `fakefed/` for end-to-end fake statement tests.
 - Static FedWatcher brief homepage/dashboard in `fedwatcher/` for the first
   `fedwatcher.ellep.it` deployment.
+- FRED monthly macro/rate ingestion in `sources/fred.py` and `scripts/backfill_fred.py`:
+  stores `CPILFESL`, `UNRATE`, and monthly-average `DGS2` in `macro_data`.
 - `AnalystAgent` document segmentation in `agents/analyst.py`: splits FOMC statements and minutes into weighted sections (`forward_guidance`, `inflation`, `labor_market`, `general` / `policy_discussion`) for downstream tone scoring.
 - `AnalystAgent` LLM tone scoring in `agents/analyst.py`: calls the Anthropic API (`claude-sonnet-4-6`) with the segmented sections and extracts a numeric `tone_score` in `[-1.0, +1.0]` (dovish → hawkish), plus `overall_tone`, `inflation_assessment`, `labor_market_assessment`, `forward_guidance`, `key_phrases`, and `confidence`. Returns a typed `ToneResult` with a `to_db_row()` helper ready for the `sentiment` table.
 
 Planned next:
 
 - Migrate the prototype database layer from MySQL-style scripts to SQLite.
-- Add FRED ingestion for `CPILFESL`, `UNRATE`, policy-rate series, and market-rate proxies.
+- Add FRED ingestion for policy-rate target series such as `DFEDTARU`, `DFEDTARL`,
+  and `DFF`.
 - Implement `StrategistAgent` (EWMA tone smoothing, multinomial nowcast, tone-implied rate, divergence signals).
 - Add FastAPI endpoints.
 - Build the dashboard against the FastAPI API.
@@ -75,7 +78,7 @@ Fed website -> MonitorAgent -> documents table
                          AnalystAgent
                               |
                               v
-FRED API -> macro/rates tables -> StrategistAgent -> signals table
+FRED API -> macro_data/market_data -> StrategistAgent -> signals table
                               |
                               v
                          FastAPI backend
@@ -217,6 +220,19 @@ unemployment_gap = UNRATE_t - NROU_t       # optional once NROU/NROUST is added
 policy_midpoint = (DFEDTARU_t + DFEDTARL_t) / 2
 market_policy_gap = DGS2_t - policy_midpoint
 ```
+
+Implemented FRED storage uses one row per month in `macro_data`, because `CPILFESL` and
+`UNRATE` are monthly series. `DGS2` is fetched from FRED at monthly frequency using average
+aggregation, so the 2-year Treasury yield is aligned to the same monthly row:
+
+| Column | Source | Frequency |
+|---|---|---|
+| `observation_month` | derived from FRED date | monthly key, `YYYY-MM` |
+| `core_cpi_index` | `CPILFESL` | monthly |
+| `core_cpi_mom` | `CPILFESL` transform | monthly percent change |
+| `core_cpi_yoy` | `CPILFESL` transform | year-over-year percent change |
+| `unemployment_rate` | `UNRATE` | monthly percentage rate |
+| `us2y_yield` | `DGS2` | monthly average percentage yield |
 
 All data transformations should keep units explicit. Interest-rate and inflation variables
 must consistently use either percentage points or basis points.
@@ -366,8 +382,9 @@ OPENROUTER_API_KEY=
 Current prototype commands:
 
 ```bash
-python agents/monitor.py
-python scripts/fetch_document_text.py
+python scripts/init_db.py
+python scripts/inital_data_download.py
+python scripts/backfill_fred.py
 ```
 
 FakeFed test target:
@@ -381,7 +398,6 @@ Target commands:
 
 ```bash
 python scripts/init_db.py
-python scripts/backfill_fred.py
 python scripts/backfill_documents.py
 python pipeline.py
 uvicorn api.main:app --reload
