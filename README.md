@@ -251,6 +251,7 @@ Tone smoothing:
 S_t = alpha_t * tone_score_t + (1 - alpha_t) * S_{t-1}
 alpha_t = 1 - exp(-lambda * Delta t)
 lambda = ln(2) / h
+h = 21
 ```
 
 Interpretation:
