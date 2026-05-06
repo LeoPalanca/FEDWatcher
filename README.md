@@ -105,9 +105,10 @@ Uses an LLM as a text-analysis model.
 
 Responsibilities:
 
+- Call the LLM API (model TBD)
 - Read cleaned Fed document text.
 - Extract hawkish/neutral/dovish tone.
-- Return a numeric `tone_score`.
+- Return a numeric `tone_score` between -1 (dovish) and +1 (hawkish), where 0 is neutral.
 - Return evidence phrases and a short interpretation.
 - Produce structured JSON that can be validated and stored.
 
