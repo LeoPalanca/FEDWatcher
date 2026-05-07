@@ -153,8 +153,63 @@
         </aside>
       </section>
 
+      <section class="panel section data-explorer" id="data-explorer" aria-labelledby="explorer-title">
+        <div class="section-header">
+          <div>
+            <div class="section-title" id="explorer-title">Data Explorer</div>
+            <div class="section-meta" id="explorer-sub">FRED &amp; pipeline tables · click any row for details</div>
+          </div>
+          <div class="explorer-toolbar">
+            <div class="toggle" role="tablist" id="table-picker"></div>
+          </div>
+        </div>
+
+        <div class="explorer-grid">
+          <div class="chart-card" id="chart-card">
+            <div class="chart-head">
+              <div>
+                <h3 class="chart-title" id="chart-title">Core CPI · Unemployment · 2Y Yield</h3>
+                <div class="chart-sub" id="chart-sub">Monthly observations</div>
+              </div>
+              <div class="chart-legend" id="chart-legend"></div>
+            </div>
+            <div class="chart-wrap"><canvas id="series-chart" aria-label="series chart"></canvas></div>
+          </div>
+
+          <div class="table-wrap">
+            <div class="table-toolbar">
+              <input class="input input-search" id="table-filter" type="search" placeholder="Filter rows…" aria-label="Filter table">
+              <span class="badge badge-neutral" id="row-count"><span class="dot"></span><span class="n">0</span> rows</span>
+            </div>
+            <div class="table-scroll">
+              <table class="data-table" id="data-table">
+                <thead><tr id="table-head"></tr></thead>
+                <tbody id="table-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <div class="footer">FedWatcher course prototype - not investment advice - data values shown here are dashboard placeholders.</div>
     </main>
   </div>
+
+  <div class="modal" id="row-modal" hidden role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-panel" role="document">
+      <header class="modal-head">
+        <div>
+          <div class="modal-eyebrow" id="modal-eyebrow">macro_data</div>
+          <h2 class="modal-title" id="modal-title">Row detail</h2>
+        </div>
+        <button class="modal-close" type="button" data-close aria-label="Close">×</button>
+      </header>
+      <div class="modal-body" id="modal-body"></div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <script src="/assets/explorer.js" defer></script>
 </body>
 </html>
