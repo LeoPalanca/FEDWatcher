@@ -176,31 +176,17 @@
         <p class="sec-desc">Live ingestion target. Statements, minutes, and synthetic FakeFed fixtures flow through the analyst agent and accumulate here.</p>
       </div>
     </div>
-    <div class="doc-feed">
-      <div class="alert accent">
-        <div class="stripe"></div>
-        <div>
-          <h4>FOMC statement — May 7, 2026 · 14:00 ET</h4>
-          <p>Target range held. Tone score +0.31. Inflation language tightened versus prior statement.</p>
-        </div>
-        <div class="meta">live · 11 min ago</div>
+    <div class="feed-toolbar">
+      <div class="toggle" id="feed-filter" role="tablist" aria-label="Document type">
+        <button type="button" data-feed="all" class="active">All</button>
+        <button type="button" data-feed="statement">Statements</button>
+        <button type="button" data-feed="minutes">Minutes</button>
       </div>
-      <div class="alert">
-        <div class="stripe"></div>
-        <div>
-          <h4>FOMC statement — March 18, 2026</h4>
-          <p>Synthetic FakeFed fixture used for educational mode. Source switch in topbar to compare against official wire.</p>
-        </div>
-        <div class="meta">archive</div>
-      </div>
-      <div class="alert warn">
-        <div class="stripe"></div>
-        <div>
-          <h4>FOMC minutes — pending ingestion</h4>
-          <p>Scheduled scrape target. Will appear here once the monitor agent sees a public release.</p>
-        </div>
-        <div class="meta">pending</div>
-      </div>
+      <input class="input input-search" id="feed-search" type="search" placeholder="Search by date, type, text…" aria-label="Search documents" style="max-width: 320px;">
+      <span class="badge badge-outline" id="feed-count">0 docs</span>
+    </div>
+    <div class="doc-feed-scroll">
+      <div class="doc-feed" id="doc-feed"></div>
     </div>
   </section>
 

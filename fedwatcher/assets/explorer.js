@@ -37,12 +37,20 @@
   let chart = null;
   let hiddenSeries = new Set();
 
+  let DOCS = [];
+  let docFilter = "all";
+  let docQuery = "";
+
   async function load() {
     try {
-      const res = await fetch("/assets/data.json", { cache: "no-store" });
-      DATA = await res.json();
+      const [d, docs] = await Promise.all([
+        fetch("/assets/data.json", { cache: "no-store" }).then(r => r.json()).catch(() => ({})),
+        fetch("/assets/documents.json", { cache: "no-store" }).then(r => r.ok ? r.json() : []).catch(() => []),
+      ]);
+      DATA = d;
+      DOCS = Array.isArray(docs) ? docs : [];
     } catch (e) {
-      DATA = {};
+      DATA = {}; DOCS = [];
       console.error("data load failed", e);
     }
     renderTablePicker();
@@ -51,6 +59,8 @@
     renderActive();
     wireModal();
     hydrateHero();
+    renderFeed();
+    wireFeed();
   }
 
   function hydrateHero() {
@@ -427,8 +437,148 @@
   }
 
   function closeModal() {
-    $("row-modal").hidden = true;
+    const m = $("row-modal");
+    m.hidden = true;
+    const panel = m.querySelector(".modal-panel");
+    if (panel) panel.classList.remove("modal-doc");
     document.body.style.overflow = "";
+  }
+
+  /* === DOCUMENT FEED === */
+  const DOC_TYPE_LABEL = { statement: "FOMC Statement", minutes: "FOMC Minutes" };
+
+  function wireFeed() {
+    const ftr = $("feed-filter");
+    if (ftr) {
+      ftr.querySelectorAll("button").forEach(b => {
+        b.addEventListener("click", () => {
+          docFilter = b.dataset.feed;
+          ftr.querySelectorAll("button").forEach(x => x.classList.toggle("active", x === b));
+          renderFeed();
+        });
+      });
+    }
+    const s = $("feed-search");
+    if (s) s.addEventListener("input", () => { docQuery = s.value.toLowerCase(); renderFeed(); });
+  }
+
+  function renderFeed() {
+    const root = $("doc-feed");
+    const count = $("feed-count");
+    if (!root) return;
+    root.innerHTML = "";
+
+    const filtered = DOCS.filter(d => {
+      if (docFilter !== "all" && d.doc_type !== docFilter) return false;
+      if (!docQuery) return true;
+      const hay = `${d.release_date} ${d.doc_type} ${d.central_bank} ${d.raw_text || ""}`.toLowerCase();
+      return hay.includes(docQuery);
+    });
+
+    if (count) count.textContent = `${filtered.length} doc${filtered.length === 1 ? "" : "s"}`;
+
+    if (!filtered.length) {
+      root.innerHTML = `<div class="doc-empty">No documents ${docQuery ? "match search" : "yet"}.</div>`;
+      return;
+    }
+
+    for (const d of filtered) {
+      const row = document.createElement("div");
+      row.className = "doc-row";
+      const dateLabel = formatReleaseDate(d.release_date);
+      const typeLabel = DOC_TYPE_LABEL[d.doc_type] ?? d.doc_type;
+      const preview = (d.raw_text || "").replace(/\s+/g, " ").trim().slice(0, 220);
+      const sizeKb = d.raw_text ? `${Math.max(1, Math.round(d.raw_text.length / 1024))} KB` : "—";
+      row.innerHTML = `
+        <div class="date">${dateLabel.short}<small>${dateLabel.year}</small></div>
+        <div class="preview"><strong>${typeLabel}${d.central_bank ? ` · ${d.central_bank}` : ""}</strong>${escapeHtml(preview) || "<em>no text captured</em>"}</div>
+        <div class="meta">${sizeKb}</div>
+        <div class="ext" title="View detail">→</div>
+      `;
+      row.addEventListener("click", () => openDocModal(d));
+      root.appendChild(row);
+    }
+  }
+
+  function openDocModal(d) {
+    const m = $("row-modal");
+    const panel = m.querySelector(".modal-panel");
+    panel.classList.add("modal-doc");
+    $("modal-eyebrow").textContent = `${d.central_bank ?? "FED"} · ${(d.doc_type || "").toUpperCase()}`;
+    const dateLabel = formatReleaseDate(d.release_date);
+    $("modal-title").textContent = `${DOC_TYPE_LABEL[d.doc_type] ?? d.doc_type} — ${dateLabel.long}`;
+    const body = $("modal-body");
+    body.innerHTML = "";
+
+    const meta = document.createElement("dl");
+    meta.className = "kv-grid";
+    const fields = [
+      ["release date", d.release_date ?? "—"],
+      ["type", DOC_TYPE_LABEL[d.doc_type] ?? d.doc_type ?? "—"],
+      ["central bank", d.central_bank ?? "—"],
+      ["raw text length", d.raw_text ? `${d.raw_text.length.toLocaleString()} chars` : "—"],
+      ["processed", d.processed ? "yes" : "no"],
+      ["source id", d.source_id ?? "—"],
+    ];
+    for (const [k, v] of fields) {
+      const dt = document.createElement("dt");
+      dt.textContent = k;
+      const dd = document.createElement("dd");
+      dd.textContent = v;
+      meta.appendChild(dt); meta.appendChild(dd);
+    }
+    body.appendChild(meta);
+
+    const actions = document.createElement("div");
+    actions.className = "doc-actions";
+    if (d.url) {
+      const a = document.createElement("a");
+      a.className = "btn btn-accent";
+      a.href = d.url;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      a.innerHTML = `Open on federalreserve.gov <span class="arrow">↗</span>`;
+      actions.appendChild(a);
+    }
+    const copyBtn = document.createElement("button");
+    copyBtn.className = "btn btn-secondary btn-sm";
+    copyBtn.type = "button";
+    copyBtn.textContent = "Copy text";
+    copyBtn.addEventListener("click", async () => {
+      try { await navigator.clipboard.writeText(d.raw_text || ""); copyBtn.textContent = "Copied"; setTimeout(() => (copyBtn.textContent = "Copy text"), 1200); } catch (_) { copyBtn.textContent = "Copy failed"; }
+    });
+    actions.appendChild(copyBtn);
+    body.appendChild(actions);
+
+    if (d.raw_text) {
+      const pre = document.createElement("div");
+      pre.className = "doc-text";
+      pre.textContent = d.raw_text;
+      body.appendChild(pre);
+    } else {
+      const note = document.createElement("p");
+      note.style.color = "var(--c-ink-3)";
+      note.style.marginTop = "var(--s-5)";
+      note.textContent = "No raw text captured for this document.";
+      body.appendChild(note);
+    }
+
+    m.hidden = false;
+    document.body.style.overflow = "hidden";
+  }
+
+  function formatReleaseDate(iso) {
+    if (!iso) return { short: "—", year: "", long: "—" };
+    const d = new Date(iso + "T12:00:00");
+    if (isNaN(d.getTime())) return { short: iso, year: "", long: iso };
+    const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    const short = `${months[d.getMonth()]} ${d.getDate()}`;
+    const long = `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+    return { short, year: String(d.getFullYear()), long };
+  }
+
+  function escapeHtml(s) {
+    return String(s ?? "").replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
   }
 
   load();
