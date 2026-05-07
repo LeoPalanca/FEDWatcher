@@ -1,0 +1,1631 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>FEDWatcher — Design System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,300..900;1,8..60,300..900&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" />
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<style>
+  :root {
+    /* === FOUNDATION TOKENS === */
+    /* Warm neutral grays — paper-leaning */
+    --c-paper:        oklch(0.992 0.003 80);   /* page bg */
+    --c-paper-2:      oklch(0.975 0.004 80);   /* surface */
+    --c-paper-3:      oklch(0.955 0.005 80);   /* hover/sunken */
+    --c-line:         oklch(0.910 0.005 80);   /* hairline */
+    --c-line-2:       oklch(0.860 0.006 80);   /* stronger rule */
+    --c-ink-3:        oklch(0.620 0.008 80);   /* tertiary text */
+    --c-ink-2:        oklch(0.460 0.010 80);   /* secondary text */
+    --c-ink:          oklch(0.220 0.012 80);   /* primary text */
+    --c-ink-strong:   oklch(0.150 0.015 80);   /* strongest */
+
+    /* Single accent — institutional teal-blue */
+    --c-accent-h:     230;
+    --c-accent:       oklch(0.45 0.08 var(--c-accent-h));
+    --c-accent-hover: oklch(0.39 0.09 var(--c-accent-h));
+    --c-accent-soft:  oklch(0.95 0.025 var(--c-accent-h));
+    --c-accent-line:  oklch(0.85 0.04 var(--c-accent-h));
+
+    /* Restrained semantics */
+    --c-pos:   oklch(0.50 0.09 155);
+    --c-pos-soft: oklch(0.96 0.025 155);
+    --c-neg:   oklch(0.52 0.13 25);
+    --c-neg-soft: oklch(0.96 0.025 25);
+    --c-warn:  oklch(0.62 0.10 75);
+    --c-warn-soft: oklch(0.96 0.03 75);
+
+    /* Data viz — neutral first, accent for primary series */
+    --dv-1: var(--c-accent);
+    --dv-2: oklch(0.42 0.012 80);
+    --dv-3: oklch(0.62 0.012 80);
+    --dv-4: oklch(0.78 0.010 80);
+    --dv-pos: var(--c-pos);
+    --dv-neg: var(--c-neg);
+
+    /* Type */
+    --f-serif: "Source Serif 4", "Iowan Old Style", "Charter", Georgia, serif;
+    --f-sans:  "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    --f-mono:  "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+    /* Spacing scale (4px base) */
+    --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 20px;
+    --s-6: 24px; --s-7: 32px; --s-8: 40px; --s-9: 48px; --s-10: 64px; --s-11: 96px;
+
+    /* Radii */
+    --r-1: 3px; --r-2: 6px; --r-3: 10px; --r-4: 14px; --r-pill: 999px;
+
+    /* Shadows — restrained */
+    --sh-1: 0 1px 0 0 oklch(0 0 0 / 0.04);
+    --sh-2: 0 1px 2px 0 oklch(0 0 0 / 0.04), 0 1px 3px 0 oklch(0 0 0 / 0.06);
+    --sh-3: 0 4px 8px -2px oklch(0 0 0 / 0.06), 0 2px 4px -1px oklch(0 0 0 / 0.04);
+    --sh-4: 0 12px 24px -6px oklch(0 0 0 / 0.10), 0 4px 8px -2px oklch(0 0 0 / 0.04);
+
+    /* Density */
+    --row-h: 40px;
+    --tnum: "tnum" 1, "lnum" 1;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: var(--f-sans);
+    color: var(--c-ink);
+    background: var(--c-paper);
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    font-feature-settings: "ss01", "cv11";
+  }
+  .num, .tnum { font-feature-settings: var(--tnum); font-variant-numeric: tabular-nums lining-nums; }
+  .mono { font-family: var(--f-mono); font-feature-settings: var(--tnum); }
+
+  /* === LAYOUT === */
+  .page { max-width: 1280px; margin: 0 auto; padding: 0 var(--s-7); }
+  .topbar {
+    border-bottom: 1px solid var(--c-line);
+    background: color-mix(in oklab, var(--c-paper), transparent 20%);
+    backdrop-filter: saturate(140%) blur(8px);
+    position: sticky; top: 0; z-index: 50;
+  }
+  .topbar-inner {
+    max-width: 1280px; margin: 0 auto;
+    padding: var(--s-4) var(--s-7);
+    display: flex; align-items: baseline; gap: var(--s-7);
+  }
+  .topbar nav { display: flex; gap: var(--s-5); margin-left: auto; }
+  .topbar nav a {
+    font-size: 13px; color: var(--c-ink-2); text-decoration: none;
+    letter-spacing: 0.01em;
+  }
+  .topbar nav a:hover { color: var(--c-ink); }
+
+  /* Hero */
+  .hero {
+    padding: var(--s-11) 0 var(--s-10);
+    border-bottom: 1px solid var(--c-line);
+  }
+  .hero-eyebrow {
+    font-family: var(--f-mono); font-size: 11px;
+    text-transform: uppercase; letter-spacing: 0.12em;
+    color: var(--c-ink-3);
+    display: flex; align-items: center; gap: var(--s-3);
+    margin-bottom: var(--s-5);
+  }
+  .hero-eyebrow .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--c-accent); }
+  .hero h1 {
+    font-family: var(--f-serif); font-weight: 400;
+    font-size: clamp(48px, 7vw, 88px);
+    line-height: 0.98; letter-spacing: -0.025em;
+    margin: 0 0 var(--s-5);
+    color: var(--c-ink-strong);
+    max-width: 14ch;
+    text-wrap: pretty;
+  }
+  .hero h1 em {
+    font-style: italic; font-weight: 300;
+    color: var(--c-accent);
+  }
+  .hero p {
+    font-size: 19px; line-height: 1.55;
+    color: var(--c-ink-2);
+    max-width: 58ch;
+    margin: 0;
+  }
+  .hero-meta {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: var(--s-7);
+    margin-top: var(--s-9);
+    padding-top: var(--s-6);
+    border-top: 1px solid var(--c-line);
+  }
+  .hero-meta dt {
+    font-family: var(--f-mono); font-size: 11px;
+    text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--c-ink-3); margin-bottom: var(--s-2);
+  }
+  .hero-meta dd {
+    margin: 0;
+    font-family: var(--f-serif); font-size: 17px;
+    color: var(--c-ink);
+  }
+
+  /* Section scaffolding */
+  section.ds {
+    padding: var(--s-11) 0;
+    border-bottom: 1px solid var(--c-line);
+  }
+  .sec-head {
+    display: grid; grid-template-columns: 220px 1fr;
+    gap: var(--s-7); margin-bottom: var(--s-9);
+    align-items: baseline;
+  }
+  .sec-num {
+    font-family: var(--f-mono); font-size: 12px;
+    color: var(--c-ink-3); letter-spacing: 0.08em;
+  }
+  .sec-title {
+    font-family: var(--f-serif); font-weight: 400;
+    font-size: 36px; line-height: 1.1;
+    letter-spacing: -0.015em;
+    color: var(--c-ink-strong);
+    margin: 0 0 var(--s-3);
+  }
+  .sec-desc {
+    font-size: 16px; color: var(--c-ink-2);
+    max-width: 62ch; margin: 0;
+  }
+
+  .sub-head {
+    font-family: var(--f-mono); font-size: 11px;
+    text-transform: uppercase; letter-spacing: 0.12em;
+    color: var(--c-ink-3);
+    padding-bottom: var(--s-3);
+    border-bottom: 1px solid var(--c-line);
+    margin: var(--s-9) 0 var(--s-6);
+    display: flex; justify-content: space-between; align-items: baseline;
+  }
+  .sub-head:first-child { margin-top: 0; }
+  .sub-head span:last-child { color: var(--c-ink-3); font-size: 10px; }
+
+  /* === TYPOGRAPHY SECTION === */
+  .type-row {
+    display: grid; grid-template-columns: 200px 1fr 180px;
+    gap: var(--s-6); align-items: baseline;
+    padding: var(--s-6) 0;
+    border-top: 1px solid var(--c-line);
+  }
+  .type-row:first-of-type { border-top: 0; }
+  .type-label { font-family: var(--f-mono); font-size: 12px; color: var(--c-ink-3); }
+  .type-label small { display: block; color: var(--c-ink-3); margin-top: 2px; opacity: 0.7; }
+  .type-spec {
+    font-family: var(--f-mono); font-size: 11px;
+    color: var(--c-ink-3); text-align: right;
+    line-height: 1.6;
+  }
+
+  .display-1 { font-family: var(--f-serif); font-weight: 300; font-size: 72px; line-height: 1.0; letter-spacing: -0.025em; color: var(--c-ink-strong); }
+  .display-2 { font-family: var(--f-serif); font-weight: 400; font-size: 56px; line-height: 1.05; letter-spacing: -0.02em; color: var(--c-ink-strong); }
+  .h1 { font-family: var(--f-serif); font-weight: 400; font-size: 36px; line-height: 1.15; letter-spacing: -0.015em; }
+  .h2 { font-family: var(--f-serif); font-weight: 500; font-size: 26px; line-height: 1.25; letter-spacing: -0.01em; }
+  .h3 { font-family: var(--f-sans); font-weight: 600; font-size: 18px; line-height: 1.4; letter-spacing: -0.005em; }
+  .body-l { font-family: var(--f-sans); font-weight: 400; font-size: 17px; line-height: 1.6; }
+  .body-m { font-family: var(--f-sans); font-weight: 400; font-size: 15px; line-height: 1.55; }
+  .body-s { font-family: var(--f-sans); font-weight: 400; font-size: 13px; line-height: 1.5; color: var(--c-ink-2); }
+  .caption { font-family: var(--f-mono); font-weight: 400; font-size: 11px; line-height: 1.4; text-transform: uppercase; letter-spacing: 0.1em; color: var(--c-ink-3); }
+  .num-l { font-family: var(--f-mono); font-weight: 500; font-size: 32px; letter-spacing: -0.01em; font-feature-settings: var(--tnum); }
+  .num-m { font-family: var(--f-mono); font-weight: 500; font-size: 18px; font-feature-settings: var(--tnum); }
+
+  /* Pairing demo */
+  .pairing-card {
+    background: var(--c-paper-2);
+    border: 1px solid var(--c-line);
+    border-radius: var(--r-3);
+    padding: var(--s-8);
+    margin-top: var(--s-6);
+  }
+  .pairing-card .eyebrow {
+    font-family: var(--f-mono); font-size: 11px;
+    text-transform: uppercase; letter-spacing: 0.12em;
+    color: var(--c-accent);
+    margin-bottom: var(--s-3);
+  }
+  .pairing-card h3 {
+    font-family: var(--f-serif); font-weight: 400;
+    font-size: 32px; line-height: 1.15; letter-spacing: -0.015em;
+    color: var(--c-ink-strong);
+    margin: 0 0 var(--s-4);
+    max-width: 22ch;
+  }
+  .pairing-card h3 em { font-style: italic; color: var(--c-ink-2); font-weight: 300; }
+  .pairing-card .body { color: var(--c-ink-2); max-width: 56ch; margin: 0 0 var(--s-5); }
+  .pairing-card .data-line {
+    display: flex; gap: var(--s-7); padding-top: var(--s-4);
+    border-top: 1px solid var(--c-line);
+  }
+  .pairing-card .data-line div { display: flex; flex-direction: column; gap: 2px; }
+  .pairing-card .data-line .k { font-family: var(--f-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--c-ink-3); }
+  .pairing-card .data-line .v { font-family: var(--f-mono); font-size: 18px; font-weight: 500; color: var(--c-ink); font-feature-settings: var(--tnum); }
+  .pairing-card .data-line .v.pos { color: var(--c-pos); }
+  .pairing-card .data-line .v.neg { color: var(--c-neg); }
+
+  /* === COLOR === */
+  .swatch-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: var(--s-3); }
+  .swatch {
+    border: 1px solid var(--c-line);
+    border-radius: var(--r-2);
+    overflow: hidden;
+  }
+  .swatch .chip { aspect-ratio: 1.5/1; }
+  .swatch .meta {
+    padding: var(--s-3);
+    background: var(--c-paper-2);
+    border-top: 1px solid var(--c-line);
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .swatch .name { font-family: var(--f-mono); font-size: 11px; color: var(--c-ink); }
+  .swatch .val { font-family: var(--f-mono); font-size: 10px; color: var(--c-ink-3); }
+
+  .ramp { display: grid; grid-template-columns: repeat(8, 1fr); gap: 0; border: 1px solid var(--c-line); border-radius: var(--r-2); overflow: hidden; margin-bottom: var(--s-7); }
+  .ramp .step { aspect-ratio: 1.2/1; padding: var(--s-3); display: flex; flex-direction: column; justify-content: space-between; font-family: var(--f-mono); font-size: 10px; }
+  .ramp .step .n { color: inherit; opacity: 0.7; }
+  .ramp .step .v { color: inherit; opacity: 0.55; }
+
+  .semantic-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s-4); }
+  .sem-card {
+    border: 1px solid var(--c-line); border-radius: var(--r-3);
+    padding: var(--s-5); background: var(--c-paper-2);
+    display: flex; flex-direction: column; gap: var(--s-3);
+  }
+  .sem-card .head { display: flex; align-items: center; gap: var(--s-3); }
+  .sem-card .pip { width: 10px; height: 10px; border-radius: 50%; }
+  .sem-card .label { font-family: var(--f-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--c-ink-2); }
+  .sem-card .demo { font-family: var(--f-mono); font-size: 14px; padding: var(--s-3); border-radius: var(--r-2); font-feature-settings: var(--tnum); }
+
+  /* === SPACING / RADII / SHADOWS === */
+  .scale-grid { display: grid; grid-template-columns: repeat(11, 1fr); gap: var(--s-3); align-items: end; }
+  .scale-cell { display: flex; flex-direction: column; align-items: flex-start; gap: var(--s-2); }
+  .scale-cell .bar { width: 100%; background: var(--c-accent-soft); border-bottom: 2px solid var(--c-accent); }
+  .scale-cell .lbl { font-family: var(--f-mono); font-size: 10px; color: var(--c-ink-3); }
+
+  .radii-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--s-4); }
+  .radii-cell { aspect-ratio: 1/1; background: var(--c-paper-2); border: 1px solid var(--c-line); display: flex; align-items: flex-end; justify-content: flex-start; padding: var(--s-3); font-family: var(--f-mono); font-size: 11px; color: var(--c-ink-3); }
+
+  .shadow-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--s-5); }
+  .shadow-cell {
+    aspect-ratio: 1.5/1; background: var(--c-paper-2);
+    border-radius: var(--r-3); display: flex;
+    align-items: flex-end; padding: var(--s-3);
+    font-family: var(--f-mono); font-size: 11px; color: var(--c-ink-3);
+  }
+  .shadow-cell.s1 { box-shadow: var(--sh-1); }
+  .shadow-cell.s2 { box-shadow: var(--sh-2); }
+  .shadow-cell.s3 { box-shadow: var(--sh-3); }
+  .shadow-cell.s4 { box-shadow: var(--sh-4); }
+
+  /* === BUTTONS === */
+  .btn {
+    display: inline-flex; align-items: center; gap: var(--s-2);
+    font-family: var(--f-sans); font-size: 14px; font-weight: 500;
+    padding: 0 var(--s-4); height: 36px;
+    border-radius: var(--r-2);
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: background 120ms, border-color 120ms, color 120ms;
+    letter-spacing: -0.005em;
+  }
+  .btn-primary { background: var(--c-ink-strong); color: var(--c-paper); }
+  .btn-primary:hover { background: var(--c-ink); }
+  .btn-accent { background: var(--c-accent); color: white; }
+  .btn-accent:hover { background: var(--c-accent-hover); }
+  .btn-secondary { background: var(--c-paper); color: var(--c-ink); border-color: var(--c-line-2); }
+  .btn-secondary:hover { background: var(--c-paper-3); }
+  .btn-ghost { background: transparent; color: var(--c-ink); }
+  .btn-ghost:hover { background: var(--c-paper-3); }
+  .btn-link { background: transparent; color: var(--c-accent); padding: 0; height: auto; border-bottom: 1px solid var(--c-accent-line); border-radius: 0; }
+  .btn-sm { height: 28px; font-size: 13px; padding: 0 var(--s-3); }
+  .btn-lg { height: 44px; font-size: 15px; padding: 0 var(--s-5); }
+  .btn .arrow { font-size: 12px; }
+
+  .btn-row { display: flex; flex-wrap: wrap; gap: var(--s-3); align-items: center; }
+
+  /* === FORMS === */
+  .field { display: flex; flex-direction: column; gap: var(--s-2); }
+  .field label { font-family: var(--f-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--c-ink-3); }
+  .input, .select, .textarea {
+    font-family: var(--f-sans); font-size: 14px;
+    padding: 0 var(--s-3); height: 36px;
+    background: var(--c-paper);
+    border: 1px solid var(--c-line-2);
+    border-radius: var(--r-2);
+    color: var(--c-ink);
+    outline: none;
+    transition: border-color 120ms, box-shadow 120ms;
+    width: 100%;
+  }
+  .input:focus, .select:focus, .textarea:focus {
+    border-color: var(--c-accent);
+    box-shadow: 0 0 0 3px var(--c-accent-soft);
+  }
+  .textarea { padding: var(--s-3); height: auto; resize: vertical; min-height: 80px; }
+  .input-search {
+    background: var(--c-paper-2);
+    border-color: transparent;
+    padding-left: 36px;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 14 14' fill='none' stroke='%23888' stroke-width='1.5'><circle cx='6' cy='6' r='4.5'/><path d='m9.5 9.5 3 3'/></svg>");
+    background-repeat: no-repeat;
+    background-position: 12px center;
+  }
+
+  .checkbox, .radio {
+    display: flex; align-items: center; gap: var(--s-3);
+    font-size: 14px; cursor: pointer;
+  }
+  .checkbox input, .radio input { accent-color: var(--c-accent); width: 14px; height: 14px; }
+
+  .toggle { display: inline-flex; background: var(--c-paper-2); border: 1px solid var(--c-line); border-radius: var(--r-2); padding: 2px; }
+  .toggle button {
+    border: 0; background: transparent;
+    font-family: var(--f-sans); font-size: 13px; font-weight: 500;
+    padding: 6px 14px; border-radius: 4px;
+    color: var(--c-ink-2); cursor: pointer;
+  }
+  .toggle button.active { background: var(--c-paper); color: var(--c-ink); box-shadow: var(--sh-1); }
+
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-5); max-width: 720px; }
+
+  /* === BADGES === */
+  .badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-family: var(--f-mono); font-size: 11px;
+    font-weight: 500; letter-spacing: 0.04em;
+    padding: 3px 8px;
+    border-radius: var(--r-1);
+    text-transform: uppercase;
+  }
+  .badge .dot { width: 5px; height: 5px; border-radius: 50%; }
+  .badge-neutral { background: var(--c-paper-3); color: var(--c-ink-2); }
+  .badge-neutral .dot { background: var(--c-ink-3); }
+  .badge-accent  { background: var(--c-accent-soft); color: var(--c-accent); }
+  .badge-accent .dot { background: var(--c-accent); }
+  .badge-pos { background: var(--c-pos-soft); color: var(--c-pos); }
+  .badge-pos .dot { background: var(--c-pos); }
+  .badge-neg { background: var(--c-neg-soft); color: var(--c-neg); }
+  .badge-neg .dot { background: var(--c-neg); }
+  .badge-warn { background: var(--c-warn-soft); color: var(--c-warn); }
+  .badge-warn .dot { background: var(--c-warn); }
+  .badge-outline { background: transparent; color: var(--c-ink-2); border: 1px solid var(--c-line-2); }
+
+  .badge-row { display: flex; flex-wrap: wrap; gap: var(--s-2); }
+
+  /* === ALERTS === */
+  .alert {
+    display: grid; grid-template-columns: 4px 1fr auto;
+    gap: var(--s-4);
+    padding: var(--s-4) var(--s-5);
+    border: 1px solid var(--c-line);
+    border-radius: var(--r-3);
+    background: var(--c-paper-2);
+  }
+  .alert .stripe { background: var(--c-ink-3); border-radius: 2px; }
+  .alert.accent .stripe { background: var(--c-accent); }
+  .alert.pos .stripe { background: var(--c-pos); }
+  .alert.warn .stripe { background: var(--c-warn); }
+  .alert.neg .stripe { background: var(--c-neg); }
+  .alert h4 { margin: 0 0 4px; font-family: var(--f-sans); font-size: 14px; font-weight: 600; color: var(--c-ink); }
+  .alert p { margin: 0; font-size: 13px; color: var(--c-ink-2); line-height: 1.5; }
+  .alert .meta { font-family: var(--f-mono); font-size: 11px; color: var(--c-ink-3); white-space: nowrap; align-self: start; }
+
+  /* === CARDS / METRIC TILES === */
+  .metric-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--s-4); }
+  .metric {
+    border: 1px solid var(--c-line);
+    border-radius: var(--r-3);
+    padding: var(--s-5);
+    background: var(--c-paper);
+    display: flex; flex-direction: column; gap: var(--s-2);
+  }
+  .metric .label {
+    font-family: var(--f-mono); font-size: 11px;
+    text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--c-ink-3);
+  }
+  .metric .value {
+    font-family: var(--f-mono); font-weight: 500;
+    font-size: 28px; letter-spacing: -0.01em;
+    color: var(--c-ink-strong);
+    font-feature-settings: var(--tnum);
+  }
+  .metric .value .unit { font-size: 14px; color: var(--c-ink-3); margin-left: 4px; font-weight: 400; }
+  .metric .delta {
+    display: flex; gap: var(--s-2); font-size: 12px;
+    color: var(--c-ink-2); align-items: center;
+    font-family: var(--f-mono); font-feature-settings: var(--tnum);
+  }
+  .metric .delta .v { font-weight: 500; }
+  .metric .delta.pos .v { color: var(--c-pos); }
+  .metric .delta.neg .v { color: var(--c-neg); }
+  .metric .spark { margin-top: var(--s-2); }
+
+  /* Card variant — content card */
+  .content-card {
+    border: 1px solid var(--c-line);
+    border-radius: var(--r-3);
+    background: var(--c-paper);
+    padding: var(--s-6);
+    display: flex; flex-direction: column; gap: var(--s-3);
+  }
+  .content-card .eyebrow { font-family: var(--f-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--c-accent); }
+  .content-card h3 { font-family: var(--f-serif); font-weight: 400; font-size: 22px; line-height: 1.2; margin: 0; color: var(--c-ink-strong); }
+  .content-card p { margin: 0; color: var(--c-ink-2); font-size: 14px; line-height: 1.55; }
+  .content-card .footer { display: flex; justify-content: space-between; align-items: center; padding-top: var(--s-3); border-top: 1px solid var(--c-line); margin-top: var(--s-2); font-family: var(--f-mono); font-size: 11px; color: var(--c-ink-3); }
+
+  /* === TABLE === */
+  .data-table {
+    width: 100%; border-collapse: collapse;
+    font-family: var(--f-sans); font-size: 13px;
+  }
+  .data-table thead th {
+    font-family: var(--f-mono); font-weight: 500; font-size: 11px;
+    text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--c-ink-3);
+    text-align: left;
+    padding: var(--s-3) var(--s-4);
+    border-bottom: 1px solid var(--c-line-2);
+    background: var(--c-paper-2);
+    white-space: nowrap;
+  }
+  .data-table tbody td {
+    padding: var(--s-3) var(--s-4);
+    border-bottom: 1px solid var(--c-line);
+    color: var(--c-ink);
+    vertical-align: middle;
+  }
+  .data-table tbody tr:hover { background: var(--c-paper-2); }
+  .data-table .num { font-family: var(--f-mono); font-feature-settings: var(--tnum); text-align: right; }
+  .data-table th.num, .data-table td.num { text-align: right; }
+  .data-table .name { font-weight: 500; color: var(--c-ink-strong); }
+  .data-table .sub { color: var(--c-ink-3); font-size: 11px; font-family: var(--f-mono); margin-top: 2px; }
+  .table-wrap {
+    border: 1px solid var(--c-line);
+    border-radius: var(--r-3);
+    overflow: hidden;
+  }
+  .table-toolbar {
+    display: flex; align-items: center; gap: var(--s-3);
+    padding: var(--s-4) var(--s-4);
+    border-bottom: 1px solid var(--c-line);
+    background: var(--c-paper);
+  }
+  .table-toolbar .title { font-family: var(--f-serif); font-size: 18px; color: var(--c-ink-strong); flex: 1; }
+
+  /* trend bar inside table cells */
+  .bar-cell { display: flex; align-items: center; gap: var(--s-2); justify-content: flex-end; }
+  .bar-cell .bar { height: 4px; border-radius: 2px; background: var(--c-accent); }
+  .bar-cell .bar.neg { background: var(--c-neg); }
+  .bar-cell .bar.pos { background: var(--c-pos); }
+
+  /* === CHART CARD === */
+  .chart-card {
+    border: 1px solid var(--c-line);
+    border-radius: var(--r-3);
+    background: var(--c-paper);
+    padding: var(--s-6);
+  }
+  .chart-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: var(--s-5); gap: var(--s-5); }
+  .chart-head .title { font-family: var(--f-serif); font-size: 22px; color: var(--c-ink-strong); margin: 0; font-weight: 400; }
+  .chart-head .sub { font-family: var(--f-mono); font-size: 11px; color: var(--c-ink-3); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 4px; }
+  .chart-legend { display: flex; gap: var(--s-4); font-family: var(--f-mono); font-size: 11px; color: var(--c-ink-2); }
+  .chart-legend .ent { display: flex; align-items: center; gap: var(--s-2); }
+  .chart-legend .ent .l { width: 14px; height: 1.5px; }
+
+  /* === NAVIGATION === */
+  .nav-demo {
+    display: grid; grid-template-columns: 220px 1fr;
+    border: 1px solid var(--c-line);
+    border-radius: var(--r-3);
+    overflow: hidden;
+    min-height: 360px;
+    background: var(--c-paper);
+  }
+  .sidebar {
+    background: var(--c-paper-2);
+    border-right: 1px solid var(--c-line);
+    padding: var(--s-5) 0;
+    display: flex; flex-direction: column;
+  }
+  .sidebar .brand {
+    font-family: var(--f-serif); font-size: 20px; font-weight: 500;
+    padding: 0 var(--s-5) var(--s-5); letter-spacing: -0.01em;
+    color: var(--c-ink-strong);
+    border-bottom: 1px solid var(--c-line);
+    margin-bottom: var(--s-4);
+  }
+  .sidebar .group-label {
+    font-family: var(--f-mono); font-size: 10px;
+    text-transform: uppercase; letter-spacing: 0.12em;
+    color: var(--c-ink-3); padding: var(--s-2) var(--s-5); margin-top: var(--s-3);
+  }
+  .sidebar .nav-item {
+    display: flex; align-items: center; gap: var(--s-3);
+    padding: 7px var(--s-5); font-size: 13.5px;
+    color: var(--c-ink-2); cursor: pointer; position: relative;
+  }
+  .sidebar .nav-item:hover { background: var(--c-paper-3); color: var(--c-ink); }
+  .sidebar .nav-item.active {
+    background: var(--c-paper); color: var(--c-ink-strong); font-weight: 500;
+  }
+  .sidebar .nav-item.active::before {
+    content: ""; position: absolute; left: 0; top: 6px; bottom: 6px;
+    width: 2px; background: var(--c-accent); border-radius: 0 2px 2px 0;
+  }
+  .sidebar .nav-item .ico {
+    width: 14px; height: 14px; opacity: 0.7;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .nav-content {
+    padding: var(--s-6); display: flex; flex-direction: column; gap: var(--s-4);
+  }
+  .breadcrumb { font-family: var(--f-mono); font-size: 11px; color: var(--c-ink-3); display: flex; gap: 6px; text-transform: uppercase; letter-spacing: 0.08em; }
+  .breadcrumb span:not(:last-child)::after { content: "/"; margin-left: 6px; opacity: 0.5; }
+  .nav-content h2 { font-family: var(--f-serif); font-size: 32px; margin: 0; font-weight: 400; letter-spacing: -0.01em; color: var(--c-ink-strong); }
+  .nav-content .row { display: flex; gap: var(--s-4); }
+
+  /* tabs */
+  .tabs { display: flex; gap: var(--s-5); border-bottom: 1px solid var(--c-line); }
+  .tabs button {
+    background: transparent; border: 0; padding: var(--s-3) 0;
+    font-family: var(--f-sans); font-size: 13px; font-weight: 500;
+    color: var(--c-ink-3); cursor: pointer;
+    border-bottom: 1.5px solid transparent;
+    margin-bottom: -1px;
+  }
+  .tabs button.active { color: var(--c-ink-strong); border-bottom-color: var(--c-ink-strong); }
+  .tabs button:hover:not(.active) { color: var(--c-ink); }
+
+  /* === AGENT === */
+  .agent-thread {
+    border: 1px solid var(--c-line);
+    border-radius: var(--r-3);
+    background: var(--c-paper);
+    padding: var(--s-6) var(--s-7);
+    display: flex; flex-direction: column; gap: var(--s-6);
+    max-width: 760px;
+  }
+  .agent-msg { display: grid; grid-template-columns: 100px 1fr; gap: var(--s-5); }
+  .agent-msg .role {
+    font-family: var(--f-mono); font-size: 11px;
+    text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--c-ink-3); padding-top: 3px;
+  }
+  .agent-msg .role.agent { color: var(--c-accent); }
+  .agent-msg .body { font-size: 15px; line-height: 1.6; color: var(--c-ink); }
+  .agent-msg .body p { margin: 0 0 var(--s-3); }
+  .agent-msg .body p:last-child { margin-bottom: 0; }
+  .agent-msg .body strong { color: var(--c-ink-strong); font-weight: 600; }
+  .agent-msg .body .num { font-family: var(--f-mono); font-feature-settings: var(--tnum); }
+  .agent-msg .sources {
+    margin-top: var(--s-4);
+    padding-top: var(--s-4);
+    border-top: 1px dashed var(--c-line);
+    display: flex; flex-direction: column; gap: var(--s-2);
+  }
+  .agent-msg .sources .label {
+    font-family: var(--f-mono); font-size: 10px;
+    text-transform: uppercase; letter-spacing: 0.12em;
+    color: var(--c-ink-3); margin-bottom: 2px;
+  }
+  .citation {
+    display: inline-flex; align-items: baseline; gap: 4px;
+    font-family: var(--f-mono); font-size: 11px;
+    color: var(--c-ink-2);
+    text-decoration: none;
+    padding: 2px 6px; border-radius: 3px;
+    background: var(--c-paper-2);
+    border: 1px solid var(--c-line);
+  }
+  .citation .n {
+    color: var(--c-accent); font-weight: 500;
+  }
+  .citation:hover { background: var(--c-paper-3); color: var(--c-ink); }
+  .cite-inline {
+    font-family: var(--f-mono); font-size: 10px;
+    color: var(--c-accent);
+    vertical-align: super; line-height: 0;
+    padding: 0 2px;
+    cursor: pointer;
+  }
+
+  /* === ICONOGRAPHY === */
+  .icon-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: var(--s-3); }
+  .icon-cell {
+    border: 1px solid var(--c-line); border-radius: var(--r-2);
+    aspect-ratio: 1/1;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 6px; background: var(--c-paper);
+    color: var(--c-ink);
+  }
+  .icon-cell svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.5; }
+  .icon-cell .lbl { font-family: var(--f-mono); font-size: 10px; color: var(--c-ink-3); }
+
+  /* === WORDMARK === */
+  .wordmark-large {
+    font-family: var(--f-serif); font-weight: 400;
+    font-size: 88px; letter-spacing: -0.035em;
+    color: var(--c-ink-strong);
+    line-height: 1;
+    display: inline-flex; align-items: baseline;
+  }
+  .wordmark-large .watcher { font-style: italic; font-weight: 300; color: var(--c-accent); }
+  .wordmark-large .dot { color: var(--c-accent); }
+
+  .wordmark-row {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s-5);
+    margin-top: var(--s-6);
+  }
+  .wm-card {
+    border: 1px solid var(--c-line); border-radius: var(--r-3);
+    background: var(--c-paper); padding: var(--s-7);
+    display: flex; flex-direction: column; gap: var(--s-4);
+    align-items: flex-start; justify-content: space-between;
+    min-height: 200px;
+  }
+  .wm-card .lbl { font-family: var(--f-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--c-ink-3); }
+  .wm-card.dark { background: var(--c-ink-strong); }
+  .wm-card.dark .lbl { color: oklch(0.7 0.01 80); }
+  .wm-card.dark .wm { color: var(--c-paper); }
+  .wm { font-family: var(--f-serif); font-weight: 400; font-size: 36px; letter-spacing: -0.025em; color: var(--c-ink-strong); }
+  .wm em { font-style: italic; font-weight: 300; color: var(--c-accent); }
+  .wm-stacked { font-size: 32px; line-height: 0.92; }
+  .wm-stacked em { display: block; }
+
+  /* === FOOTER / PRINCIPLES === */
+  .principles { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--s-6); }
+  .principle .num { font-family: var(--f-mono); font-size: 11px; color: var(--c-ink-3); margin-bottom: var(--s-2); letter-spacing: 0.08em; }
+  .principle h4 { font-family: var(--f-serif); font-size: 22px; font-weight: 400; margin: 0 0 var(--s-2); color: var(--c-ink-strong); letter-spacing: -0.01em; }
+  .principle p { margin: 0; font-size: 13.5px; color: var(--c-ink-2); line-height: 1.55; }
+
+  footer {
+    padding: var(--s-9) 0;
+    color: var(--c-ink-3); font-family: var(--f-mono); font-size: 11px;
+    display: flex; justify-content: space-between;
+    text-transform: uppercase; letter-spacing: 0.1em;
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div style="font-family: var(--f-serif); font-size: 19px; font-weight: 500; letter-spacing: -0.015em;">
+      FED<em style="font-style: italic; font-weight: 300; color: var(--c-accent);">Watcher</em>
+      <span style="font-family: var(--f-mono); font-size: 10px; color: var(--c-ink-3); margin-left: 8px; text-transform: uppercase; letter-spacing: 0.12em;">Design&nbsp;System&nbsp;v0.1</span>
+    </div>
+    <nav>
+      <a href="#foundations">Foundations</a>
+      <a href="#color">Color</a>
+      <a href="#type">Type</a>
+      <a href="#components">Components</a>
+      <a href="#data">Data</a>
+      <a href="#agent">Agent</a>
+      <a href="#brand">Brand</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-eyebrow"><span class="dot"></span>FEDWATCHER · DESIGN SYSTEM · v0.1 · MAY 2026</div>
+  <h1>A calm interface for <em>reading the&nbsp;Fed.</em></h1>
+  <p>FEDWatcher turns Federal Reserve releases — minutes, statements, projections, speeches — into structured economic intelligence. This system defines how that intelligence looks: precise, scholarly, confident, and quiet enough to think alongside.</p>
+  <dl class="hero-meta">
+    <div><dt>Audience</dt><dd>Researchers, analysts, students</dd></div>
+    <div><dt>Mode</dt><dd>Light · single accent</dd></div>
+    <div><dt>Voice</dt><dd>Sharp, precise, scholarly</dd></div>
+    <div><dt>Foundation</dt><dd>Source Serif 4 · Inter · JetBrains&nbsp;Mono</dd></div>
+  </dl>
+</section>
+
+<!-- PRINCIPLES -->
+<section class="ds" id="principles">
+  <div class="sec-head">
+    <div class="sec-num">§ 00 · PRINCIPLES</div>
+    <div>
+      <h2 class="sec-title">Four guardrails for every decision.</h2>
+      <p class="sec-desc">Before tokens and components, the system commits to four positions. When in doubt, return here.</p>
+    </div>
+  </div>
+  <div class="principles">
+    <div class="principle">
+      <div class="num">01</div>
+      <h4>Numbers are the&nbsp;subject.</h4>
+      <p>Tabular monospace numerals, generous whitespace, restrained chrome. Charts use thin lines and minimal grids — the data carries the weight, not the container.</p>
+    </div>
+    <div class="principle">
+      <div class="num">02</div>
+      <h4>One accent, used&nbsp;sparingly.</h4>
+      <p>A single institutional teal-blue marks intent, focus, and primary action. It never decorates. If everything is highlighted, nothing is.</p>
+    </div>
+    <div class="principle">
+      <div class="num">03</div>
+      <h4>Serif headlines, sans&nbsp;machinery.</h4>
+      <p>A serif voice gives the agent's prose the authority of a research paper; sans-serif and mono carry the interface and the data without competing.</p>
+    </div>
+    <div class="principle">
+      <div class="num">04</div>
+      <h4>Cite or stay&nbsp;silent.</h4>
+      <p>Every claim the agent makes points back to a source — FOMC document, BLS series, speech, dataset. Trust is built from traceability, not confidence.</p>
+    </div>
+  </div>
+</section>
+
+<!-- TYPE -->
+<section class="ds" id="type">
+  <div class="sec-head">
+    <div class="sec-num">§ 01 · TYPOGRAPHY</div>
+    <div>
+      <h2 class="sec-title">Source Serif 4. Inter. JetBrains&nbsp;Mono.</h2>
+      <p class="sec-desc">A scholarly serif for headings and the agent's voice; a neutral sans for the interface; a monospace for everything numeric, tabular, or technical. Three families, total.</p>
+    </div>
+  </div>
+
+  <div class="sub-head"><span>Type scale</span><span>min 11px · max 88px</span></div>
+
+  <div class="type-row">
+    <div class="type-label">Display 1<small>Hero, marketing</small></div>
+    <div class="display-1">Reading the&nbsp;Fed.</div>
+    <div class="type-spec">Source Serif 4<br>72/72 · 300 · -2.5</div>
+  </div>
+  <div class="type-row">
+    <div class="type-label">Display 2<small>Section openers</small></div>
+    <div class="display-2">Hawkish, with reservations.</div>
+    <div class="type-spec">Source Serif 4<br>56/59 · 400 · -2.0</div>
+  </div>
+  <div class="type-row">
+    <div class="type-label">H1<small>Page titles</small></div>
+    <div class="h1">FOMC, March&nbsp;2026 — minutes</div>
+    <div class="type-spec">Source Serif 4<br>36/41 · 400 · -1.5</div>
+  </div>
+  <div class="type-row">
+    <div class="type-label">H2<small>Subsections</small></div>
+    <div class="h2">Disposition of voting members</div>
+    <div class="type-spec">Source Serif 4<br>26/33 · 500 · -1.0</div>
+  </div>
+  <div class="type-row">
+    <div class="type-label">H3<small>UI titles</small></div>
+    <div class="h3">Recent participant remarks</div>
+    <div class="type-spec">Inter<br>18/25 · 600 · -0.5</div>
+  </div>
+  <div class="type-row">
+    <div class="type-label">Body L<small>Reading prose</small></div>
+    <div class="body-l">Five participants noted that progress on disinflation had been slower than anticipated, while three argued the labor-market cooling justified a 25-basis-point cut at the June meeting.</div>
+    <div class="type-spec">Inter<br>17/27 · 400</div>
+  </div>
+  <div class="type-row">
+    <div class="type-label">Body M<small>Default UI</small></div>
+    <div class="body-m">Inflation expectations remain anchored. Median projections see core PCE at 2.4% by year-end.</div>
+    <div class="type-spec">Inter<br>15/23 · 400</div>
+  </div>
+  <div class="type-row">
+    <div class="type-label">Body S<small>Captions, helper</small></div>
+    <div class="body-s">Source: Federal Reserve Board, Summary of Economic Projections, March 2026.</div>
+    <div class="type-spec">Inter<br>13/20 · 400</div>
+  </div>
+  <div class="type-row">
+    <div class="type-label">Caption<small>Eyebrows, labels</small></div>
+    <div class="caption">Macro · Released 04:00 ET</div>
+    <div class="type-spec">JetBrains Mono<br>11/15 · 400 · +1.0</div>
+  </div>
+  <div class="type-row">
+    <div class="type-label">Numeric L<small>Headline KPI</small></div>
+    <div class="num-l">5.250 <span style="color: var(--c-pos); font-size: 18px;">+0.025</span></div>
+    <div class="type-spec">JetBrains Mono<br>32/32 · 500</div>
+  </div>
+  <div class="type-row">
+    <div class="type-label">Numeric M<small>Tables, inline</small></div>
+    <div class="num-m">2.4% · 156,000 jobs · 4.1% u‑rate</div>
+    <div class="type-spec">JetBrains Mono<br>18/24 · 500</div>
+  </div>
+
+  <div class="sub-head"><span>Pairing in context</span><span>Article + agent + data</span></div>
+
+  <div class="pairing-card">
+    <div class="eyebrow">FOMC · MARCH 19, 2026</div>
+    <h3>Powell holds steady, but the dots <em>shift inward.</em></h3>
+    <p class="body">The Committee left the target range unchanged at 5.25–5.50%, as expected. The story sits in the Summary of Economic Projections: median 2026 dots moved from three cuts to two, with a notable narrowing in the dispersion of participant forecasts.</p>
+    <div class="data-line">
+      <div><div class="k">Target range</div><div class="v">5.25 – 5.50</div></div>
+      <div><div class="k">2026 dots Δ</div><div class="v neg">−25 bps</div></div>
+      <div><div class="k">Core PCE</div><div class="v">2.4%</div></div>
+      <div><div class="k">Vote</div><div class="v">11 – 1</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- COLOR -->
+<section class="ds" id="color">
+  <div class="sec-head">
+    <div class="sec-num">§ 02 · COLOR</div>
+    <div>
+      <h2 class="sec-title">Warm neutrals. One accent. Quiet&nbsp;semantics.</h2>
+      <p class="sec-desc">A paper-leaning neutral ramp sets the tone. A single institutional blue marks intent. Semantic colors are reserved exclusively for state — never for decoration.</p>
+    </div>
+  </div>
+
+  <div class="sub-head"><span>Neutral ramp · ink &amp; paper</span><span>oklch · warm hue 80°</span></div>
+  <div class="ramp" style="background: white;">
+    <div class="step" style="background: oklch(0.992 0.003 80); color: var(--c-ink);"><div class="n">paper</div><div class="v">L .992</div></div>
+    <div class="step" style="background: oklch(0.975 0.004 80); color: var(--c-ink);"><div class="n">paper-2</div><div class="v">L .975</div></div>
+    <div class="step" style="background: oklch(0.955 0.005 80); color: var(--c-ink);"><div class="n">paper-3</div><div class="v">L .955</div></div>
+    <div class="step" style="background: oklch(0.910 0.005 80); color: var(--c-ink);"><div class="n">line</div><div class="v">L .910</div></div>
+    <div class="step" style="background: oklch(0.860 0.006 80); color: var(--c-ink);"><div class="n">line-2</div><div class="v">L .860</div></div>
+    <div class="step" style="background: oklch(0.620 0.008 80); color: white;"><div class="n">ink-3</div><div class="v">L .620</div></div>
+    <div class="step" style="background: oklch(0.460 0.010 80); color: white;"><div class="n">ink-2</div><div class="v">L .460</div></div>
+    <div class="step" style="background: oklch(0.220 0.012 80); color: white;"><div class="n">ink</div><div class="v">L .220</div></div>
+  </div>
+
+  <div class="sub-head"><span>Accent · institutional teal-blue</span><span>oklch(0.45 0.08 230)</span></div>
+  <div class="swatch-grid">
+    <div class="swatch"><div class="chip" style="background: var(--c-accent-soft);"></div><div class="meta"><span class="name">accent-soft</span><span class="val">L.95 C.025 H230</span></div></div>
+    <div class="swatch"><div class="chip" style="background: var(--c-accent-line);"></div><div class="meta"><span class="name">accent-line</span><span class="val">L.85 C.04 H230</span></div></div>
+    <div class="swatch"><div class="chip" style="background: var(--c-accent);"></div><div class="meta"><span class="name">accent</span><span class="val">L.45 C.08 H230</span></div></div>
+    <div class="swatch"><div class="chip" style="background: var(--c-accent-hover);"></div><div class="meta"><span class="name">accent-hover</span><span class="val">L.39 C.09 H230</span></div></div>
+    <div class="swatch"><div class="chip" style="background: var(--c-ink-strong);"></div><div class="meta"><span class="name">ink-strong</span><span class="val">L.15 C.015 H80</span></div></div>
+    <div class="swatch"><div class="chip" style="background: var(--c-paper);"></div><div class="meta"><span class="name">paper</span><span class="val">L.99 C.003 H80</span></div></div>
+  </div>
+
+  <div class="sub-head"><span>Semantic · state colors only</span><span>positive · negative · warning</span></div>
+  <div class="semantic-grid">
+    <div class="sem-card">
+      <div class="head"><span class="pip" style="background: var(--c-pos);"></span><span class="label">Positive · dovish</span></div>
+      <div class="demo" style="background: var(--c-pos-soft); color: var(--c-pos);">+0.42% &nbsp; ▲ above consensus</div>
+      <div class="caption" style="margin-top: auto;">Use for: gains, dovish surprises, target met</div>
+    </div>
+    <div class="sem-card">
+      <div class="head"><span class="pip" style="background: var(--c-neg);"></span><span class="label">Negative · hawkish</span></div>
+      <div class="demo" style="background: var(--c-neg-soft); color: var(--c-neg);">−0.18% &nbsp; ▼ miss vs estimate</div>
+      <div class="caption" style="margin-top: auto;">Use for: losses, hawkish surprises, breaches</div>
+    </div>
+    <div class="sem-card">
+      <div class="head"><span class="pip" style="background: var(--c-warn);"></span><span class="label">Warning · uncertainty</span></div>
+      <div class="demo" style="background: var(--c-warn-soft); color: var(--c-warn);">⏱ Awaiting CPI release · 08:30 ET</div>
+      <div class="caption" style="margin-top: auto;">Use for: pending data, low confidence, warnings</div>
+    </div>
+  </div>
+
+  <div class="sub-head"><span>Data viz palette</span><span>charts &amp; series</span></div>
+  <div class="swatch-grid" style="grid-template-columns: repeat(6,1fr);">
+    <div class="swatch"><div class="chip" style="background: var(--dv-1);"></div><div class="meta"><span class="name">dv-1 · primary</span><span class="val">accent</span></div></div>
+    <div class="swatch"><div class="chip" style="background: var(--dv-2);"></div><div class="meta"><span class="name">dv-2</span><span class="val">ink-medium</span></div></div>
+    <div class="swatch"><div class="chip" style="background: var(--dv-3);"></div><div class="meta"><span class="name">dv-3</span><span class="val">ink-soft</span></div></div>
+    <div class="swatch"><div class="chip" style="background: var(--dv-4);"></div><div class="meta"><span class="name">dv-4</span><span class="val">ink-fade</span></div></div>
+    <div class="swatch"><div class="chip" style="background: var(--c-pos);"></div><div class="meta"><span class="name">dv-pos</span><span class="val">positive</span></div></div>
+    <div class="swatch"><div class="chip" style="background: var(--c-neg);"></div><div class="meta"><span class="name">dv-neg</span><span class="val">negative</span></div></div>
+  </div>
+</section>
+
+<!-- SPACING / RADII / SHADOWS -->
+<section class="ds" id="foundations">
+  <div class="sec-head">
+    <div class="sec-num">§ 03 · SPACE · RADII · SHADOWS</div>
+    <div>
+      <h2 class="sec-title">A 4-pixel grid, four corners, four lifts.</h2>
+      <p class="sec-desc">Spacing is granular at small sizes and generous at large ones. Shadows stay almost imperceptible — the system depends on hairlines, not depth.</p>
+    </div>
+  </div>
+
+  <div class="sub-head"><span>Spacing scale · 4px base</span><span>--s-1 to --s-11</span></div>
+  <div class="scale-grid">
+    <div class="scale-cell"><div class="bar" style="height: 4px;"></div><div class="lbl">1 · 4</div></div>
+    <div class="scale-cell"><div class="bar" style="height: 8px;"></div><div class="lbl">2 · 8</div></div>
+    <div class="scale-cell"><div class="bar" style="height: 12px;"></div><div class="lbl">3 · 12</div></div>
+    <div class="scale-cell"><div class="bar" style="height: 16px;"></div><div class="lbl">4 · 16</div></div>
+    <div class="scale-cell"><div class="bar" style="height: 20px;"></div><div class="lbl">5 · 20</div></div>
+    <div class="scale-cell"><div class="bar" style="height: 24px;"></div><div class="lbl">6 · 24</div></div>
+    <div class="scale-cell"><div class="bar" style="height: 32px;"></div><div class="lbl">7 · 32</div></div>
+    <div class="scale-cell"><div class="bar" style="height: 40px;"></div><div class="lbl">8 · 40</div></div>
+    <div class="scale-cell"><div class="bar" style="height: 48px;"></div><div class="lbl">9 · 48</div></div>
+    <div class="scale-cell"><div class="bar" style="height: 64px;"></div><div class="lbl">10 · 64</div></div>
+    <div class="scale-cell"><div class="bar" style="height: 96px;"></div><div class="lbl">11 · 96</div></div>
+  </div>
+
+  <div class="sub-head"><span>Corner radii</span><span>none · 3 · 6 · 10 · 14 · pill</span></div>
+  <div class="radii-grid">
+    <div class="radii-cell" style="border-radius: 0;">none · 0</div>
+    <div class="radii-cell" style="border-radius: var(--r-1);">r-1 · 3</div>
+    <div class="radii-cell" style="border-radius: var(--r-2);">r-2 · 6</div>
+    <div class="radii-cell" style="border-radius: var(--r-3);">r-3 · 10</div>
+    <div class="radii-cell" style="border-radius: var(--r-4);">r-4 · 14</div>
+  </div>
+
+  <div class="sub-head"><span>Elevation</span><span>4 levels · barely-there</span></div>
+  <div class="shadow-grid">
+    <div class="shadow-cell s1">sh-1 · hairline</div>
+    <div class="shadow-cell s2">sh-2 · resting</div>
+    <div class="shadow-cell s3">sh-3 · hover</div>
+    <div class="shadow-cell s4">sh-4 · floating</div>
+  </div>
+</section>
+
+<!-- COMPONENTS — BUTTONS / FORMS / BADGES / ALERTS / NAV -->
+<section class="ds" id="components">
+  <div class="sec-head">
+    <div class="sec-num">§ 04 · COMPONENTS</div>
+    <div>
+      <h2 class="sec-title">Quiet controls that stay out of the&nbsp;way.</h2>
+      <p class="sec-desc">Action elements lean monochrome; the accent is reserved for the single primary action on a screen. Dense forms, small targets are not penalized for being small — they earn it.</p>
+    </div>
+  </div>
+
+  <div class="sub-head"><span>Buttons</span><span>5 styles · 3 sizes</span></div>
+  <div class="btn-row">
+    <button class="btn btn-accent">Run analysis <span class="arrow">→</span></button>
+    <button class="btn btn-primary">Open report</button>
+    <button class="btn btn-secondary">Filter</button>
+    <button class="btn btn-ghost">Cancel</button>
+    <button class="btn btn-link">View FOMC source</button>
+  </div>
+  <div class="btn-row" style="margin-top: var(--s-4);">
+    <button class="btn btn-accent btn-lg">Run analysis</button>
+    <button class="btn btn-accent">Run analysis</button>
+    <button class="btn btn-accent btn-sm">Run</button>
+    <button class="btn btn-secondary btn-sm">Export CSV</button>
+    <button class="btn btn-secondary btn-sm">Copy citation</button>
+  </div>
+
+  <div class="sub-head"><span>Form controls</span><span>inputs · select · toggle · checkbox</span></div>
+  <div class="form-grid">
+    <div class="field">
+      <label>Search release archive</label>
+      <input class="input input-search" placeholder="e.g. core PCE, dot plot, Powell" />
+    </div>
+    <div class="field">
+      <label>Time horizon</label>
+      <select class="select">
+        <option>Last 30 days</option>
+        <option>YTD</option>
+        <option>Past 12 months</option>
+        <option>Custom range…</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Series ID</label>
+      <input class="input" value="DFF · Federal Funds Rate" />
+    </div>
+    <div class="field">
+      <label>Frequency</label>
+      <div class="toggle">
+        <button>Daily</button>
+        <button class="active">Weekly</button>
+        <button>Monthly</button>
+      </div>
+    </div>
+    <div class="field" style="grid-column: span 2;">
+      <label>Agent prompt</label>
+      <textarea class="textarea" placeholder="Ask FEDWatcher to summarize, compare, or extract from a Fed release…">Compare the dispersion of participant projections between the December 2025 and March 2026 SEPs.</textarea>
+    </div>
+    <div style="display: flex; gap: var(--s-5); align-items: center; padding-top: var(--s-2);">
+      <label class="checkbox"><input type="checkbox" checked /> Include dissents</label>
+      <label class="checkbox"><input type="checkbox" /> Annotate chart</label>
+      <label class="radio"><input type="radio" name="r" checked /> Concise</label>
+      <label class="radio"><input type="radio" name="r" /> Detailed</label>
+    </div>
+  </div>
+
+  <div class="sub-head"><span>Badges &amp; tags</span><span>state · category · disposition</span></div>
+  <div class="badge-row">
+    <span class="badge badge-neutral"><span class="dot"></span>Neutral</span>
+    <span class="badge badge-accent"><span class="dot"></span>Primary</span>
+    <span class="badge badge-pos"><span class="dot"></span>Dovish</span>
+    <span class="badge badge-neg"><span class="dot"></span>Hawkish</span>
+    <span class="badge badge-warn"><span class="dot"></span>Pending</span>
+    <span class="badge badge-outline">FOMC</span>
+    <span class="badge badge-outline">SEP</span>
+    <span class="badge badge-outline">Beige Book</span>
+    <span class="badge badge-outline">Speech</span>
+    <span class="badge badge-outline">BLS · CPI</span>
+  </div>
+
+  <div class="sub-head"><span>Alerts &amp; callouts</span><span>announcement · warning · neutral</span></div>
+  <div style="display: grid; gap: var(--s-3);">
+    <div class="alert accent">
+      <div class="stripe"></div>
+      <div>
+        <h4>FOMC statement released — March 19, 2026 · 14:00 ET</h4>
+        <p>Target range held at 5.25–5.50%. Median 2026 dot moved from three cuts to two. FEDWatcher has summarized the changes against the January statement.</p>
+      </div>
+      <div class="meta">11 min&nbsp;ago</div>
+    </div>
+    <div class="alert warn">
+      <div class="stripe"></div>
+      <div>
+        <h4>Awaiting May CPI release</h4>
+        <p>Bureau of Labor Statistics scheduled for 08:30 ET on May 14. Forecasts published when consensus polls close.</p>
+      </div>
+      <div class="meta">In 6 days</div>
+    </div>
+    <div class="alert pos">
+      <div class="stripe"></div>
+      <div>
+        <h4>Core PCE in line with projection</h4>
+        <p>April reading printed 2.6% YoY, matching the median SEP projection from March. Expectations remain anchored.</p>
+      </div>
+      <div class="meta">2 hr ago</div>
+    </div>
+  </div>
+
+  <div class="sub-head"><span>Navigation · sidebar &amp; tabs</span><span>app shell pattern</span></div>
+  <div class="nav-demo">
+    <aside class="sidebar">
+      <div class="brand">FED<em style="font-style: italic; font-weight: 300; color: var(--c-accent);">Watcher</em></div>
+      <div class="group-label">Watchlist</div>
+      <div class="nav-item active"><span class="ico">
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 11l3-4 3 2 4-6"/></svg>
+      </span>Dashboard</div>
+      <div class="nav-item"><span class="ico">
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="10" height="10" rx="1.5"/><path d="M2 6h10M6 2v10"/></svg>
+      </span>FOMC calendar</div>
+      <div class="nav-item"><span class="ico">
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 3h8v8H3z"/><path d="M5 6h4M5 8h4"/></svg>
+      </span>Releases</div>
+      <div class="group-label">Sources</div>
+      <div class="nav-item">Federal Reserve</div>
+      <div class="nav-item">BLS · BEA · Treasury</div>
+      <div class="nav-item">Speeches archive</div>
+      <div class="group-label">Workspace</div>
+      <div class="nav-item">My research</div>
+      <div class="nav-item">Threads</div>
+    </aside>
+    <div class="nav-content">
+      <div class="breadcrumb"><span>Dashboard</span><span>FOMC</span><span>March 2026</span></div>
+      <h2>Hawkish, with reservations.</h2>
+      <div class="tabs">
+        <button class="active">Summary</button>
+        <button>Statement</button>
+        <button>Minutes</button>
+        <button>Projections</button>
+        <button>Press conference</button>
+      </div>
+      <p class="body-m" style="color: var(--c-ink-2); max-width: 60ch; margin: 0;">The Committee held the target range at 5.25–5.50%, voting 11–1. The Summary of Economic Projections shows a more cautious 2026 path, with the median dot moving inward.</p>
+      <div class="row">
+        <button class="btn btn-accent btn-sm">Open agent thread →</button>
+        <button class="btn btn-secondary btn-sm">Export brief (PDF)</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="sub-head"><span>Cards · content &amp; metric</span><span>article preview · KPI tile</span></div>
+  <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: var(--s-5);">
+    <div class="content-card">
+      <div class="eyebrow">FOMC ANALYSIS · 6 MIN READ</div>
+      <h3>What the dispersion of dots is really telling us about 2026.</h3>
+      <p>FEDWatcher tracks not just the median dot, but the spread. March's SEP shows the tightest dispersion since the 2022 hiking cycle began — a quiet but unusually firm signal of consensus among voting members.</p>
+      <div class="footer"><span>Auth · FEDWATCHER AGENT</span><span>04 SOURCES CITED</span></div>
+    </div>
+    <div class="content-card">
+      <div class="eyebrow">METHODOLOGY</div>
+      <h3>How FEDWatcher reads a&nbsp;statement.</h3>
+      <p>The agent ingests the official PDF, performs a structured diff against the previous statement, and tags each substantive change by topic and disposition.</p>
+      <div class="footer"><span>UPDATED · MAY 2026</span><span>↗</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- DATA — METRIC TILES, TABLES, CHARTS -->
+<section class="ds" id="data">
+  <div class="sec-head">
+    <div class="sec-num">§ 05 · DATA</div>
+    <div>
+      <h2 class="sec-title">Tables and charts that breathe.</h2>
+      <p class="sec-desc">Tabular numerals, right-aligned numerics, and a chart language built on thin lines and minimal grid. Where context helps, inline bars and sparklines do quietly what a separate chart would do loudly.</p>
+    </div>
+  </div>
+
+  <div class="sub-head"><span>Metric tiles · KPIs</span><span>headline numbers with deltas + sparks</span></div>
+  <div class="metric-grid">
+    <div class="metric">
+      <div class="label">Federal Funds Rate</div>
+      <div class="value">5.25<span class="unit">– 5.50%</span></div>
+      <div class="delta"><span class="badge badge-neutral" style="padding: 1px 6px; font-size: 10px;">HOLD</span><span>since Jul 2025</span></div>
+      <svg class="spark" viewBox="0 0 200 36" width="100%" height="36" preserveAspectRatio="none">
+        <path d="M0,28 L20,28 L40,22 L60,22 L80,16 L100,16 L120,10 L140,10 L160,6 L200,6" stroke="var(--c-accent)" stroke-width="1.5" fill="none" stroke-linejoin="round" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="metric">
+      <div class="label">Core PCE · YoY</div>
+      <div class="value">2.6<span class="unit">%</span></div>
+      <div class="delta pos"><span class="v">−0.2 pts</span><span>vs. prior</span></div>
+      <svg class="spark" viewBox="0 0 200 36" width="100%" height="36" preserveAspectRatio="none">
+        <path d="M0,4 C30,8 50,16 80,18 C110,20 140,24 200,28" stroke="var(--c-pos)" stroke-width="1.5" fill="none"/>
+      </svg>
+    </div>
+    <div class="metric">
+      <div class="label">Unemployment</div>
+      <div class="value">4.1<span class="unit">%</span></div>
+      <div class="delta neg"><span class="v">+0.1 pts</span><span>vs. prior</span></div>
+      <svg class="spark" viewBox="0 0 200 36" width="100%" height="36" preserveAspectRatio="none">
+        <path d="M0,28 C30,26 50,22 80,20 C110,18 140,14 200,10" stroke="var(--c-neg)" stroke-width="1.5" fill="none"/>
+      </svg>
+    </div>
+    <div class="metric">
+      <div class="label">10Y Treasury Yield</div>
+      <div class="value">4.32<span class="unit">%</span></div>
+      <div class="delta pos"><span class="v">−4 bps</span><span>1d</span></div>
+      <svg class="spark" viewBox="0 0 200 36" width="100%" height="36" preserveAspectRatio="none">
+        <path d="M0,12 L25,18 L50,14 L75,22 L100,18 L125,24 L150,20 L175,26 L200,22" stroke="var(--dv-2)" stroke-width="1.5" fill="none" stroke-linejoin="round"/>
+      </svg>
+    </div>
+  </div>
+
+  <div class="sub-head"><span>Data table · participant projections</span><span>tabular nums · inline bars · row hover</span></div>
+  <div class="table-wrap">
+    <div class="table-toolbar">
+      <div class="title">Summary of Economic Projections — March 2026</div>
+      <div class="badge badge-outline">11 voting · 19 participants</div>
+      <button class="btn btn-secondary btn-sm">Export CSV</button>
+    </div>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Variable</th>
+          <th>2026 median</th>
+          <th class="num">Δ vs Dec '25</th>
+          <th class="num">2027 median</th>
+          <th class="num">Long run</th>
+          <th class="num" style="width: 240px;">Dispersion (range)</th>
+          <th>Disposition</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><div class="name">Real GDP growth</div><div class="sub">Q4-over-Q4 percent change</div></td>
+          <td class="num">2.0</td>
+          <td class="num" style="color: var(--c-pos);">+0.2</td>
+          <td class="num">1.9</td>
+          <td class="num">1.8</td>
+          <td>
+            <div class="bar-cell"><span class="mono" style="font-size: 11px; color: var(--c-ink-3);">1.6 — 2.4</span><span class="bar" style="width: 80px;"></span></div>
+          </td>
+          <td><span class="badge badge-pos"><span class="dot"></span>Dovish</span></td>
+        </tr>
+        <tr>
+          <td><div class="name">Unemployment rate</div><div class="sub">Q4 average, percent</div></td>
+          <td class="num">4.1</td>
+          <td class="num" style="color: var(--c-ink-3);">0.0</td>
+          <td class="num">4.0</td>
+          <td class="num">4.0</td>
+          <td>
+            <div class="bar-cell"><span class="mono" style="font-size: 11px; color: var(--c-ink-3);">3.9 — 4.4</span><span class="bar" style="width: 60px; background: var(--c-ink-3);"></span></div>
+          </td>
+          <td><span class="badge badge-neutral"><span class="dot"></span>Neutral</span></td>
+        </tr>
+        <tr>
+          <td><div class="name">Core PCE inflation</div><div class="sub">Q4-over-Q4 percent change</div></td>
+          <td class="num">2.4</td>
+          <td class="num" style="color: var(--c-neg);">+0.2</td>
+          <td class="num">2.2</td>
+          <td class="num">2.0</td>
+          <td>
+            <div class="bar-cell"><span class="mono" style="font-size: 11px; color: var(--c-ink-3);">2.2 — 2.7</span><span class="bar neg" style="width: 70px;"></span></div>
+          </td>
+          <td><span class="badge badge-neg"><span class="dot"></span>Hawkish</span></td>
+        </tr>
+        <tr>
+          <td><div class="name">Federal funds rate</div><div class="sub">Year-end, midpoint</div></td>
+          <td class="num">4.875</td>
+          <td class="num" style="color: var(--c-neg);">+25 bps</td>
+          <td class="num">3.875</td>
+          <td class="num">2.875</td>
+          <td>
+            <div class="bar-cell"><span class="mono" style="font-size: 11px; color: var(--c-ink-3);">4.375 — 5.375</span><span class="bar neg" style="width: 110px;"></span></div>
+          </td>
+          <td><span class="badge badge-neg"><span class="dot"></span>Hawkish</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="sub-head"><span>Charts · line, bar, distribution</span><span>thin strokes · annotation-forward · no fill</span></div>
+
+  <div style="display: grid; grid-template-columns: 1.4fr 1fr; gap: var(--s-5);">
+    <!-- LINE CHART: Fed funds + 10Y -->
+    <div class="chart-card">
+      <div class="chart-head">
+        <div>
+          <h3 class="title">Policy rate vs. 10-year yield</h3>
+          <div class="sub">Daily · Jan 2024 — May 2026 · percent</div>
+        </div>
+        <div class="chart-legend">
+          <span class="ent"><span class="l" style="background: var(--c-accent);"></span>Fed funds (upper)</span>
+          <span class="ent"><span class="l" style="background: var(--dv-2); border-top: 1.5px dashed var(--dv-2); height: 0; border-bottom: 0;"></span>10Y Treasury</span>
+        </div>
+      </div>
+      <svg viewBox="0 0 720 260" width="100%" height="260" font-family="JetBrains Mono" font-size="10">
+        <!-- grid -->
+        <g stroke="var(--c-line)" stroke-width="1">
+          <line x1="40" y1="20"  x2="700" y2="20"/>
+          <line x1="40" y1="80"  x2="700" y2="80"/>
+          <line x1="40" y1="140" x2="700" y2="140"/>
+          <line x1="40" y1="200" x2="700" y2="200"/>
+          <line x1="40" y1="240" x2="700" y2="240" stroke="var(--c-line-2)"/>
+        </g>
+        <!-- y labels -->
+        <g fill="var(--c-ink-3)">
+          <text x="32" y="23"  text-anchor="end">6.0</text>
+          <text x="32" y="83"  text-anchor="end">5.0</text>
+          <text x="32" y="143" text-anchor="end">4.0</text>
+          <text x="32" y="203" text-anchor="end">3.0</text>
+          <text x="32" y="243" text-anchor="end">2.0</text>
+        </g>
+        <!-- x labels -->
+        <g fill="var(--c-ink-3)">
+          <text x="40"  y="256">Jan '24</text>
+          <text x="200" y="256">Jul '24</text>
+          <text x="360" y="256">Jan '25</text>
+          <text x="520" y="256">Jul '25</text>
+          <text x="675" y="256" text-anchor="end">May '26</text>
+        </g>
+        <!-- annotation marker: rate cut Sep 2024 -->
+        <g>
+          <line x1="240" y1="20" x2="240" y2="240" stroke="var(--c-line-2)" stroke-dasharray="2 3"/>
+          <text x="246" y="32" fill="var(--c-ink-2)" font-size="10">Sep '24 · −50 bps</text>
+        </g>
+        <!-- 10Y -->
+        <path d="M40,160 L80,150 L120,165 L160,158 L200,148 L240,140 L280,135 L320,130 L360,128 L400,122 L440,118 L480,124 L520,130 L560,128 L600,134 L640,138 L680,141 L700,141"
+              stroke="var(--dv-2)" stroke-width="1.5" fill="none" stroke-dasharray="4 3" stroke-linecap="round" stroke-linejoin="round"/>
+        <!-- Fed funds (step) -->
+        <path d="M40,80 L240,80 L240,95 L380,95 L380,110 L520,110 L520,80 L700,80"
+              stroke="var(--c-accent)" stroke-width="1.5" fill="none" stroke-linecap="square" stroke-linejoin="miter"/>
+        <!-- end markers -->
+        <circle cx="700" cy="80" r="2.5" fill="var(--c-accent)"/>
+        <circle cx="700" cy="141" r="2.5" fill="var(--dv-2)"/>
+        <text x="690" y="74" text-anchor="end" fill="var(--c-accent)" font-weight="500">5.50</text>
+        <text x="690" y="155" text-anchor="end" fill="var(--dv-2)" font-weight="500">4.32</text>
+      </svg>
+    </div>
+
+    <!-- DOT PLOT / BAR CHART: dispersion -->
+    <div class="chart-card">
+      <div class="chart-head">
+        <div>
+          <h3 class="title">2026 fed funds dot dispersion</h3>
+          <div class="sub">Participants · midpoint, percent</div>
+        </div>
+      </div>
+      <svg viewBox="0 0 360 260" width="100%" height="260" font-family="JetBrains Mono" font-size="10">
+        <g stroke="var(--c-line)" stroke-width="1">
+          <line x1="50" y1="30"  x2="340" y2="30"/>
+          <line x1="50" y1="80"  x2="340" y2="80"/>
+          <line x1="50" y1="130" x2="340" y2="130"/>
+          <line x1="50" y1="180" x2="340" y2="180"/>
+          <line x1="50" y1="230" x2="340" y2="230" stroke="var(--c-line-2)"/>
+        </g>
+        <g fill="var(--c-ink-3)">
+          <text x="44" y="33"  text-anchor="end">5.50</text>
+          <text x="44" y="83"  text-anchor="end">5.00</text>
+          <text x="44" y="133" text-anchor="end">4.50</text>
+          <text x="44" y="183" text-anchor="end">4.00</text>
+          <text x="44" y="233" text-anchor="end">3.50</text>
+        </g>
+        <!-- median line -->
+        <line x1="50" y1="115" x2="340" y2="115" stroke="var(--c-accent)" stroke-width="1" stroke-dasharray="4 3"/>
+        <text x="335" y="111" text-anchor="end" fill="var(--c-accent)" font-size="10">median 4.875</text>
+        <!-- dots: jittered around median -->
+        <g fill="var(--c-ink)">
+          <circle cx="80" cy="60" r="3"/>
+          <circle cx="100" cy="80" r="3"/>
+          <circle cx="120" cy="95" r="3"/>
+          <circle cx="140" cy="100" r="3"/>
+          <circle cx="160" cy="110" r="3"/>
+          <circle cx="180" cy="115" r="3" fill="var(--c-accent)"/>
+          <circle cx="200" cy="115" r="3" fill="var(--c-accent)"/>
+          <circle cx="220" cy="115" r="3" fill="var(--c-accent)"/>
+          <circle cx="240" cy="120" r="3"/>
+          <circle cx="260" cy="135" r="3"/>
+          <circle cx="280" cy="150" r="3"/>
+          <circle cx="300" cy="170" r="3"/>
+        </g>
+        <text x="50" y="252" fill="var(--c-ink-3)">12 of 19 participants shown</text>
+      </svg>
+    </div>
+  </div>
+
+  <!-- BAR CHART -->
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--s-5); margin-top: var(--s-5);">
+    <div class="chart-card">
+      <div class="chart-head">
+        <div>
+          <h3 class="title">Statement diff · sentiment by topic</h3>
+          <div class="sub">March vs January 2026 · ± standard score</div>
+        </div>
+      </div>
+      <svg viewBox="0 0 480 260" width="100%" height="260" font-family="JetBrains Mono" font-size="10">
+        <line x1="220" y1="20" x2="220" y2="240" stroke="var(--c-line-2)"/>
+        <g fill="var(--c-ink-3)">
+          <text x="50" y="40">Inflation outlook</text>
+          <text x="50" y="80">Labor market</text>
+          <text x="50" y="120">Growth</text>
+          <text x="50" y="160">Forward guidance</text>
+          <text x="50" y="200">Financial conditions</text>
+        </g>
+        <!-- bars -->
+        <g>
+          <rect x="220" y="30" width="80" height="14" fill="var(--c-neg)"/>
+          <text x="305" y="41" fill="var(--c-neg)" font-weight="500">+0.42</text>
+
+          <rect x="180" y="70" width="40" height="14" fill="var(--c-pos)"/>
+          <text x="175" y="81" fill="var(--c-pos)" font-weight="500" text-anchor="end">−0.21</text>
+
+          <rect x="220" y="110" width="20" height="14" fill="var(--c-ink-3)"/>
+          <text x="245" y="121" fill="var(--c-ink-3)">+0.08</text>
+
+          <rect x="220" y="150" width="60" height="14" fill="var(--c-neg)"/>
+          <text x="285" y="161" fill="var(--c-neg)" font-weight="500">+0.31</text>
+
+          <rect x="220" y="190" width="14" height="14" fill="var(--c-ink-3)"/>
+          <text x="240" y="201" fill="var(--c-ink-3)">+0.04</text>
+        </g>
+        <text x="220" y="256" fill="var(--c-ink-3)" text-anchor="middle">← dovish &nbsp;·&nbsp; hawkish →</text>
+      </svg>
+    </div>
+
+    <!-- AREA / DISTRIBUTION (still thin) -->
+    <div class="chart-card">
+      <div class="chart-head">
+        <div>
+          <h3 class="title">Distribution · expected fed funds, year-end 2026</h3>
+          <div class="sub">Implied from OIS · density</div>
+        </div>
+      </div>
+      <svg viewBox="0 0 480 260" width="100%" height="260" font-family="JetBrains Mono" font-size="10">
+        <g stroke="var(--c-line)">
+          <line x1="40" y1="40"  x2="460" y2="40"/>
+          <line x1="40" y1="100" x2="460" y2="100"/>
+          <line x1="40" y1="160" x2="460" y2="160"/>
+          <line x1="40" y1="220" x2="460" y2="220" stroke="var(--c-line-2)"/>
+        </g>
+        <!-- distribution curve, thin -->
+        <path d="M40,220 C100,218 140,210 180,180 C220,140 240,60 260,50 C280,60 320,140 360,180 C400,210 440,218 460,220"
+              stroke="var(--c-accent)" stroke-width="1.5" fill="none"/>
+        <!-- median marker -->
+        <line x1="260" y1="50" x2="260" y2="220" stroke="var(--c-accent)" stroke-dasharray="3 3" stroke-width="1"/>
+        <circle cx="260" cy="50" r="3" fill="var(--c-accent)"/>
+        <text x="266" y="44" fill="var(--c-accent)" font-weight="500">4.875% · median</text>
+        <!-- x labels -->
+        <g fill="var(--c-ink-3)">
+          <text x="40"  y="240">3.50</text>
+          <text x="180" y="240">4.25</text>
+          <text x="320" y="240">5.00</text>
+          <text x="455" y="240" text-anchor="end">5.75</text>
+        </g>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- AGENT + CITATIONS -->
+<section class="ds" id="agent">
+  <div class="sec-head">
+    <div class="sec-num">§ 06 · AGENT &amp; CITATIONS</div>
+    <div>
+      <h2 class="sec-title">The agent reads like a&nbsp;research note.</h2>
+      <p class="sec-desc">FEDWatcher's prose lives in a roomy column with serif headlines and inline citations. No avatars, no chrome, no chat bubbles — every claim is anchored to a source, and sources are listed at the bottom of each turn.</p>
+    </div>
+  </div>
+
+  <div class="agent-thread">
+
+    <div class="agent-msg">
+      <div class="role">You · 14:08</div>
+      <div class="body">
+        <p>Compare the dispersion of participant projections between the December 2025 and March 2026 SEPs. Was the consensus tighter?</p>
+      </div>
+    </div>
+
+    <div class="agent-msg">
+      <div class="role agent">FEDWatcher · 14:08</div>
+      <div class="body">
+        <p>Yes — measurably. Across the three core variables, participant dispersion in the March 2026 SEP narrowed relative to December 2025, with the largest tightening on the <strong>fed funds path</strong>.</p>
+        <p>For the 2026 fed funds midpoint, the high-low range fell from <span class="num">1.50</span> percentage points in December to <span class="num">1.00</span> in March<span class="cite-inline">[1]</span>. Core PCE dispersion narrowed from <span class="num">0.7</span> to <span class="num">0.5</span> points<span class="cite-inline">[1]</span>, and the unemployment range was unchanged at <span class="num">0.5</span> points.</p>
+        <p>Reading this alongside the statement, the implication is that participants are converging on a slower easing path. Powell's press conference framed this as a function of stickier services inflation rather than a re-evaluation of the long-run neutral rate<span class="cite-inline">[2]</span>.</p>
+
+        <div class="sources">
+          <div class="label">Sources cited</div>
+          <a class="citation" href="#"><span class="n">[1]</span> Federal Reserve Board · SEP, March 2026 · Table 2 (PDF, p. 3)</a>
+          <a class="citation" href="#"><span class="n">[2]</span> Chair Powell · Press Conference Transcript, March 19 2026 · 14:30 ET</a>
+          <a class="citation" href="#"><span class="n">[3]</span> Federal Reserve Board · SEP, December 2025 · Table 2 (PDF, p. 3)</a>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ICONOGRAPHY -->
+<section class="ds" id="icons">
+  <div class="sec-head">
+    <div class="sec-num">§ 07 · ICONOGRAPHY</div>
+    <div>
+      <h2 class="sec-title">Thin strokes, square corners, no&nbsp;novelty.</h2>
+      <p class="sec-desc">Icons are 16-grid, 1.5px stroke, monoline. Reach for Lucide or Phosphor (regular weight). Avoid filled glyphs except for currently-active states; never use multi-color or skeumorphic icons.</p>
+    </div>
+  </div>
+  <div class="icon-grid">
+    <div class="icon-cell"><svg viewBox="0 0 24 24"><path d="M3 18l5-7 4 3 6-10"/><path d="M14 4h5v5"/></svg><span class="lbl">trend</span></div>
+    <div class="icon-cell"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 3v18"/></svg><span class="lbl">grid</span></div>
+    <div class="icon-cell"><svg viewBox="0 0 24 24"><path d="M4 4h16v5H4zM4 13h16v7H4z"/><path d="M7 17h6"/></svg><span class="lbl">document</span></div>
+    <div class="icon-cell"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m20 20-4-4"/></svg><span class="lbl">search</span></div>
+    <div class="icon-cell"><svg viewBox="0 0 24 24"><path d="M12 3v9l6 3"/><circle cx="12" cy="12" r="9"/></svg><span class="lbl">time</span></div>
+    <div class="icon-cell"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="1.5"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><span class="lbl">calendar</span></div>
+    <div class="icon-cell"><svg viewBox="0 0 24 24"><path d="M12 3v18M5 10l7-7 7 7"/></svg><span class="lbl">up</span></div>
+    <div class="icon-cell"><svg viewBox="0 0 24 24"><path d="M12 21V3M5 14l7 7 7-7"/></svg><span class="lbl">down</span></div>
+    <div class="icon-cell"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h7"/></svg><span class="lbl">filter</span></div>
+    <div class="icon-cell"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg><span class="lbl">pending</span></div>
+    <div class="icon-cell"><svg viewBox="0 0 24 24"><path d="M12 4v16M4 12h16"/></svg><span class="lbl">add</span></div>
+    <div class="icon-cell"><svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg><span class="lbl">expand</span></div>
+    <div class="icon-cell"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 5l7 7-7 7"/></svg><span class="lbl">arrow-r</span></div>
+    <div class="icon-cell"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.5-7-10a7 7 0 0 1 14 0c0 5.5-7 10-7 10z"/><circle cx="12" cy="11" r="2.5"/></svg><span class="lbl">source</span></div>
+    <div class="icon-cell"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 16v-5M12 8h.01"/></svg><span class="lbl">info</span></div>
+    <div class="icon-cell"><svg viewBox="0 0 24 24"><path d="m4 4 16 16M4 20 20 4"/></svg><span class="lbl">close</span></div>
+  </div>
+</section>
+
+<!-- WORDMARK -->
+<section class="ds" id="brand">
+  <div class="sec-head">
+    <div class="sec-num">§ 08 · WORDMARK</div>
+    <div>
+      <h2 class="sec-title">Two voices set in&nbsp;type.</h2>
+      <p class="sec-desc">FEDWatcher is set in Source Serif 4. The first half is upright Regular — the institution. The second half is italic Light, in accent — the agent watching it. No logomark; the contrast is the mark.</p>
+    </div>
+  </div>
+
+  <div style="padding: var(--s-9) 0; text-align: center; border: 1px solid var(--c-line); border-radius: var(--r-3); background: var(--c-paper-2);">
+    <div class="wordmark-large">FED<span class="watcher">Watcher</span><span class="dot">.</span></div>
+    <div class="caption" style="margin-top: var(--s-5);">SOURCE SERIF 4 · 88pt · -3.5% TRACKING · MIXED WEIGHT</div>
+  </div>
+
+  <div class="wordmark-row">
+    <div class="wm-card">
+      <div class="lbl">Primary horizontal</div>
+      <div class="wm">FED<em>Watcher</em></div>
+      <div class="lbl">Use on light surfaces</div>
+    </div>
+    <div class="wm-card">
+      <div class="lbl">Stacked</div>
+      <div class="wm wm-stacked">FED<em>Watcher</em></div>
+      <div class="lbl">Use in narrow contexts</div>
+    </div>
+    <div class="wm-card dark">
+      <div class="lbl">Reversed</div>
+      <div class="wm">FED<em>Watcher</em></div>
+      <div class="lbl">Use on ink-strong</div>
+    </div>
+  </div>
+
+  <div class="sub-head" style="margin-top: var(--s-9);"><span>Construction</span><span>upright + italic, one accent</span></div>
+  <div style="display: grid; grid-template-columns: repeat(3,1fr); gap: var(--s-5);">
+    <div class="content-card">
+      <div class="eyebrow">DO</div>
+      <p style="color: var(--c-ink); font-size: 14px;">Set "FED" upright, regular weight; set "Watcher" italic, light, in accent. Optionally close with a period in accent.</p>
+    </div>
+    <div class="content-card">
+      <div class="eyebrow">DO NOT</div>
+      <p style="color: var(--c-ink); font-size: 14px;">Apply gradients, drop-shadows, or glyph icons. Do not space the two halves apart, hyphenate, or change the case.</p>
+    </div>
+    <div class="content-card">
+      <div class="eyebrow">CLEAR SPACE</div>
+      <p style="color: var(--c-ink); font-size: 14px;">Keep at least the cap height of "F" as breathing room on every side. Minimum legible size: 14px on screen, 9pt in print.</p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <span>FEDWATCHER · DESIGN SYSTEM · v0.1 · MAY 2026</span>
+  <span>UNI PROJECT · ELLEP.IT</span>
+</footer>
+
+</main>
+
+<!-- TWEAKS PANEL -->
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel">
+const { useTweaks, TweaksPanel, TweakSection, TweakColor, TweakRadio, TweakToggle } = window;
+
+function App() {
+  const [t, setTweak] = useTweaks(/*EDITMODE-BEGIN*/{
+    "accentHue": 230,
+    "density": "comfortable",
+    "monoNumerics": true,
+    "showGrid": false
+  }/*EDITMODE-END*/);
+
+  React.useEffect(() => {
+    const r = document.documentElement;
+    r.style.setProperty('--c-accent-h', t.accentHue);
+    r.style.setProperty('--c-accent',       `oklch(0.45 0.08 ${t.accentHue})`);
+    r.style.setProperty('--c-accent-hover', `oklch(0.39 0.09 ${t.accentHue})`);
+    r.style.setProperty('--c-accent-soft',  `oklch(0.95 0.025 ${t.accentHue})`);
+    r.style.setProperty('--c-accent-line',  `oklch(0.85 0.04 ${t.accentHue})`);
+
+    if (t.density === 'compact') {
+      r.style.setProperty('--row-h', '32px');
+      r.style.setProperty('--s-6', '20px');
+      r.style.setProperty('--s-7', '28px');
+      r.style.setProperty('--s-9', '40px');
+      r.style.setProperty('--s-11', '72px');
+    } else {
+      r.style.setProperty('--row-h', '40px');
+      r.style.setProperty('--s-6', '24px');
+      r.style.setProperty('--s-7', '32px');
+      r.style.setProperty('--s-9', '48px');
+      r.style.setProperty('--s-11', '96px');
+    }
+
+    if (t.monoNumerics) {
+      r.style.setProperty('--tnum', '"tnum" 1, "lnum" 1');
+    } else {
+      r.style.setProperty('--tnum', '"pnum" 1, "lnum" 1');
+    }
+
+    document.body.style.backgroundImage = t.showGrid
+      ? 'linear-gradient(to right, oklch(0.91 0.005 80) 1px, transparent 1px), linear-gradient(to bottom, oklch(0.91 0.005 80) 1px, transparent 1px)'
+      : '';
+    document.body.style.backgroundSize = t.showGrid ? '8px 8px' : '';
+  }, [t]);
+
+  const accentOptions = [
+    'oklch(0.45 0.08 230)', // teal-blue (default)
+    'oklch(0.45 0.10 145)', // forest
+    'oklch(0.45 0.11 25)',  // brick
+    'oklch(0.40 0.05 280)', // dusk
+  ];
+  const hueByColor = { 'oklch(0.45 0.08 230)': 230, 'oklch(0.45 0.10 145)': 145, 'oklch(0.45 0.11 25)': 25, 'oklch(0.40 0.05 280)': 280 };
+
+  return (
+    <TweaksPanel title="Tweaks" defaultPos={{ right: 24, bottom: 24 }}>
+      <TweakSection title="Accent">
+        <TweakColor
+          label="Accent color"
+          value={Object.keys(hueByColor).find(k => hueByColor[k] === t.accentHue) || accentOptions[0]}
+          options={accentOptions}
+          onChange={(v) => setTweak('accentHue', hueByColor[v])}
+        />
+      </TweakSection>
+      <TweakSection title="Layout">
+        <TweakRadio
+          label="Density"
+          value={t.density}
+          options={[{ value: 'comfortable', label: 'Comfortable' }, { value: 'compact', label: 'Compact' }]}
+          onChange={(v) => setTweak('density', v)}
+        />
+        <TweakToggle
+          label="Tabular numerals"
+          value={t.monoNumerics}
+          onChange={(v) => setTweak('monoNumerics', v)}
+        />
+        <TweakToggle
+          label="Baseline grid (8px)"
+          value={t.showGrid}
+          onChange={(v) => setTweak('showGrid', v)}
+        />
+      </TweakSection>
+    </TweaksPanel>
+  );
+}
+
+const root = document.createElement('div');
+document.body.appendChild(root);
+ReactDOM.createRoot(root).render(<App />);
+</script>
+</body>
+</html>
