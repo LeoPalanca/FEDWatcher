@@ -10,11 +10,20 @@
   ];
 
   const PALETTE = [
-    "oklch(0.45 0.08 230)",   // accent
-    "oklch(0.52 0.13 25)",    // neg
-    "oklch(0.50 0.09 155)",   // pos
-    "oklch(0.62 0.10 75)",    // warn
-    "oklch(0.42 0.012 80)",   // dark neutral
+    "oklch(0.45 0.08 230)",
+    "oklch(0.52 0.13 25)",
+    "oklch(0.50 0.09 155)",
+    "oklch(0.62 0.10 75)",
+    "oklch(0.42 0.012 80)",
+    "oklch(0.55 0.10 290)",
+    "oklch(0.55 0.10 200)",
+  ];
+
+  const RANGES = [
+    { key: "1Y", label: "1Y", months: 12 },
+    { key: "5Y", label: "5Y", months: 60 },
+    { key: "10Y", label: "10Y", months: 120 },
+    { key: "MAX", label: "Max", months: null },
   ];
 
   const $ = (id) => document.getElementById(id);
@@ -23,6 +32,8 @@
 
   let DATA = null;
   let activeKey = "macro_data";
+  let activeRange = "10Y";
+  let scaleMode = "multi"; // multi | indexed | shared
   let chart = null;
   let hiddenSeries = new Set();
 
@@ -34,12 +45,61 @@
       DATA = {};
       console.error("data load failed", e);
     }
-    renderPicker();
+    renderTablePicker();
+    renderRangePicker();
+    wireScalePicker();
     renderActive();
     wireModal();
+    hydrateHero();
   }
 
-  function renderPicker() {
+  function hydrateHero() {
+    const macro = DATA?.macro_data;
+    if (!macro?.rows?.length) return;
+    const rows = macro.rows.slice().sort((a, b) => String(a.observation_month).localeCompare(String(b.observation_month)));
+    const lastWith = (col) => { for (let i = rows.length - 1; i >= 0; i--) if (isNumLike(rows[i][col])) return rows[i]; return null; };
+    const cpiRow = lastWith("core_cpi_yoy") || lastWith("core_cpi_index");
+    const unRow  = lastWith("unemployment_rate");
+    if (cpiRow) {
+      const yoy = isNumLike(cpiRow.core_cpi_yoy) ? Number(cpiRow.core_cpi_yoy) : null;
+      const idx = isNumLike(cpiRow.core_cpi_index) ? Number(cpiRow.core_cpi_index) : null;
+      const cpiText = yoy !== null ? `${yoy.toFixed(1)}` : (idx !== null ? idx.toFixed(2) : "—");
+      const cpiUnit = yoy !== null ? "%" : "";
+      const heroCpi = $("hero-cpi");
+      if (heroCpi) heroCpi.firstChild.textContent = `${cpiText}${cpiUnit} `;
+      const m = $("metric-cpi");
+      if (m) m.innerHTML = `${cpiText}<span class="unit">${cpiUnit || "·idx"}</span>`;
+      const dEl = $("metric-cpi-d");
+      if (dEl) {
+        const prevIdx = rows.findIndex(r => r === cpiRow) - 1;
+        if (prevIdx >= 0 && isNumLike(rows[prevIdx].core_cpi_yoy) && yoy !== null) {
+          const d = yoy - Number(rows[prevIdx].core_cpi_yoy);
+          dEl.textContent = `${d >= 0 ? "+" : ""}${d.toFixed(2)} pp`;
+          dEl.parentElement.classList.toggle("neg", d > 0);
+          dEl.parentElement.classList.toggle("pos", d < 0);
+        }
+      }
+    }
+    if (unRow) {
+      const u = Number(unRow.unemployment_rate);
+      const heroUn = $("hero-un");
+      if (heroUn) heroUn.firstChild.textContent = `${u.toFixed(1)}% `;
+      const m = $("metric-un");
+      if (m) m.innerHTML = `${u.toFixed(1)}<span class="unit">%</span>`;
+      const dEl = $("metric-un-d");
+      if (dEl) {
+        const prevIdx = rows.findIndex(r => r === unRow) - 1;
+        if (prevIdx >= 0 && isNumLike(rows[prevIdx].unemployment_rate)) {
+          const d = u - Number(rows[prevIdx].unemployment_rate);
+          dEl.textContent = `${d >= 0 ? "+" : ""}${d.toFixed(1)} pp`;
+          dEl.parentElement.classList.toggle("neg", d > 0);
+          dEl.parentElement.classList.toggle("pos", d < 0);
+        }
+      }
+    }
+  }
+
+  function renderTablePicker() {
     const root = $("table-picker");
     root.innerHTML = "";
     for (const t of TABLES) {
@@ -58,47 +118,114 @@
     }
   }
 
+  function renderRangePicker() {
+    const root = $("range-picker");
+    root.innerHTML = "";
+    for (const r of RANGES) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.dataset.range = r.key;
+      b.textContent = r.label;
+      if (r.key === activeRange) b.classList.add("active");
+      b.addEventListener("click", () => { activeRange = r.key; renderActive(); });
+      root.appendChild(b);
+    }
+  }
+
+  function wireScalePicker() {
+    $("scale-picker").querySelectorAll("button").forEach(b => {
+      b.addEventListener("click", () => {
+        scaleMode = b.dataset.scale;
+        $("scale-picker").querySelectorAll("button").forEach(x => x.classList.toggle("active", x === b));
+        renderActive();
+      });
+    });
+  }
+
   function renderActive() {
     document.querySelectorAll("#table-picker button").forEach(b => b.classList.toggle("active", b.dataset.key === activeKey));
+    document.querySelectorAll("#range-picker button").forEach(b => b.classList.toggle("active", b.dataset.range === activeRange));
     const def = TABLES.find(t => t.key === activeKey);
     const tbl = DATA[activeKey] ?? { columns: [], rows: [] };
     $("chart-title").textContent = def.title;
     $("chart-sub").textContent = def.sub;
-    renderChart(def, tbl);
+    const sortedRows = tbl.rows.slice().sort((a, b) => String(a[def.xField]).localeCompare(String(b[def.xField])));
+    const rangedRows = applyRange(sortedRows, def);
+    renderChart(def, tbl, rangedRows);
     renderTable(def, tbl);
+    renderFootMeta(def, sortedRows, rangedRows);
   }
 
-  function renderChart(def, tbl) {
+  function applyRange(rows, def) {
+    if (!rows.length) return rows;
+    const r = RANGES.find(x => x.key === activeRange);
+    if (!r || !r.months) return rows;
+    const last = String(rows[rows.length - 1][def.xField] ?? "");
+    const lastDate = parseDateLoose(last);
+    if (!lastDate) return rows;
+    const cutoff = new Date(lastDate.getFullYear(), lastDate.getMonth() - r.months + 1, 1);
+    return rows.filter(row => {
+      const d = parseDateLoose(String(row[def.xField] ?? ""));
+      return d && d >= cutoff;
+    });
+  }
+
+  function parseDateLoose(s) {
+    if (!s) return null;
+    if (/^\d{4}-\d{2}$/.test(s)) return new Date(s + "-01T00:00:00");
+    const d = new Date(s);
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  function renderFootMeta(def, all, ranged) {
+    const a = all[0]?.[def.xField] ?? "—";
+    const b = all[all.length - 1]?.[def.xField] ?? "—";
+    const ra = ranged[0]?.[def.xField] ?? "—";
+    const rb = ranged[ranged.length - 1]?.[def.xField] ?? "—";
+    $("range-meta").textContent = `Range · ${ra} → ${rb} (${ranged.length} of ${all.length})`;
+    $("series-meta").textContent = `Source · ${def.key} · full ${a} → ${b}`;
+  }
+
+  function renderChart(def, tbl, rows) {
     const ctx = $("series-chart");
     if (chart) { chart.destroy(); chart = null; }
-    const rows = tbl.rows.slice().sort((a, b) => String(a[def.xField]).localeCompare(String(b[def.xField])));
     const labels = rows.map(r => r[def.xField] ?? "");
-    const series = def.numeric
-      .filter(col => tbl.columns.includes(col))
-      .map((col, i) => ({
+    const cols = def.numeric.filter(col => tbl.columns.includes(col));
+
+    const allDatasets = cols.map((col, i) => {
+      const color = PALETTE[i % PALETTE.length];
+      const raw = rows.map(r => isNumLike(r[col]) ? Number(r[col]) : null);
+      const data = transformSeries(raw, scaleMode);
+      return {
         label: col,
-        data: rows.map(r => isNumLike(r[col]) ? Number(r[col]) : null),
-        borderColor: PALETTE[i % PALETTE.length],
-        backgroundColor: PALETTE[i % PALETTE.length],
-        borderWidth: 1.5,
+        column: col,
+        data,
+        rawData: raw,
+        borderColor: color,
+        backgroundColor: color,
+        borderWidth: 1.75,
         pointRadius: 0,
         pointHoverRadius: 4,
         spanGaps: true,
         tension: 0.25,
         hidden: hiddenSeries.has(col),
-      }));
+        yAxisID: yAxisIdFor(scaleMode, i, cols.length),
+      };
+    });
 
-    renderLegend(series);
+    renderLegend(allDatasets);
 
-    if (!series.length || !rows.length) {
+    if (!allDatasets.length || !rows.length) {
       ctx.style.display = "none";
       return;
     }
     ctx.style.display = "";
 
+    const scales = buildScales(scaleMode, allDatasets);
+
     chart = new Chart(ctx, {
       type: "line",
-      data: { labels, datasets: series },
+      data: { labels, datasets: allDatasets },
       options: {
         responsive: true,
         maintainAspectRatio: false,
@@ -106,45 +233,106 @@
         plugins: {
           legend: { display: false },
           tooltip: {
-            backgroundColor: "oklch(0.15 0.012 80 / 0.95)",
+            backgroundColor: "oklch(0.15 0.012 80 / 0.96)",
             titleFont: { family: "JetBrains Mono", size: 11 },
             bodyFont: { family: "JetBrains Mono", size: 12 },
             padding: 10,
             borderColor: "oklch(0.45 0.08 230)",
             borderWidth: 1,
+            callbacks: {
+              label: (item) => {
+                const ds = allDatasets[item.datasetIndex];
+                const raw = ds.rawData[item.dataIndex];
+                const shown = item.parsed.y;
+                if (scaleMode === "indexed" && raw !== null) {
+                  return `${ds.label}: ${fmt(shown)} (raw ${fmt(raw)})`;
+                }
+                return `${ds.label}: ${fmt(shown)}`;
+              },
+            },
           },
         },
-        scales: {
-          x: {
-            ticks: { color: "oklch(0.460 0.010 80)", font: { family: "JetBrains Mono", size: 10 }, maxRotation: 0, autoSkipPadding: 24 },
-            grid: { color: "oklch(0.910 0.005 80)", drawTicks: false },
-          },
-          y: {
-            ticks: { color: "oklch(0.460 0.010 80)", font: { family: "JetBrains Mono", size: 10 } },
-            grid: { color: "oklch(0.910 0.005 80)", drawTicks: false },
-          },
-        },
+        scales,
       },
     });
   }
 
-  function renderLegend(series) {
+  function transformSeries(raw, mode) {
+    if (mode !== "indexed") return raw;
+    const first = raw.find(v => v !== null);
+    if (first === undefined || first === 0) return raw;
+    return raw.map(v => v === null ? null : (v / first) * 100);
+  }
+
+  function yAxisIdFor(mode, i, total) {
+    if (mode === "shared") return "y";
+    if (mode === "indexed") return "y";
+    // multi
+    return `y${i}`;
+  }
+
+  function buildScales(mode, datasets) {
+    const baseTicks = { color: "oklch(0.460 0.010 80)", font: { family: "JetBrains Mono", size: 10 } };
+    const baseGrid  = { color: "oklch(0.910 0.005 80)", drawTicks: false };
+    const x = {
+      ticks: { ...baseTicks, maxRotation: 0, autoSkipPadding: 24 },
+      grid: baseGrid,
+    };
+    if (mode === "shared") {
+      return { x, y: { ticks: baseTicks, grid: baseGrid } };
+    }
+    if (mode === "indexed") {
+      return {
+        x,
+        y: {
+          ticks: { ...baseTicks, callback: (v) => `${v.toFixed(0)}` },
+          grid: baseGrid,
+          title: { display: true, text: "Index = 100 at range start", color: "oklch(0.620 0.008 80)", font: { family: "JetBrains Mono", size: 10 } },
+        },
+      };
+    }
+    // multi: each visible dataset gets its own axis, alternating left/right, hidden when more than 2
+    const out = { x };
+    let leftCount = 0, rightCount = 0;
+    datasets.forEach((ds, i) => {
+      const visible = !ds.hidden;
+      const side = i % 2 === 0 ? "left" : "right";
+      if (visible) (side === "left" ? leftCount++ : rightCount++);
+      out[ds.yAxisID] = {
+        type: "linear",
+        position: side,
+        display: visible && (side === "left" ? leftCount <= 1 : rightCount <= 1),
+        ticks: { ...baseTicks, color: ds.borderColor },
+        grid: i === 0 ? baseGrid : { drawOnChartArea: false },
+      };
+    });
+    return out;
+  }
+
+  function renderLegend(datasets) {
     const root = $("chart-legend");
     root.innerHTML = "";
-    if (!series.length) {
-      root.innerHTML = '<span class="ent muted"><span class="l" style="background:var(--c-line-2)"></span>no numeric series</span>';
+    if (!datasets.length) {
+      root.innerHTML = '<span class="series-chip muted"><span class="swatch" style="background:var(--c-line-2)"></span>no numeric series</span>';
       return;
     }
-    series.forEach((s, i) => {
-      const e = document.createElement("span");
-      e.className = "ent" + (hiddenSeries.has(s.label) ? " muted" : "");
-      e.innerHTML = `<span class="l" style="background:${s.borderColor}"></span>${s.label}`;
-      e.addEventListener("click", () => {
-        if (hiddenSeries.has(s.label)) hiddenSeries.delete(s.label); else hiddenSeries.add(s.label);
+    datasets.forEach((ds) => {
+      const last = lastNonNull(ds.rawData);
+      const chip = document.createElement("span");
+      chip.className = "series-chip" + (ds.hidden ? " muted" : "");
+      chip.title = ds.hidden ? "Show series" : "Hide series";
+      chip.innerHTML = `<span class="swatch" style="background:${ds.borderColor}"></span>${ds.label}<span class="v">${last === null ? "—" : fmt(last)}</span>`;
+      chip.addEventListener("click", () => {
+        if (hiddenSeries.has(ds.label)) hiddenSeries.delete(ds.label); else hiddenSeries.add(ds.label);
         renderActive();
       });
-      root.appendChild(e);
+      root.appendChild(chip);
     });
+  }
+
+  function lastNonNull(arr) {
+    for (let i = arr.length - 1; i >= 0; i--) if (arr[i] !== null && arr[i] !== undefined) return arr[i];
+    return null;
   }
 
   function renderTable(def, tbl) {
@@ -172,9 +360,11 @@
       .reverse()
       .filter(r => !filter || tbl.columns.some(c => String(r[c] ?? "").toLowerCase().includes(filter)));
 
+    setRowCount(rows.length);
+    setTableTitle(def.key);
+
     if (!rows.length) {
       body.innerHTML = `<tr><td class="empty" colspan="${tbl.columns.length}">No rows ${filter ? "match filter" : "yet"}.</td></tr>`;
-      $("row-count").querySelector(".n").textContent = "0";
       return;
     }
 
@@ -190,7 +380,17 @@
       tr.addEventListener("click", () => openModal(def, tbl, r));
       body.appendChild(tr);
     }
-    $("row-count").querySelector(".n").textContent = String(rows.length);
+  }
+
+  function setRowCount(n) {
+    const t = $("row-count-text");
+    if (t) t.textContent = String(n);
+    const b = $("row-count-badge");
+    if (b) b.textContent = `${n} rows`;
+  }
+  function setTableTitle(key) {
+    const t = $("table-title");
+    if (t) t.textContent = key;
   }
 
   function openModal(def, tbl, row) {

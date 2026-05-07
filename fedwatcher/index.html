@@ -3,213 +3,261 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>FedWatcher Dashboard</title>
+  <title>FedWatcher — A calm interface for reading the Fed.</title>
+  <meta name="description" content="FedWatcher turns Federal Reserve releases into structured economic intelligence: tone, macro, market-implied moves.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,300..900;1,8..60,300..900&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap">
   <link rel="stylesheet" href="/assets/fedwatcher.css">
 </head>
 <body>
-  <div class="shell">
-    <header class="topbar">
-      <div class="topbar__inner">
-        <div class="brand">
-          <div class="brand-mark">FW</div>
-          <div>
-            <div class="brand-title">FedWatcher</div>
-            <div class="brand-subtitle">Agentic sentiment analysis and monetary-policy nowcasting</div>
-          </div>
-        </div>
-        <div class="source-switch" aria-label="data source">
-          <span class="pill active">Official Fed</span>
-          <span class="pill">FakeFed demo</span>
-          <span class="pill">Admin locked</span>
-        </div>
-      </div>
-    </header>
 
-    <main class="page">
-      <section class="status-row" aria-label="summary metrics">
-        <div class="panel metric">
-          <div class="metric__label">Pipeline</div>
-          <div class="metric__value">Ready</div>
-          <div class="metric__note">Monitor, analyst, strategist workflow target</div>
-        </div>
-        <div class="panel metric hawkish">
-          <div class="metric__label">Tone Score</div>
-          <div class="metric__value">+0.31</div>
-          <div class="metric__note">Moderately hawkish</div>
-        </div>
-        <div class="panel metric warn">
-          <div class="metric__label">Core CPI</div>
-          <div class="metric__value">3.1%</div>
-          <div class="metric__note">FRED CPILFESL, YoY</div>
-        </div>
-        <div class="panel metric">
-          <div class="metric__label">Unemployment</div>
-          <div class="metric__value">4.0%</div>
-          <div class="metric__note">FRED UNRATE</div>
-        </div>
-        <div class="panel metric good">
-          <div class="metric__label">Next Move</div>
-          <div class="metric__value">Hold</div>
-          <div class="metric__note">Highest model bucket</div>
-        </div>
-      </section>
-
-      <section class="main-grid">
-        <div>
-          <section class="panel section">
-            <div class="section-header">
-              <div>
-                <div class="section-title">Policy Signal</div>
-                <div class="section-meta">Latest document: FOMC statement, May 7 2026</div>
-              </div>
-              <div class="section-meta">Source: Official Fed</div>
-            </div>
-            <div class="hero-panel">
-              <div class="gauge">
-                <div class="gauge-ring"><div class="gauge-value">+0.31</div></div>
-                <div class="gauge-caption">Moderately Hawkish</div>
-              </div>
-              <div class="narrative">
-                <h1>FedWatcher estimates a cautious hold with hawkish inflation language.</h1>
-                <p>The dashboard combines Fed statement tone, CPI, unemployment, and rate proxies to estimate probabilities over rate-move buckets instead of a simple hike/no-hike output.</p>
-                <div class="tags">
-                  <span class="tag">Outcomes: -50, -25, 0, +25, +50 bps</span>
-                  <span class="tag">FRED: CPILFESL, UNRATE</span>
-                  <span class="tag">FastAPI backend target</span>
-                  <span class="tag">Educational FakeFed mode planned</span>
-                </div>
-              </div>
-            </div>
-            <div class="chart" aria-label="tone history mock chart">
-              <div class="bar" style="height: 38%"></div>
-              <div class="bar" style="height: 42%"></div>
-              <div class="bar gold" style="height: 50%"></div>
-              <div class="bar" style="height: 45%"></div>
-              <div class="bar red" style="height: 64%"></div>
-              <div class="bar red" style="height: 70%"></div>
-              <div class="bar gold" style="height: 55%"></div>
-              <div class="bar red" style="height: 62%"></div>
-              <div class="bar" style="height: 48%"></div>
-              <div class="bar red" style="height: 68%"></div>
-            </div>
-          </section>
-
-          <div class="two-col">
-            <section class="panel section">
-              <div class="section-title">Rate Move Probabilities</div>
-              <div class="prob-row"><span>-25</span><div class="track"><div class="fill green" style="width: 14%"></div></div><strong>14%</strong></div>
-              <div class="prob-row"><span>0</span><div class="track"><div class="fill" style="width: 55%"></div></div><strong>55%</strong></div>
-              <div class="prob-row"><span>+25</span><div class="track"><div class="fill red" style="width: 26%"></div></div><strong>26%</strong></div>
-              <div class="prob-row"><span>+50</span><div class="track"><div class="fill red" style="width: 5%"></div></div><strong>5%</strong></div>
-            </section>
-            <section class="panel section">
-              <div class="section-title">Macro Context</div>
-              <div class="prob-row"><span>CPI</span><div class="track"><div class="fill red" style="width: 62%"></div></div><strong>High</strong></div>
-              <div class="prob-row"><span>Labor</span><div class="track"><div class="fill" style="width: 46%"></div></div><strong>Solid</strong></div>
-              <div class="prob-row"><span>Rates</span><div class="track"><div class="fill" style="width: 51%"></div></div><strong>Tight</strong></div>
-              <p class="metric__note">Placeholder values until FRED ingestion and model runs are wired into FastAPI.</p>
-            </section>
-          </div>
-        </div>
-
-        <aside>
-          <section class="panel section">
-            <div class="section-header">
-              <div class="section-title">Document Feed</div>
-              <div class="section-meta">Latest first</div>
-            </div>
-            <div class="timeline">
-              <div class="event">
-                <strong>FOMC statement</strong>
-                <span>May 7, 2026 - tone +0.31 - source ready</span>
-              </div>
-              <div class="event">
-                <strong>FOMC statement</strong>
-                <span>March 18, 2026 - synthetic FakeFed fixture</span>
-              </div>
-              <div class="event">
-                <strong>Minutes</strong>
-                <span>Planned ingestion target</span>
-              </div>
-            </div>
-          </section>
-
-          <section class="panel section" style="margin-top: 16px;">
-            <div class="section-title">Project Brief</div>
-            <p>FedWatcher monitors Federal Reserve communication, extracts policy tone with an LLM-backed analyst agent, joins macro data from FRED, and presents rate-move probabilities through a FastAPI-backed dashboard.</p>
-            <p class="metric__note">This static page is the brief homepage/dashboard placeholder for `fedwatcher.ellep.it` while the API and Streamlit/FastAPI app are implemented.</p>
-          </section>
-
-          <div class="admin-strip">
-            <div>
-              <strong>Educational mode</strong><br>
-              FakeFed source selection and statement writing will be admin-only.
-            </div>
-            <button class="button" type="button">Admin</button>
-          </div>
-        </aside>
-      </section>
-
-      <section class="panel section data-explorer" id="data-explorer" aria-labelledby="explorer-title">
-        <div class="section-header">
-          <div>
-            <div class="section-title" id="explorer-title">Data Explorer</div>
-            <div class="section-meta" id="explorer-sub">FRED &amp; pipeline tables · click any row for details</div>
-          </div>
-          <div class="explorer-toolbar">
-            <div class="toggle" role="tablist" id="table-picker"></div>
-          </div>
-        </div>
-
-        <div class="explorer-grid">
-          <div class="chart-card" id="chart-card">
-            <div class="chart-head">
-              <div>
-                <h3 class="chart-title" id="chart-title">Core CPI · Unemployment · 2Y Yield</h3>
-                <div class="chart-sub" id="chart-sub">Monthly observations</div>
-              </div>
-              <div class="chart-legend" id="chart-legend"></div>
-            </div>
-            <div class="chart-wrap"><canvas id="series-chart" aria-label="series chart"></canvas></div>
-          </div>
-
-          <div class="table-wrap">
-            <div class="table-toolbar">
-              <input class="input input-search" id="table-filter" type="search" placeholder="Filter rows…" aria-label="Filter table">
-              <span class="badge badge-neutral" id="row-count"><span class="dot"></span><span class="n">0</span> rows</span>
-            </div>
-            <div class="table-scroll">
-              <table class="data-table" id="data-table">
-                <thead><tr id="table-head"></tr></thead>
-                <tbody id="table-body"></tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <div class="footer">FedWatcher course prototype - not investment advice - data values shown here are dashboard placeholders.</div>
-    </main>
-  </div>
-
-  <div class="modal" id="row-modal" hidden role="dialog" aria-modal="true" aria-labelledby="modal-title">
-    <div class="modal-backdrop" data-close></div>
-    <div class="modal-panel" role="document">
-      <header class="modal-head">
-        <div>
-          <div class="modal-eyebrow" id="modal-eyebrow">macro_data</div>
-          <h2 class="modal-title" id="modal-title">Row detail</h2>
-        </div>
-        <button class="modal-close" type="button" data-close aria-label="Close">×</button>
-      </header>
-      <div class="modal-body" id="modal-body"></div>
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="wordmark">
+      Fed<em>Watcher</em><span class="dot">.</span>
+      <span class="topbar-tag">Policy&nbsp;Monitor · v0.2</span>
+    </div>
+    <nav class="top-nav">
+      <a href="#signal">Signal</a>
+      <a href="#scenario">Scenarios</a>
+      <a href="#explorer">Data</a>
+      <a href="#feed">Feed</a>
+      <a href="#brief">Brief</a>
+    </nav>
+    <div class="source-switch">
+      <span class="badge badge-accent"><span class="dot"></span>Official Fed</span>
+      <span class="badge badge-outline">FakeFed</span>
     </div>
   </div>
+</header>
 
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
-  <script src="/assets/explorer.js" defer></script>
+<main class="page">
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-eyebrow"><span class="dot"></span>FOMC · MAY 7 · 2026 · LATEST READ</div>
+    <h1>A cautious hold, with <em>hawkish</em> inflation language.</h1>
+    <p>FedWatcher reads the Federal Reserve's communication, joins it with FRED macro series, and projects probabilities over rate-move outcomes. Numbers, sources, no narrative theatre.</p>
+    <dl class="hero-meta">
+      <div><dt>Tone score</dt><dd>+0.31<span class="delta neg">moderately hawkish</span></dd></div>
+      <div><dt>Next-move bucket</dt><dd>Hold<span class="delta">55% probability</span></dd></div>
+      <div><dt>Core CPI · YoY</dt><dd id="hero-cpi">—<span class="delta warn">FRED CPILFESL</span></dd></div>
+      <div><dt>Unemployment</dt><dd id="hero-un">—<span class="delta">FRED UNRATE</span></dd></div>
+    </dl>
+  </section>
+
+  <!-- §01 SIGNAL -->
+  <section class="ds" id="signal">
+    <div class="sec-head">
+      <div class="sec-num">§ 01 · SIGNAL</div>
+      <div>
+        <h2 class="sec-title">What the latest statement implies.</h2>
+        <p class="sec-desc">A tone score is computed from the FOMC's language and joined against macro context. The dashboard expresses the read as a probability distribution — not a single hike-or-not call.</p>
+      </div>
+    </div>
+
+    <div class="metric-grid">
+      <div class="metric">
+        <span class="label">Tone score</span>
+        <span class="value">+0.31</span>
+        <span class="delta neg"><span class="v">+0.04</span><span>vs March '26</span></span>
+      </div>
+      <div class="metric">
+        <span class="label">Implied move</span>
+        <span class="value">Hold</span>
+        <span class="delta"><span class="v">0 bps</span><span>highest bucket</span></span>
+      </div>
+      <div class="metric">
+        <span class="label">Core CPI · YoY</span>
+        <span class="value" id="metric-cpi">—<span class="unit">%</span></span>
+        <span class="delta"><span class="v" id="metric-cpi-d">—</span><span>vs prior</span></span>
+      </div>
+      <div class="metric">
+        <span class="label">Unemployment</span>
+        <span class="value" id="metric-un">—<span class="unit">%</span></span>
+        <span class="delta"><span class="v" id="metric-un-d">—</span><span>vs prior</span></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- §02 RATE-MOVE SCENARIOS -->
+  <section class="ds" id="scenario">
+    <div class="sec-head">
+      <div class="sec-num">§ 02 · SCENARIOS</div>
+      <div>
+        <h2 class="sec-title">Rate-move probability buckets.</h2>
+        <p class="sec-desc">Probability assigned to each plausible Committee outcome at the next meeting. Values are placeholders until the agent pipeline writes live signals.</p>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div class="scenario">
+        <div class="scenario-row"><div class="label">−25 bps<small>cut</small></div><div class="track"><div class="fill pos" style="width: 14%"></div></div><div class="pct">14%</div></div>
+        <div class="scenario-row"><div class="label">0 bps<small>hold</small></div><div class="track"><div class="fill" style="width: 55%"></div></div><div class="pct">55%</div></div>
+        <div class="scenario-row"><div class="label">+25 bps<small>hike</small></div><div class="track"><div class="fill neg" style="width: 26%"></div></div><div class="pct">26%</div></div>
+        <div class="scenario-row"><div class="label">+50 bps<small>tighten</small></div><div class="track"><div class="fill neg" style="width: 5%"></div></div><div class="pct">5%</div></div>
+      </div>
+      <div class="alert accent">
+        <div class="stripe"></div>
+        <div>
+          <h4>Inflation language drove the hawkish skew.</h4>
+          <p>Statement adds "inflation has been somewhat elevated" — language not present since March 2024. Labor-market sentence retained "solid" and removed the prior "modest cooling" qualifier. Net effect: probability mass shifts right by ~6 points vs prior meeting.</p>
+        </div>
+        <div class="meta">11 min ago</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- §03 DATA EXPLORER -->
+  <section class="ds" id="explorer" aria-labelledby="explorer-title">
+    <div class="sec-head">
+      <div class="sec-num">§ 03 · DATA</div>
+      <div>
+        <h2 class="sec-title" id="explorer-title">Explore the underlying series.</h2>
+        <p class="sec-desc">Click a table to inspect schema and rows. The chart renders any numeric columns; toggle individual series, switch to indexed view, or change the time window. Click a row for full detail.</p>
+      </div>
+    </div>
+
+    <div class="sub-head">
+      <span>Tables</span>
+      <span id="explorer-sub">FRED &amp; pipeline tables</span>
+    </div>
+    <div class="toggle" role="tablist" id="table-picker" style="margin-bottom: var(--s-5);"></div>
+
+    <div class="chart-card" id="chart-card">
+      <div class="chart-head">
+        <div>
+          <h3 class="chart-title" id="chart-title">Core CPI · Unemployment · 2Y Yield</h3>
+          <div class="chart-sub" id="chart-sub">Monthly observations · FRED</div>
+        </div>
+        <div class="chart-controls">
+          <div class="toggle" id="range-picker" role="tablist" aria-label="Time range"></div>
+          <div class="toggle" id="scale-picker" role="tablist" aria-label="Y axis mode">
+            <button type="button" data-scale="multi" class="active" title="Each series gets its own auto-scaled Y axis">Per-axis</button>
+            <button type="button" data-scale="indexed" title="Rebase to 100 at range start">Indexed</button>
+            <button type="button" data-scale="shared" title="All series share one Y axis">Shared</button>
+          </div>
+        </div>
+      </div>
+      <div class="series-legend" id="chart-legend"></div>
+      <div class="chart-wrap chart-wrap-tall"><canvas id="series-chart" aria-label="series chart"></canvas></div>
+      <div class="chart-foot">
+        <span id="range-meta">—</span>
+        <span id="series-meta">—</span>
+      </div>
+    </div>
+
+    <div class="sub-head" style="margin-top: var(--s-9);">
+      <span>Rows</span>
+      <span><span id="row-count-text">0</span> rows · click any row</span>
+    </div>
+    <div class="table-card">
+      <div class="table-toolbar">
+        <span class="title" id="table-title">macro_data</span>
+        <span class="badge badge-outline" id="row-count-badge">0 rows</span>
+        <input class="input input-search" id="table-filter" type="search" placeholder="Filter rows…" aria-label="Filter table" style="max-width: 280px;">
+      </div>
+      <div class="table-scroll">
+        <table class="data-table" id="data-table">
+          <thead><tr id="table-head"></tr></thead>
+          <tbody id="table-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- §04 FEED -->
+  <section class="ds" id="feed">
+    <div class="sec-head">
+      <div class="sec-num">§ 04 · FEED</div>
+      <div>
+        <h2 class="sec-title">Document &amp; release log.</h2>
+        <p class="sec-desc">Live ingestion target. Statements, minutes, and synthetic FakeFed fixtures flow through the analyst agent and accumulate here.</p>
+      </div>
+    </div>
+    <div class="doc-feed">
+      <div class="alert accent">
+        <div class="stripe"></div>
+        <div>
+          <h4>FOMC statement — May 7, 2026 · 14:00 ET</h4>
+          <p>Target range held. Tone score +0.31. Inflation language tightened versus prior statement.</p>
+        </div>
+        <div class="meta">live · 11 min ago</div>
+      </div>
+      <div class="alert">
+        <div class="stripe"></div>
+        <div>
+          <h4>FOMC statement — March 18, 2026</h4>
+          <p>Synthetic FakeFed fixture used for educational mode. Source switch in topbar to compare against official wire.</p>
+        </div>
+        <div class="meta">archive</div>
+      </div>
+      <div class="alert warn">
+        <div class="stripe"></div>
+        <div>
+          <h4>FOMC minutes — pending ingestion</h4>
+          <p>Scheduled scrape target. Will appear here once the monitor agent sees a public release.</p>
+        </div>
+        <div class="meta">pending</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- §05 BRIEF / PRINCIPLES -->
+  <section class="ds" id="brief">
+    <div class="sec-head">
+      <div class="sec-num">§ 05 · BRIEF</div>
+      <div>
+        <h2 class="sec-title">Four guardrails for every decision.</h2>
+        <p class="sec-desc">FedWatcher is a course prototype. The principles below describe how the dashboard should behave when more data, better models, or richer narratives arrive.</p>
+      </div>
+    </div>
+    <div class="principles">
+      <div class="principle">
+        <div class="num">01</div>
+        <h4>Numbers are the&nbsp;subject.</h4>
+        <p>Tabular monospace numerals, generous whitespace, restrained chrome. Charts use thin lines and minimal grids — the data carries the weight.</p>
+      </div>
+      <div class="principle">
+        <div class="num">02</div>
+        <h4>One accent, used&nbsp;sparingly.</h4>
+        <p>A single institutional teal-blue marks intent and primary action. It never decorates. If everything is highlighted, nothing is.</p>
+      </div>
+      <div class="principle">
+        <div class="num">03</div>
+        <h4>Serif headlines, sans&nbsp;machinery.</h4>
+        <p>A serif voice gives the agent's prose the authority of a research paper; sans and mono carry the interface and the data without competing.</p>
+      </div>
+      <div class="principle">
+        <div class="num">04</div>
+        <h4>Cite or stay&nbsp;silent.</h4>
+        <p>Every claim points back to a source — FOMC document, BLS series, speech, dataset. Trust is built from traceability, not confidence.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer class="page-foot">
+    <span>FedWatcher · course prototype · not investment advice</span>
+    <span>Source Serif 4 · Inter · JetBrains Mono</span>
+  </footer>
+</main>
+
+<div class="modal" id="row-modal" hidden role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="modal-backdrop" data-close></div>
+  <div class="modal-panel" role="document">
+    <header class="modal-head">
+      <div>
+        <div class="modal-eyebrow" id="modal-eyebrow">macro_data</div>
+        <h2 class="modal-title" id="modal-title">Row detail</h2>
+      </div>
+      <button class="modal-close" type="button" data-close aria-label="Close">×</button>
+    </header>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="/assets/explorer.js" defer></script>
 </body>
 </html>
