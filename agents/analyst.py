@@ -2,7 +2,7 @@
 AnalystAgent – document segmentation and tone scoring.
 
 Splits Fed documents into semantically labelled sections then calls the
-Anthropic API to extract a numeric tone_score in [-1, +1] (dovish → hawkish).
+OpenRouter API (ChatGPT) to extract a numeric tone_score in [-1, +1] (dovish → hawkish).
 """
 
 from __future__ import annotations
@@ -14,11 +14,10 @@ from collections import Counter
 from dataclasses import dataclass, field
 from typing import Any
 
-import anthropic
+from openai import OpenAI
 
-# Model used for tone extraction. Swap to claude-opus-4-7 for higher accuracy
-# at greater cost, or claude-haiku-4-5-20251001 for cheap batch back-filling.
-_MODEL = "claude-sonnet-4-6"
+_MODEL = "openai/gpt-oss-120b:free"
+_OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 
 _SYSTEM_PROMPT = """\
 You are a monetary-policy analyst specialising in Federal Reserve communications.
@@ -178,8 +177,9 @@ class AnalystAgent:
     WEIGHTS = WEIGHTS
 
     def __init__(self, api_key: str | None = None) -> None:
-        self._client = anthropic.Anthropic(
-            api_key=api_key or os.environ.get("ANTHROPIC_API_KEY")
+        self._client = OpenAI(
+            api_key=api_key or os.environ.get("OPENROUTER_API_KEY"),
+            base_url=_OPENROUTER_BASE_URL,
         )
 
     # ------------------------------------------------------------------
@@ -227,14 +227,16 @@ class AnalystAgent:
             doc_type=doc_type, sections_block=sections_block
         )
 
-        response = self._client.messages.create(
+        response = self._client.chat.completions.create(
             model=_MODEL,
             max_tokens=512,
-            system=_SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": prompt}],
+            messages=[
+                {"role": "system", "content": _SYSTEM_PROMPT},
+                {"role": "user", "content": prompt},
+            ],
         )
 
-        raw = response.content[0].text.strip()
+        raw = response.choices[0].message.content.strip()
         return _parse_llm_json(raw)
 
     # ------------------------------------------------------------------
