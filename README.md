@@ -34,14 +34,16 @@ This repository is still in active development.
 
 Implemented:
 
-- Initial Fed document monitor in `agents/monitor.py`.
-- Initial script for fetching raw HTML document text in `scripts/fetch_document_text.py`.
 - Initial SQL schema and database scripts.
-- Dashboard mockup in `dashboard_mockup.html`.
 - Agent/contributor workflow in `AGENTS.md`.
+- SQLite-native `MonitorAgent` in `agents/monitor.py` for source-aware live document
+  fetching from the official Fed site or FakeFed.
 - Static FakeFed fixture site in `fakefed/` for end-to-end fake statement tests.
 - Static FedWatcher brief homepage/dashboard in `fedwatcher/` for the first
-  `fedwatcher.ellep.it` deployment.
+  `fedwatcher.ellep.it` deployment. It currently reads static JSON from
+  `fedwatcher/assets/data.json` and `fedwatcher/assets/documents.json`.
+- Historical official Fed document backfill in `scripts/inital_data_download.py` using
+  FedTools.
 - FRED monthly macro/rate ingestion in `sources/fred.py` and `scripts/backfill_fred.py`:
   stores `CPILFESL`, `UNRATE`, and monthly-average `DGS2` in `macro_data`.
 - `AnalystAgent`  in `agents/analyst.py`:
@@ -51,12 +53,12 @@ Implemented:
 
 Planned next:
 
-- Migrate the prototype database layer from MySQL-style scripts to SQLite.
 - Add FRED ingestion for policy-rate target series such as `DFEDTARU`, `DFEDTARL`,
   and `DFF`.
 - Implement `StrategistAgent` (EWMA tone smoothing, multinomial nowcast, tone-implied rate, divergence signals).
 - Add FastAPI endpoints.
-- Build the dashboard against the FastAPI API.
+- Build the dashboard against the FastAPI API, including an admin-protected FakeFed fetch
+  action that appends synthetic documents to the same document feed.
 - Add backtesting and academic documentation.
 
 ## Architecture
@@ -100,10 +102,10 @@ Finds new Fed documents and stores their metadata/raw text.
 
 Responsibilities:
 
-- Scrape Federal Reserve FOMC pages.
+- Scrape official Federal Reserve or FakeFed FOMC pages.
 - Detect statements, minutes, and related documents.
 - Deduplicate documents by date/type.
-- Store document records in the database.
+- Fetch HTML text and store document records in SQLite.
 
 ### AnalystAgent
 
@@ -112,7 +114,7 @@ Uses an LLM as a text-analysis model. **Implemented.**
 Responsibilities:
 
 - Segment the document into weighted sections (`forward_guidance`, `inflation`, `labor_market`, `general` / `policy_discussion`).
-- Call the Anthropic API (`claude-sonnet-4-6`) with the segmented sections.
+- Call an OpenRouter-hosted LLM through the OpenAI client with the segmented sections.
 - Extract a numeric `tone_score` in `[-1.0, +1.0]` (dovish → hawkish) plus `overall_tone`, `inflation_assessment`, `labor_market_assessment`, `forward_guidance`, `key_phrases`, and `confidence`.
 - Return a typed `ToneResult`; call `result.to_db_row()` to get a dict ready for the `sentiment` table.
 
@@ -132,7 +134,7 @@ Responsibilities:
 No separate `PublisherAgent` is planned. Persisting outputs and serving them to the dashboard
 is application plumbing handled by `pipeline.py`, `db.py`, and FastAPI.
 
-## Proposed File Structure
+## Current And Planned File Structure
 
 ```text
 FEDWatcher/
@@ -148,30 +150,29 @@ FEDWatcher/
 ├── docs/
 │   └── fakefed_deployment.md
 │
-├── api/
+├── api/                        # planned FastAPI backend
 │   └── main.py                 # FastAPI app
 │
 ├── agents/
 │   ├── monitor.py              # MonitorAgent
 │   ├── analyst.py              # AnalystAgent
-│   └── strategist.py           # StrategistAgent
+│   └── strategist.py           # planned StrategistAgent
 │
 ├── sources/
-│   ├── fed.py                  # Fed scraping helpers
+│   ├── fed.py                  # planned Fed scraping helpers
 │   └── fred.py                 # FRED fetch + transformations
 │
-├── models/
+├── models/                     # planned nowcast model package
 │   └── nowcast.py              # ordered/multinomial model
 │
-├── dashboard/
-│   └── app.py                  # dashboard frontend
+├── fedwatcher/                 # current static dashboard frontend
 │
-├── db.py                       # SQLite interface
-├── pipeline.py                 # workflow runner
+├── db.py                       # planned SQLite interface
+├── pipeline.py                 # planned workflow runner
 └── scripts/
     ├── init_db.py
     ├── backfill_fred.py
-    └── backfill_documents.py
+    └── inital_data_download.py # historical FedTools document backfill
 ```
 
 ## Data Sources
@@ -327,7 +328,8 @@ The dashboard should use FastAPI as its data source and show:
 - divergence history;
 - document explorer with extracted evidence phrases.
 
-The existing `dashboard_mockup.html` is a visual prototype, not the final dashboard.
+The current static frontend in `fedwatcher/` is temporary. It reads static JSON files today;
+the final version should read from the FastAPI backend.
 
 ## Database
 
@@ -341,7 +343,6 @@ sentiment
 macro_data
 market_data
 signals
-model_runs
 ```
 
 This is enough to demonstrate SQL, ETL, joins, and reproducible local development without
@@ -353,8 +354,7 @@ Prerequisites:
 
 - Python 3.10+
 - FRED API key
-- Anthropic API key for LLM sentiment extraction (`ANTHROPIC_API_KEY`), or
-  OpenRouter API key (`OPENROUTER_API_KEY`) when testing OpenRouter-hosted models.
+- OpenRouter API key (`OPENROUTER_API_KEY`) for LLM sentiment extraction.
 
 Setup:
 
@@ -370,13 +370,11 @@ cp .env.example .env
 ```
 
 The `.env.example` contains the target SQLite/API/FRED variables plus legacy MySQL fields
-needed by the original prototype scripts.
+kept for old prototype compatibility.
 
-For AI calls, use one provider key:
+For AI calls:
 
 ```text
-OPENAI_API_KEY=
-ANTHROPIC_API_KEY=
 OPENROUTER_API_KEY=
 ```
 
@@ -388,23 +386,21 @@ Current prototype commands:
 python scripts/init_db.py
 python scripts/inital_data_download.py
 python scripts/backfill_fred.py
+python agents/monitor.py
 ```
 
 FakeFed test target:
 
 ```bash
 FED_BASE_URL=https://fakefed.ellep.it python agents/monitor.py
-FED_BASE_URL=https://fakefed.ellep.it python scripts/fetch_document_text.py
 ```
 
 Target commands:
 
 ```bash
 python scripts/init_db.py
-python scripts/backfill_documents.py
 python pipeline.py
 uvicorn api.main:app --reload
-streamlit run dashboard/app.py
 ```
 
 These target commands will become valid as the corresponding modules are implemented.
@@ -441,6 +437,12 @@ The final dashboard should support two modes:
 - clean app mode using the official Federal Reserve source;
 - educational demo mode with admin-only FakeFed controls for writing synthetic statements.
 
+For the next dashboard integration, the top-right FakeFed control should authenticate an
+admin, trigger the backend to run `MonitorAgent` against `https://fakefed.ellep.it`, append
+the fetched synthetic documents to the same document feed as official Fed documents, and
+label every FakeFed row as synthetic/test content. If LLM credentials are configured, the
+backend can run analysis after fetch; otherwise the fetched rows remain pending analysis.
+
 The mode split is documented in `docs/dashboard_modes.md`.
 
 ## FedWatcher Homepage Dashboard
@@ -450,8 +452,9 @@ The mode split is documented in `docs/dashboard_modes.md`.
 panels, macro context, rate-move buckets, document feed, and the planned admin-only
 educational FakeFed mode.
 
-This static page is temporary. The final version should read from the FastAPI backend and
-replace placeholder values with database-backed documents, FRED data, sentiment results,
+This static page is temporary. It currently reads `fedwatcher/assets/data.json` and
+`fedwatcher/assets/documents.json`. The final version should read from the FastAPI backend
+and replace placeholder values with database-backed documents, FRED data, sentiment results,
 and model probabilities.
 
 ## Course Criteria Coverage

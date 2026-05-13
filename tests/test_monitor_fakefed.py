@@ -1,7 +1,10 @@
 import unittest
 from datetime import datetime
+from pathlib import Path
+from unittest.mock import patch
 
 from agents.monitor import (
+    MonitorAgent,
     classify_doc_type,
     deduplicate_documents,
     extract_release_date,
@@ -9,6 +12,33 @@ from agents.monitor import (
 
 
 class MonitorFakeFedTests(unittest.TestCase):
+    def test_discovers_fakefed_calendar_statement_links(self):
+        calendar_html = Path("fakefed/monetarypolicy/fomccalendars.htm").read_text(
+            encoding="utf-8"
+        )
+
+        class Response:
+            text = calendar_html
+
+            def raise_for_status(self):
+                return None
+
+        with patch("agents.monitor.requests.get", return_value=Response()):
+            agent = MonitorAgent(base_url="https://fakefed.ellep.it")
+            candidates = agent.fetch_candidate_documents()
+
+        urls = {doc["url"] for doc in candidates}
+
+        self.assertIn(
+            "https://fakefed.ellep.it/newsevents/pressreleases/monetary20260507a.htm",
+            urls,
+        )
+        self.assertIn(
+            "https://fakefed.ellep.it/newsevents/pressreleases/monetary20260318a.htm",
+            urls,
+        )
+        self.assertTrue(all(doc["doc_type"] == "statement" for doc in candidates))
+
     def test_classifies_fed_press_release_statement_from_link_text(self):
         url = "https://fakefed.ellep.it/newsevents/pressreleases/monetary20260507a.htm"
 
