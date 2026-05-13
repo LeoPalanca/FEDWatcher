@@ -1,0 +1,22 @@
+[
+  {
+    "id": "fakefed-20260507",
+    "central_bank": "FakeFed",
+    "doc_type": "statement",
+    "release_date": "2026-05-07",
+    "source_id": "fakefed://FED/statement/2026-05-07",
+    "url": "https://fakefed.ellep.it/newsevents/pressreleases/monetary20260507a.htm",
+    "raw_text": "Synthetic FakeFed fixture. This is fake test content for FedWatcher and is not a real Federal Reserve communication. Recent indicators suggest that economic activity has continued to expand at a moderate pace. Job gains have slowed but remain solid, and the unemployment rate has moved up slightly while remaining low. Inflation remains somewhat elevated. The Committee is attentive to the risks to both sides of its dual mandate and judges that incoming data warrant a cautious policy stance. The Committee decided to maintain the target range for the federal funds rate at 4.25 to 4.50 percent. In assessing the appropriate stance of monetary policy, the Committee will continue to monitor incoming information and the implications for the economic outlook. The Committee would be prepared to adjust the stance of monetary policy as appropriate if risks emerge that could impede the attainment of the Committee's goals. Voting for the monetary policy action were synthetic committee members created only for this educational fixture.",
+    "processed": false
+  },
+  {
+    "id": "fakefed-20260318",
+    "central_bank": "FakeFed",
+    "doc_type": "statement",
+    "release_date": "2026-03-18",
+    "source_id": "fakefed://FED/statement/2026-03-18",
+    "url": "https://fakefed.ellep.it/newsevents/pressreleases/monetary20260318a.htm",
+    "raw_text": "Synthetic FakeFed fixture. This is fake test content for FedWatcher. This older synthetic statement exists to test multiple FakeFed calendar links. The Committee decided to maintain the target range for the federal funds rate while monitoring inflation and labor-market data.",
+    "processed": false
+  }
+]

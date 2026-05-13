@@ -38,8 +38,12 @@
   let hiddenSeries = new Set();
 
   let DOCS = [];
+  let OFFICIAL_DOCS = [];
+  let FAKEFED_DOCS = [];
   let docFilter = "all";
   let docQuery = "";
+  let fakeFedLoaded = false;
+  let fakeFedEnabled = false;
 
   async function load() {
     try {
@@ -48,9 +52,10 @@
         fetch("/assets/documents.json", { cache: "no-store" }).then(r => r.ok ? r.json() : []).catch(() => []),
       ]);
       DATA = d;
-      DOCS = Array.isArray(docs) ? docs : [];
+      OFFICIAL_DOCS = Array.isArray(docs) ? docs : [];
+      DOCS = OFFICIAL_DOCS.slice();
     } catch (e) {
-      DATA = {}; DOCS = [];
+      DATA = {}; OFFICIAL_DOCS = []; DOCS = [];
       console.error("data load failed", e);
     }
     renderTablePicker();
@@ -61,6 +66,7 @@
     hydrateHero();
     renderFeed();
     wireFeed();
+    wireSourceSwitch();
   }
 
   function hydrateHero() {
@@ -368,6 +374,7 @@
     const rows = tbl.rows
       .slice()
       .reverse()
+      .filter(r => !shouldHideRow(def, r))
       .filter(r => !filter || tbl.columns.some(c => String(r[c] ?? "").toLowerCase().includes(filter)));
 
     setRowCount(rows.length);
@@ -380,11 +387,25 @@
 
     for (const r of rows) {
       const tr = document.createElement("tr");
+      const interpolatedFields = macroInterpolatedFields(r);
+      if (def.key === "macro_data" && interpolatedFields.size) tr.classList.add("has-interpolated");
       for (const c of tbl.columns) {
         const td = document.createElement("td");
         const v = r[c];
         td.textContent = fmt(v);
         if (def.numeric.includes(c) || c === "id") td.classList.add("num");
+        if (shouldHighlightMissing(def, c, v, r)) {
+          td.classList.add("missing-value");
+          td.title = "Missing value";
+        }
+        if (def.key === "macro_data" && interpolatedFields.has(c)) {
+          td.classList.add("interpolated-value");
+          td.title = "Interpolated from adjacent months";
+        }
+        if (def.key === "macro_data" && c === "interpolated_fields" && v) {
+          td.classList.add("quality-note");
+          td.textContent = `filled: ${String(v).replaceAll(",", ", ")}`;
+        }
         tr.appendChild(td);
       }
       tr.addEventListener("click", () => openModal(def, tbl, r));
@@ -401,6 +422,29 @@
   function setTableTitle(key) {
     const t = $("table-title");
     if (t) t.textContent = key;
+  }
+
+  function shouldHighlightMissing(def, column, value, row) {
+    if (value !== null && value !== undefined && value !== "") return false;
+    if (def.key !== "macro_data") return false;
+    if (["core_cpi_index", "unemployment_rate", "us2y_yield"].includes(column)) return true;
+    if (["core_cpi_mom", "core_cpi_yoy"].includes(column)) return !hasValue(row?.core_cpi_index);
+    return false;
+  }
+
+  function shouldHideRow(def, row) {
+    if (def.key !== "macro_data") return false;
+    return ["core_cpi_index", "unemployment_rate", "us2y_yield"].every(field => !hasValue(row[field]));
+  }
+
+  function hasValue(value) {
+    return value !== null && value !== undefined && value !== "";
+  }
+
+  function macroInterpolatedFields(row) {
+    const raw = String(row?.interpolated_fields || "").trim();
+    if (!raw) return new Set();
+    return new Set(raw.split(",").map(field => field.trim()).filter(Boolean));
   }
 
   function openModal(def, tbl, row) {
@@ -446,6 +490,7 @@
 
   /* === DOCUMENT FEED === */
   const DOC_TYPE_LABEL = { statement: "FOMC Statement", minutes: "FOMC Minutes" };
+  const DOC_TYPE_SHORT = { statement: "Statement", minutes: "Minutes" };
 
   function wireFeed() {
     const ftr = $("feed-filter");
@@ -460,6 +505,49 @@
     }
     const s = $("feed-search");
     if (s) s.addEventListener("input", () => { docQuery = s.value.toLowerCase(); renderFeed(); });
+  }
+
+  function wireSourceSwitch() {
+    const root = $("source-switch");
+    if (!root) return;
+    const fakeBtn = root.querySelector('[data-source="fakefed"]');
+
+    if (fakeBtn) {
+      fakeBtn.addEventListener("click", async () => {
+        if (fakeFedEnabled) {
+          fakeFedEnabled = false;
+          DOCS = OFFICIAL_DOCS.slice();
+          setSourceSwitchState();
+          renderFeed();
+          scrollFeedIntoView();
+          return;
+        }
+
+        fakeBtn.classList.add("loading");
+        fakeBtn.textContent = "Loading...";
+        try {
+          if (!fakeFedLoaded) {
+            const response = await fetch("/assets/fakefed-documents.json", { cache: "no-store" });
+            FAKEFED_DOCS = response.ok ? await response.json() : [];
+            fakeFedLoaded = true;
+          }
+          fakeFedEnabled = true;
+          DOCS = mergeDocuments(OFFICIAL_DOCS, FAKEFED_DOCS);
+          setSourceSwitchState();
+          docFilter = "all";
+          docQuery = "";
+          const search = $("feed-search");
+          if (search) search.value = "";
+          const filter = $("feed-filter");
+          if (filter) filter.querySelectorAll("button").forEach(b => b.classList.toggle("active", b.dataset.feed === "all"));
+          renderFeed();
+          scrollFeedIntoView();
+        } finally {
+          fakeBtn.classList.remove("loading");
+          fakeBtn.textContent = "FakeFed";
+        }
+      });
+    }
   }
 
   function renderFeed() {
@@ -487,12 +575,22 @@
       row.className = "doc-row";
       const dateLabel = formatReleaseDate(d.release_date);
       const typeLabel = DOC_TYPE_LABEL[d.doc_type] ?? d.doc_type;
-      const preview = (d.raw_text || "").replace(/\s+/g, " ").trim().slice(0, 220);
+      const typeShort = DOC_TYPE_SHORT[d.doc_type] ?? (d.doc_type || "Document");
+      const sourceLabel = sourceLabelFor(d);
+      const sourceClass = sourceLabel === "FakeFed" ? "fakefed" : "fed";
+      const preview = (d.raw_text || "").replace(/\s+/g, " ").trim().slice(0, 360);
       const sizeKb = d.raw_text ? `${Math.max(1, Math.round(d.raw_text.length / 1024))} KB` : "—";
       row.innerHTML = `
         <div class="date">${dateLabel.short}<small>${dateLabel.year}</small></div>
-        <div class="preview"><strong>${typeLabel}${d.central_bank ? ` · ${d.central_bank}` : ""}</strong>${escapeHtml(preview) || "<em>no text captured</em>"}</div>
-        <div class="meta">${sizeKb}</div>
+        <div class="doc-main">
+          <div class="doc-title-line">
+            <strong>${typeLabel}</strong>
+            <span class="doc-chip doc-chip-${escapeHtml(d.doc_type || "document")}">${escapeHtml(typeShort)}</span>
+            <span class="doc-chip doc-chip-${sourceClass}">${sourceLabel}</span>
+          </div>
+          <div class="preview">${escapeHtml(preview) || "<em>no text captured</em>"}</div>
+        </div>
+        <div class="meta"><span>${sizeKb}</span><span>${escapeHtml(sourceLabel)}</span></div>
         <div class="ext" title="View detail">→</div>
       `;
       row.addEventListener("click", () => openDocModal(d));
@@ -579,6 +677,39 @@
 
   function escapeHtml(s) {
     return String(s ?? "").replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
+  }
+
+  function mergeDocuments(primary, secondary) {
+    const byKey = new Map();
+    for (const d of [...primary, ...secondary]) {
+      const key = d.url || d.source_id || `${d.central_bank}-${d.doc_type}-${d.release_date}`;
+      byKey.set(key, d);
+    }
+    return [...byKey.values()].sort((a, b) => String(b.release_date || "").localeCompare(String(a.release_date || "")));
+  }
+
+  function setSourceSwitchState() {
+    const root = $("source-switch");
+    if (!root) return;
+    const fakeBtn = root.querySelector('[data-source="fakefed"]');
+    if (!fakeBtn) return;
+    fakeBtn.classList.toggle("active", fakeFedEnabled);
+    fakeBtn.classList.toggle("badge-neg", fakeFedEnabled);
+    fakeBtn.classList.toggle("badge-outline", !fakeFedEnabled);
+    fakeBtn.setAttribute("aria-pressed", fakeFedEnabled ? "true" : "false");
+    fakeBtn.title = fakeFedEnabled ? "Hide FakeFed documents" : "Show FakeFed documents";
+  }
+
+  function scrollFeedIntoView() {
+    const feed = $("feed");
+    if (feed) feed.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function sourceLabelFor(d) {
+    const url = String(d.url || d.source_id || "").toLowerCase();
+    const bank = String(d.central_bank || "").toLowerCase();
+    if (url.includes("fakefed") || bank.includes("fakefed")) return "FakeFed";
+    return d.central_bank || "FED";
   }
 
   load();

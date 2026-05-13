@@ -1,4 +1,6 @@
 import unittest
+import sqlite3
+import tempfile
 from datetime import datetime
 from pathlib import Path
 from unittest.mock import patch
@@ -73,6 +75,68 @@ class MonitorFakeFedTests(unittest.TestCase):
 
         self.assertEqual(len(deduped), 1)
         self.assertTrue(deduped[0]["url"].endswith(".htm"))
+
+    def test_refresh_macro_data_upserts_fred_rows(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            db_path = Path(tmp_dir) / "fedwatcher.db"
+            with sqlite3.connect(db_path) as conn:
+                conn.execute(
+                    """
+                    CREATE TABLE macro_data (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        observation_month TEXT UNIQUE NOT NULL,
+                        core_cpi_index REAL,
+                        core_cpi_mom REAL,
+                        core_cpi_yoy REAL,
+                        unemployment_rate REAL,
+                        us2y_yield REAL,
+                        interpolated_fields TEXT,
+                        source TEXT DEFAULT 'FRED',
+                        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+                    )
+                    """
+                )
+
+            rows = [
+                {
+                    "observation_month": "1994-01",
+                    "core_cpi_index": 154.5,
+                    "core_cpi_mom": 0.12,
+                    "core_cpi_yoy": 2.93,
+                    "unemployment_rate": 6.6,
+                    "us2y_yield": 4.14,
+                    "interpolated_fields": "",
+                }
+            ]
+
+            with patch("agents.monitor.FredClient"), patch(
+                "agents.monitor.fetch_monthly_macro_rows",
+                return_value=rows,
+            ) as fetch_rows:
+                agent = MonitorAgent(
+                    db_path=db_path,
+                    macro_start="1994-01-01",
+                    macro_end="1994-01-31",
+                )
+                written_rows = agent.refresh_macro_data()
+
+            self.assertEqual(written_rows, rows)
+            fetch_rows.assert_called_once()
+
+            with sqlite3.connect(db_path) as conn:
+                saved = conn.execute(
+                    """
+                    SELECT observation_month, core_cpi_index, core_cpi_yoy,
+                           unemployment_rate, us2y_yield, interpolated_fields
+                    FROM macro_data
+                    """
+                ).fetchone()
+
+            self.assertEqual(
+                saved,
+                ("1994-01", 154.5, 2.93, 6.6, 4.14, ""),
+            )
 
 
 if __name__ == "__main__":

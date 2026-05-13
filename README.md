@@ -224,9 +224,14 @@ policy_midpoint = (DFEDTARU_t + DFEDTARL_t) / 2
 market_policy_gap = DGS2_t - policy_midpoint
 ```
 
-Implemented FRED storage uses one row per month in `macro_data`, because `CPILFESL` and
-`UNRATE` are monthly series. `DGS2` is fetched from FRED at monthly frequency using average
-aggregation, so the 2-year Treasury yield is aligned to the same monthly row:
+Implemented FRED storage starts at `1994-01` to align with the earliest Fed statement
+history. The fetcher pulls one hidden prior year of `CPILFESL` so stored `1994` rows can
+still calculate `core_cpi_yoy`; those lookback rows are not stored in `macro_data`.
+`UNRATE` is monthly, and `DGS2` is fetched from FRED at monthly frequency using average
+aggregation, so the 2-year Treasury yield is aligned to the same monthly row. The fetcher
+creates a continuous monthly index and fills only isolated one-month gaps by averaging the
+previous and following month. Filled fields are recorded in `interpolated_fields`; longer
+gaps stay null and are highlighted as missing in the dashboard table.
 
 | Column | Source | Frequency |
 |---|---|---|
@@ -236,6 +241,7 @@ aggregation, so the 2-year Treasury yield is aligned to the same monthly row:
 | `core_cpi_yoy` | `CPILFESL` transform | year-over-year percent change |
 | `unemployment_rate` | `UNRATE` | monthly percentage rate |
 | `us2y_yield` | `DGS2` | monthly average percentage yield |
+| `interpolated_fields` | fetcher metadata | comma-separated fields filled from adjacent months |
 
 All data transformations should keep units explicit. Interest-rate and inflation variables
 must consistently use either percentage points or basis points.
@@ -386,7 +392,9 @@ Current prototype commands:
 python scripts/init_db.py
 python scripts/inital_data_download.py
 python scripts/backfill_fred.py
+python scripts/backfill_fred.py --dry-run
 python agents/monitor.py
+python agents/monitor.py --refresh-macro
 ```
 
 FakeFed test target:

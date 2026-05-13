@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import sqlite3
+import time
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -13,10 +14,11 @@ import requests
 
 
 FRED_OBSERVATIONS_URL = "https://api.stlouisfed.org/fred/series/observations"
-DEFAULT_START_DATE = "2000-01-01"
+DEFAULT_START_DATE = "1994-01-01"
 SERIES_CORE_CPI = "CPILFESL"
 SERIES_UNEMPLOYMENT = "UNRATE"
 SERIES_US2Y = "DGS2"
+MACRO_VALUE_FIELDS = ("core_cpi_index", "unemployment_rate", "us2y_yield")
 
 
 @dataclass(frozen=True)
@@ -33,6 +35,42 @@ def month_key(observation_date: str) -> str:
     return observation_date[:7]
 
 
+def next_month(month: str) -> str:
+    """Return the month after a YYYY-MM key."""
+
+    year = int(month[:4])
+    month_number = int(month[5:7])
+    if month_number == 12:
+        return f"{year + 1}-01"
+    return f"{year}-{month_number + 1:02d}"
+
+
+def previous_year_date(date_text: str) -> str:
+    """Return the same YYYY-MM-DD date one year earlier."""
+
+    date = datetime.strptime(date_text, "%Y-%m-%d").date()
+    try:
+        previous = date.replace(year=date.year - 1)
+    except ValueError:
+        previous = date.replace(year=date.year - 1, day=28)
+    return previous.isoformat()
+
+
+def complete_month_range(months: list[str]) -> list[str]:
+    """Return a continuous monthly range spanning the provided YYYY-MM keys."""
+
+    if not months:
+        return []
+
+    month = min(months)
+    end = max(months)
+    out: list[str] = []
+    while month <= end:
+        out.append(month)
+        month = next_month(month)
+    return out
+
+
 def parse_fred_value(value: str) -> float | None:
     """FRED uses "." for missing observations."""
 
@@ -45,6 +83,31 @@ def percent_change(current: float | None, previous: float | None) -> float | Non
     if current is None or previous in (None, 0):
         return None
     return 100 * (current / previous - 1)
+
+
+def interpolate_single_month_gaps(
+    values_by_month: dict[str, float | None],
+    months: list[str],
+) -> tuple[dict[str, float | None], set[str]]:
+    """Fill one-month gaps by averaging the adjacent monthly observations."""
+
+    filled = dict(values_by_month)
+    interpolated_months: set[str] = set()
+
+    for index in range(1, len(months) - 1):
+        month = months[index]
+        if filled.get(month) is not None:
+            continue
+
+        previous_value = values_by_month.get(months[index - 1])
+        next_value = values_by_month.get(months[index + 1])
+        if previous_value is None or next_value is None:
+            continue
+
+        filled[month] = (previous_value + next_value) / 2
+        interpolated_months.add(month)
+
+    return filled, interpolated_months
 
 
 def load_dotenv_if_available(path: Path = Path(".env")) -> None:
@@ -90,8 +153,20 @@ class FredClient:
         if aggregation_method:
             params["aggregation_method"] = aggregation_method
 
-        response = requests.get(FRED_OBSERVATIONS_URL, params=params, timeout=30)
-        response.raise_for_status()
+        response = None
+        for attempt in range(3):
+            response = requests.get(FRED_OBSERVATIONS_URL, params=params, timeout=30)
+            if response.status_code not in {500, 502, 503, 504}:
+                break
+            if attempt < 2:
+                time.sleep(0.5 * (attempt + 1))
+
+        if response is None:
+            raise RuntimeError(f"FRED observations request failed for {series_id}")
+        if not response.ok:
+            raise RuntimeError(
+                f"FRED observations request failed for {series_id}: HTTP {response.status_code}"
+            )
         payload = response.json()
 
         if "error_message" in payload:
@@ -110,6 +185,7 @@ def build_monthly_macro_rows(
     core_cpi: list[FredObservation],
     unemployment: list[FredObservation],
     us2y: list[FredObservation],
+    output_start: str | None = None,
 ) -> list[dict[str, float | str | None]]:
     """Align CPILFESL, UNRATE, and monthly-average DGS2 into one row per month."""
 
@@ -117,17 +193,29 @@ def build_monthly_macro_rows(
     unemployment_by_month = {month_key(obs.date): obs.value for obs in unemployment}
     us2y_by_month = {month_key(obs.date): obs.value for obs in us2y}
 
-    months = sorted(set(cpi_by_month) | set(unemployment_by_month) | set(us2y_by_month))
-    cpi_months = sorted(cpi_by_month)
-    previous_cpi_month = {
-        month: cpi_months[index - 1] if index > 0 else None
-        for index, month in enumerate(cpi_months)
-    }
+    observed_months = sorted(set(cpi_by_month) | set(unemployment_by_month) | set(us2y_by_month))
+    months = complete_month_range(observed_months)
+    interpolated_by_month = {month: set() for month in months}
+
+    cpi_by_month, cpi_interpolated = interpolate_single_month_gaps(cpi_by_month, months)
+    unemployment_by_month, unemployment_interpolated = interpolate_single_month_gaps(
+        unemployment_by_month,
+        months,
+    )
+    us2y_by_month, us2y_interpolated = interpolate_single_month_gaps(us2y_by_month, months)
+
+    for month in cpi_interpolated:
+        interpolated_by_month[month].add("core_cpi_index")
+    for month in unemployment_interpolated:
+        interpolated_by_month[month].add("unemployment_rate")
+    for month in us2y_interpolated:
+        interpolated_by_month[month].add("us2y_yield")
+
     rows: list[dict[str, float | str | None]] = []
 
-    for month in months:
+    for index, month in enumerate(months):
         cpi_value = cpi_by_month.get(month)
-        previous_month = previous_cpi_month.get(month)
+        previous_month = months[index - 1] if index > 0 else None
         previous_cpi = cpi_by_month.get(previous_month) if previous_month else None
         prior_year_month = f"{int(month[:4]) - 1}{month[4:]}"
         prior_year_cpi = cpi_by_month.get(prior_year_month)
@@ -140,10 +228,21 @@ def build_monthly_macro_rows(
                 "core_cpi_yoy": percent_change(cpi_value, prior_year_cpi),
                 "unemployment_rate": unemployment_by_month.get(month),
                 "us2y_yield": us2y_by_month.get(month),
+                "interpolated_fields": ",".join(
+                    field for field in MACRO_VALUE_FIELDS if field in interpolated_by_month[month]
+                ),
             }
         )
 
-    return rows
+    if output_start is None:
+        return rows
+
+    output_start_month = month_key(output_start)
+    return [
+        row
+        for row in rows
+        if str(row["observation_month"]) >= output_start_month
+    ]
 
 
 def fetch_monthly_macro_rows(
@@ -156,9 +255,10 @@ def fetch_monthly_macro_rows(
     if observation_end is None:
         observation_end = datetime.today().date().isoformat()
 
+    cpi_start = previous_year_date(observation_start)
     core_cpi = client.observations(
         SERIES_CORE_CPI,
-        observation_start=observation_start,
+        observation_start=cpi_start,
         observation_end=observation_end,
     )
     unemployment = client.observations(
@@ -174,7 +274,12 @@ def fetch_monthly_macro_rows(
         aggregation_method="avg",
     )
 
-    return build_monthly_macro_rows(core_cpi, unemployment, us2y)
+    return build_monthly_macro_rows(
+        core_cpi,
+        unemployment,
+        us2y,
+        output_start=observation_start,
+    )
 
 
 def upsert_macro_rows(db_path: Path, rows: list[dict[str, float | str | None]]) -> int:
@@ -183,6 +288,7 @@ def upsert_macro_rows(db_path: Path, rows: list[dict[str, float | str | None]]) 
     conn = sqlite3.connect(db_path)
     try:
         cursor = conn.cursor()
+        ensure_macro_data_columns(cursor)
         cursor.executemany(
             """
             INSERT INTO macro_data (
@@ -191,7 +297,8 @@ def upsert_macro_rows(db_path: Path, rows: list[dict[str, float | str | None]]) 
                 core_cpi_mom,
                 core_cpi_yoy,
                 unemployment_rate,
-                us2y_yield
+                us2y_yield,
+                interpolated_fields
             )
             VALUES (
                 :observation_month,
@@ -199,7 +306,8 @@ def upsert_macro_rows(db_path: Path, rows: list[dict[str, float | str | None]]) 
                 :core_cpi_mom,
                 :core_cpi_yoy,
                 :unemployment_rate,
-                :us2y_yield
+                :us2y_yield,
+                :interpolated_fields
             )
             ON CONFLICT(observation_month) DO UPDATE SET
                 core_cpi_index = excluded.core_cpi_index,
@@ -207,6 +315,7 @@ def upsert_macro_rows(db_path: Path, rows: list[dict[str, float | str | None]]) 
                 core_cpi_yoy = excluded.core_cpi_yoy,
                 unemployment_rate = excluded.unemployment_rate,
                 us2y_yield = excluded.us2y_yield,
+                interpolated_fields = excluded.interpolated_fields,
                 updated_at = CURRENT_TIMESTAMP
             """,
             rows,
@@ -215,3 +324,14 @@ def upsert_macro_rows(db_path: Path, rows: list[dict[str, float | str | None]]) 
         return cursor.rowcount
     finally:
         conn.close()
+
+
+def ensure_macro_data_columns(cursor: sqlite3.Cursor) -> None:
+    """Add lightweight macro_data columns needed by newer fetchers."""
+
+    columns = {
+        row[1]
+        for row in cursor.execute("PRAGMA table_info(macro_data)").fetchall()
+    }
+    if "interpolated_fields" not in columns:
+        cursor.execute("ALTER TABLE macro_data ADD COLUMN interpolated_fields TEXT")

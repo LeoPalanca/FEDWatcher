@@ -10,6 +10,7 @@ from __future__ import annotations
 import os
 import re
 import sqlite3
+import argparse
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -19,6 +20,18 @@ from urllib.parse import urljoin, urlparse
 import requests
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in os.sys.path:
+    os.sys.path.insert(0, str(PROJECT_ROOT))
+
+from sources.fred import (
+    DEFAULT_START_DATE as DEFAULT_MACRO_START_DATE,
+    FredClient,
+    fetch_monthly_macro_rows,
+    load_dotenv_if_available,
+    upsert_macro_rows,
+)
 
 
 load_dotenv()
@@ -125,6 +138,9 @@ class MonitorAgent:
     calendar_path: str | None = None
     db_path: str | Path = DEFAULT_DB_PATH
     timeout: int = 30
+    refresh_macro: bool = False
+    macro_start: str = DEFAULT_MACRO_START_DATE
+    macro_end: str | None = None
 
     def __post_init__(self) -> None:
         self.base_url = (self.base_url or os.getenv("FED_BASE_URL") or DEFAULT_BASE_URL).rstrip("/")
@@ -144,7 +160,27 @@ class MonitorAgent:
         candidates = self.fetch_candidate_documents()
         documents = deduplicate_documents(candidates)
         fetched_documents = self.fetch_document_texts(documents)
-        return self.save_documents(fetched_documents)
+        saved_documents = self.save_documents(fetched_documents)
+        if self.refresh_macro:
+            self.refresh_macro_data()
+        return saved_documents
+
+    def refresh_macro_data(self) -> list[dict[str, float | str | None]]:
+        """Fetch FRED macro rows and upsert them into ``macro_data``."""
+
+        load_dotenv_if_available()
+        rows = fetch_monthly_macro_rows(
+            FredClient(),
+            observation_start=self.macro_start,
+            observation_end=self.macro_end,
+        )
+        db_path = Path(self.db_path)
+        if not db_path.exists():
+            raise FileNotFoundError(
+                f"Database file not found: {db_path}. Run python scripts/init_db.py first."
+            )
+        upsert_macro_rows(db_path, rows)
+        return rows
 
     def fetch_candidate_documents(self) -> list[dict[str, Any]]:
         response = requests.get(self.calendar_url, timeout=self.timeout)
@@ -247,8 +283,41 @@ class MonitorAgent:
         return saved
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Monitor Fed/FakeFed documents and optionally refresh FRED macro data."
+    )
+    parser.add_argument(
+        "--db",
+        default=DEFAULT_DB_PATH,
+        help=f"SQLite database path. Default: {DEFAULT_DB_PATH}",
+    )
+    parser.add_argument(
+        "--refresh-macro",
+        action="store_true",
+        help="Also refresh FRED macro rows in macro_data.",
+    )
+    parser.add_argument(
+        "--macro-start",
+        default=DEFAULT_MACRO_START_DATE,
+        help=f"Macro observation start date. Default: {DEFAULT_MACRO_START_DATE}",
+    )
+    parser.add_argument(
+        "--macro-end",
+        default=None,
+        help="Macro observation end date, YYYY-MM-DD. Default: today.",
+    )
+    return parser.parse_args()
+
+
 def main() -> None:
-    agent = MonitorAgent()
+    args = parse_args()
+    agent = MonitorAgent(
+        db_path=args.db,
+        refresh_macro=args.refresh_macro,
+        macro_start=args.macro_start,
+        macro_end=args.macro_end,
+    )
     documents = agent.run()
     print(f"Fetched and saved {len(documents)} documents from {agent.calendar_url}.")
     for document in documents[:20]:
@@ -256,6 +325,8 @@ def main() -> None:
             f"{document['release_date']} | {document['doc_type']} | "
             f"{len(document.get('raw_text') or '')} chars | {document['url']}"
         )
+    if args.refresh_macro:
+        print(f"Refreshed macro_data from FRED starting {args.macro_start}.")
 
 
 if __name__ == "__main__":

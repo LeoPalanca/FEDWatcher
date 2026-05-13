@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS macro_data (
     core_cpi_yoy REAL,
     unemployment_rate REAL,
     us2y_yield REAL,
+    interpolated_fields TEXT,
     source TEXT DEFAULT 'FRED',
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP
