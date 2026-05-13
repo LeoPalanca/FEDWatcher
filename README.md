@@ -44,8 +44,10 @@ Implemented:
   `fedwatcher.ellep.it` deployment.
 - FRED monthly macro/rate ingestion in `sources/fred.py` and `scripts/backfill_fred.py`:
   stores `CPILFESL`, `UNRATE`, and monthly-average `DGS2` in `macro_data`.
-- `AnalystAgent` document segmentation in `agents/analyst.py`: splits FOMC statements and minutes into weighted sections (`forward_guidance`, `inflation`, `labor_market`, `general` / `policy_discussion`) for downstream tone scoring.
-- `AnalystAgent` LLM tone scoring in `agents/analyst.py`: calls the Anthropic API (`ANTHROPIC_API_KEY`), or OpenRouter API key (`OPENROUTER_API_KEY`) with the segmented sections and extracts a numeric `tone_score` in `[-1.0, +1.0]` (dovish → hawkish), plus `overall_tone`, `inflation_assessment`, `labor_market_assessment`, `forward_guidance`, `key_phrases`, and `confidence`. Returns a typed `ToneResult` with a `to_db_row()` helper ready for the `sentiment` table.
+- `AnalystAgent`  in `agents/analyst.py`:
+  - document segmentation: splits FOMC statements and minutes into weighted sections (`forward_guidance`, `inflation`, `labor_market`, `general` / `policy_discussion`) for downstream tone scoring.
+  - LLM tone scoring calls the OpenRouter API key (`OPENROUTER_API_KEY`) with the segmented sections and extracts a numeric `tone_score` in `[-1.0, +1.0]` (dovish → hawkish), plus `overall_tone`, `inflation_assessment`, `labor_market_assessment`, `forward_guidance`, `key_phrases`, and `confidence`.
+  Returns a typed `ToneResult` with a `to_db_row()` helper ready for the `sentiment` table.
 
 Planned next:
 
