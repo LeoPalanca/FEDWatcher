@@ -16,14 +16,28 @@ from typing import Any
 
 from openai import OpenAI
 
+
+# ---------------------------------------------------------------------------
+# Model used for tone extraction
+# ---------------------------------------------------------------------------
+
 _MODEL = "openai/gpt-oss-120b:free"
 _OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 
 _SYSTEM_PROMPT = """\
-You are a monetary-policy analyst specialising in Federal Reserve communications.
+You are a monetary-policy analyst specialised in Federal Reserve communications.
 You read FOMC statements, minutes, and speeches and return a structured JSON object.
-Be precise and evidence-based. Never hallucinate numbers or dates.
+
+Rules:
+- Be precise and evidence-based. 
+- Never hallucinate numbers or dates.
+- Only include a label if the statement clearly supports it.
+- For each label you select, provide a verbatim quote from the statement as evidence.
+- Do not invent or paraphrase quotes.
+- Quotes must be copied verbatim from the input text.
+- Choose quotes from different statements where possible.
 """
+
 
 _USER_TEMPLATE = """\
 Analyse the following Federal Reserve {doc_type} for monetary-policy tone.
@@ -35,9 +49,9 @@ Return ONLY a JSON object with these exact keys:
 {{
   "tone_score": <float in [-1.0, +1.0]>,
   "overall_tone": <"dovish" | "neutral" | "hawkish">,
-  "inflation_assessment": <one sentence>,
-  "labor_market_assessment": <one sentence>,
-  "forward_guidance": <one sentence>,
+  "inflation_assessment": <one sentence on current inflation conditions>,
+  "labor_market_assessment": <one sentence on the state of the art of the labor market>,
+  "forward_guidance": <one sentence that explicitly signals the future path of rates or policy>,
   "key_phrases": [<up to 5 verbatim short phrases that drove your score>],
   "confidence": <float in [0.0, 1.0]>
 }}
