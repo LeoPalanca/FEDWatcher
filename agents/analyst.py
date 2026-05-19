@@ -18,10 +18,14 @@ from openai import OpenAI
 
 
 # ---------------------------------------------------------------------------
-# Model used for tone extraction
+# Models used for tone extraction
+# Both are called per document; tone_score is averaged across models.
 # ---------------------------------------------------------------------------
 
-_MODEL = "openai/gpt-oss-120b:free"
+_MODELS = [
+    "openai/gpt-oss-120b:free",
+    "deepseek/deepseek-v4-flash",
+]
 _OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 
 _SYSTEM_PROMPT = """\
@@ -66,8 +70,7 @@ Do not include any text outside the JSON object.
 
 # ---------------------------------------------------------------------------
 # Section weights
-# Placeholder values – to be validated against Hansen & McMahon (2016) or
-# empirically calibrated on historical FOMC data before final submission.
+# Placeholder values – to be empirically calibrated on historical FOMC data before final submission.
 # ---------------------------------------------------------------------------
 
 WEIGHTS: dict[str, dict[str, float]] = {
@@ -236,22 +239,23 @@ class AnalystAgent:
     ) -> dict[str, Any]:
         weights = WEIGHTS.get(_normalise_doc_type(doc_type), WEIGHTS["statement"])
         sections_block = _format_sections_block(sections, weights)
+        prompt = _USER_TEMPLATE.format(doc_type=doc_type, sections_block=sections_block)
+        messages = [
+            {"role": "system", "content": _SYSTEM_PROMPT},
+            {"role": "user", "content": prompt},
+        ]
 
-        prompt = _USER_TEMPLATE.format(
-            doc_type=doc_type, sections_block=sections_block
-        )
+        results: list[dict[str, Any]] = []
+        for model in _MODELS:
+            response = self._client.chat.completions.create(
+                model=model,
+                max_tokens=512,
+                messages=messages,
+            )
+            raw = response.choices[0].message.content.strip()
+            results.append(_parse_llm_json(raw))
 
-        response = self._client.chat.completions.create(
-            model=_MODEL,
-            max_tokens=512,
-            messages=[
-                {"role": "system", "content": _SYSTEM_PROMPT},
-                {"role": "user", "content": prompt},
-            ],
-        )
-
-        raw = response.choices[0].message.content.strip()
-        return _parse_llm_json(raw)
+        return _average_llm_results(results)
 
     # ------------------------------------------------------------------
     # Segmentation (unchanged public surface)
@@ -299,10 +303,12 @@ class AnalystAgent:
                 current_section = _map_header(m.group(0), sections)
             else:
                 # content-based fallback within current section context
-                labels = [_classify_sentence(s, sections) for s in _split_sentences(para)]
+                labels = [_classify_sentence(s, sections)
+                          for s in _split_sentences(para)]
                 non_fallback = [l for l in labels if l != sections[-1]]
                 if non_fallback:
-                    current_section = Counter(non_fallback).most_common(1)[0][0]
+                    current_section = Counter(
+                        non_fallback).most_common(1)[0][0]
             buckets[current_section].append(para)
 
         return {k: " ".join(v) for k, v in buckets.items() if v}
@@ -321,7 +327,8 @@ def _split_paragraphs(text: str) -> list[str]:
 
 
 def _classify_sentence(sentence: str, sections: list[str]) -> str:
-    priority = ["forward_guidance", "policy_discussion", "inflation", "labor_market"]
+    priority = ["forward_guidance", "policy_discussion",
+                "inflation", "labor_market"]
     for label in priority:
         if label in sections and _PATTERNS[label].search(sentence):
             return label
@@ -356,7 +363,8 @@ def _parse_llm_json(raw: str) -> dict[str, Any]:
     Raises ValueError if the reply cannot be parsed or is missing tone_score.
     """
     # Strip markdown code fences if the model wrapped the JSON
-    clean = re.sub(r"^```(?:json)?\s*|\s*```$", "", raw, flags=re.DOTALL).strip()
+    clean = re.sub(r"^```(?:json)?\s*|\s*```$", "",
+                   raw, flags=re.DOTALL).strip()
 
     try:
         data: dict[str, Any] = json.loads(clean)
@@ -372,3 +380,39 @@ def _parse_llm_json(raw: str) -> dict[str, Any]:
     data["confidence"] = max(0.0, min(1.0, float(data["confidence"])))
 
     return data
+
+
+def _average_llm_results(results: list[dict[str, Any]]) -> dict[str, Any]:
+    """Average numeric fields across models; take text fields from the highest-confidence result."""
+    avg_tone = sum(r["tone_score"] for r in results) / len(results)
+    avg_confidence = sum(r["confidence"] for r in results) / len(results)
+
+    best = max(results, key=lambda r: r["confidence"])
+
+    score = max(-1.0, min(1.0, avg_tone))
+    if score <= -0.33:
+        overall_tone = "dovish"
+    elif score >= 0.33:
+        overall_tone = "hawkish"
+    else:
+        overall_tone = "neutral"
+
+    seen: set[str] = set()
+    key_phrases: list[str] = []
+    for r in results:
+        for phrase in r.get("key_phrases", []):
+            if phrase not in seen:
+                seen.add(phrase)
+                key_phrases.append(phrase)
+            if len(key_phrases) == 5:
+                break
+
+    return {
+        "tone_score": score,
+        "overall_tone": overall_tone,
+        "inflation_assessment": best["inflation_assessment"],
+        "labor_market_assessment": best["labor_market_assessment"],
+        "forward_guidance": best["forward_guidance"],
+        "key_phrases": key_phrases,
+        "confidence": avg_confidence,
+    }
