@@ -15,6 +15,3 @@ Structure:
 
 **Review of academic factor decay literature**
 Alpha Architect (2023) – Information Decay: Which Factors Have the Longest Half-Lives?
----
-### FED Documents weights
-* Hansen & McMahon (2016) 
