@@ -50,12 +50,21 @@ Implemented:
   - document segmentation: splits FOMC statements and minutes into weighted sections (`forward_guidance`, `inflation`, `labor_market`, `general` / `policy_discussion`) for downstream tone scoring.
   - LLM tone scoring calls the OpenRouter API key (`OPENROUTER_API_KEY`) with the segmented sections and extracts a numeric `tone_score` in `[-1.0, +1.0]` (dovish → hawkish), plus `overall_tone`, `inflation_assessment`, `labor_market_assessment`, `forward_guidance`, `key_phrases`, and `confidence`.
   Returns a typed `ToneResult` with a `to_db_row()` helper ready for the `sentiment` table.
+- `StrategistAgent` in `agents/strategist.py`:
+  - EWMA time-aware tone smoothing (`S_t = α_t·tone_t + (1−α_t)·S_{t−1}`,
+    `α_t = 1 − exp(−ln(2)/21 · Δt)`), where Δt is the calendar-day gap between FOMC releases.
+  - Ordered-probit nowcast over rate-move buckets `{-50, -25, 0, +25, +50}` bps,
+    with latent index `η = β_S·S + β_π·(CPI_yoy − 2) + β_u·(U − U_baseline)`.
+    Default `β` and cut points are sign-coherent placeholders pending calibration on historical FOMC outcomes.
+  - Tone-implied next-meeting rate `current_rate + Σ_k P(Y=j_k)·j_k / 100`.
+  - Divergence signal vs the market proxy (`DGS2`), with `aligned` / `hawkish` / `dovish` classification.
+  - Returns a typed `PolicySignal` with a `to_db_row()` helper ready for the `signals` table.
 
 Planned next:
 
 - Add FRED ingestion for policy-rate target series such as `DFEDTARU`, `DFEDTARL`,
   and `DFF`.
-- Implement `StrategistAgent` (EWMA tone smoothing, multinomial nowcast, tone-implied rate, divergence signals).
+- Calibrate `StrategistAgent` β coefficients and cut points on historical FOMC rate-move outcomes.
 - Add FastAPI endpoints.
 - Build the dashboard against the FastAPI API, including an admin-protected FakeFed fetch
   action that appends synthetic documents to the same document feed.
@@ -120,7 +129,7 @@ Responsibilities:
 
 ### StrategistAgent
 
-Combines text tone, macro data, and market proxies.
+Combines text tone, macro data, and market proxies. **Implemented.**
 
 Responsibilities:
 
