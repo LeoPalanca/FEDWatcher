@@ -62,3 +62,17 @@ CREATE TABLE IF NOT EXISTS signals (
     FOREIGN KEY (document_id) REFERENCES documents(id),
     FOREIGN KEY (market_snapshot_id) REFERENCES market_data(id)
 );
+
+CREATE TABLE IF NOT EXISTS sentiment2 (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    document_id INTEGER,
+    overall_tone TEXT,
+    tone_score REAL,
+    inflation_assessment TEXT,
+    labor_market_assessment TEXT,
+    forward_guidance TEXT,
+    key_phrases TEXT,
+    confidence REAL,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (document_id) REFERENCES documents(id)
+);

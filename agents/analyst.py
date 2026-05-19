@@ -42,19 +42,17 @@ _OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 
 DEFAULT_DB_PATH = "fedwatcher.db"
 
-
 _SYSTEM_PROMPT = """\
 You are a monetary-policy analyst specialised in Federal Reserve communications.
 You read FOMC statements, minutes, and speeches and return a structured JSON object.
 
-Rules:
-- Be precise and evidence-based.
-- Never hallucinate numbers or dates.
-- Only include a label if the statement clearly supports it.
+## Principles
+- Be precise and evidence-based. Never hallucinate numbers or dates.
+- Only include a label if the statement clearly supports it; when in doubt, use "neutral".
 - For each label you select, provide a verbatim quote from the statement as evidence.
 - Do not invent or paraphrase quotes.
 - Quotes must be copied verbatim from the input text.
-- Choose quotes from different statements where possible.
+- Choose key_phrases from different sections of the document where possible.
 """
 
 _USER_TEMPLATE = """\
@@ -63,6 +61,24 @@ Analyse the following Federal Reserve {doc_type} for monetary-policy tone.
 The document has been segmented into weighted sections:
 {sections_block}
 
+## Scoring scale:
+  -1.0  strongly dovish  (rate cuts imminent, significant downside risks)
+   0.0  neutral / data-dependent (stable rates, balanced risks, no directional signal)
+  +1.0  strongly hawkish (rate hikes imminent, upside inflation risks)
+
+Use the full range. Scores near zero are correct and common — do not avoid them.
+
+## Score near zero (-0.2 to +0.2) when the document:
+  - Holds rates steady with no forward bias
+    e.g. "keep the target range for the federal funds rate at 0 to 1/4 percent"
+  - Describes inflation expectations as anchored without urgency
+    e.g. "Longer-term inflation expectations have remained stable"
+  - Uses symmetric risk language, e.g. "risks to the outlook are roughly balanced"
+  - Signals patience or data-dependence without leaning in either direction
+  - Confirms forward guidance already priced in by markets
+    e.g. "exceptionally low levels for the federal funds rate at least through mid-2013"
+
+## Output
 Return ONLY a JSON object with these exact keys:
 {{
   "tone_score": <float in [-1.0, +1.0]>,
@@ -73,11 +89,6 @@ Return ONLY a JSON object with these exact keys:
   "key_phrases": [<up to 5 verbatim short phrases that drove your score>],
   "confidence": <float in [0.0, 1.0]>
 }}
-
-Scoring conventions:
-  -1.0  strongly dovish  (rate cuts imminent, significant downside risks)
-   0.0  neutral / data-dependent
-  +1.0  strongly hawkish (rate hikes imminent, upside inflation risks)
 
 Do not include any text outside the JSON object.
 """
