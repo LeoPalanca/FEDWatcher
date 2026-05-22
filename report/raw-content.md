@@ -1,4 +1,30 @@
-Structure:
+To-do
+- [ ]  Link to your Github page
+- [ ]  Project plan
+- [ ]  Project diary (your steps, what you did, why, which tools)
+- [ ]  Economics/mathematics/data science behind your project
+- [ ]  Sample results or applications and reflection of (economic) results
+- [ ]  Lessons learned from the project
+
+> Link to Github page:
+
+---
+## Project plan
+
+---
+## Project diary (your steps, what you did, why, which tools)
+
+---
+## Economics/mathematics/data science behind your project
+
+---
+## Sample results or applications and reflection of (economic) results
+
+---
+## Lessons learned from the project
+
+---
+## Literature
 ### Macro-topic
 **Sub-Topic**
 * Authors - Title, Journal/Publication institution
@@ -14,4 +40,4 @@ Structure:
 * Coibion, Georgarakos, Gorodnichenko & Weber – Forward Guidance and Household Expectations, SSRN / UCR working paper
 
 **Review of academic factor decay literature**
-Alpha Architect (2023) – Information Decay: Which Factors Have the Longest Half-Lives?
+* Alpha Architect (2023) – Information Decay: Which Factors Have the Longest Half-Lives?
