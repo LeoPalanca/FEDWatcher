@@ -32,27 +32,31 @@ from openai import OpenAI
 load_dotenv()
 
 
-
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
 
-_MODEL = "openai/gpt-oss-120b:free"
+_MODELS = [
+    "openai/gpt-oss-120b:free",
+    "deepseek/deepseek-v4-flash",
+]
 _OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 
 DEFAULT_DB_PATH = "fedwatcher.db"
+
 
 _SYSTEM_PROMPT = """\
 You are a monetary-policy analyst specialised in Federal Reserve communications.
 You read FOMC statements, minutes, and speeches and return a structured JSON object.
 
-## Principles
-- Be precise and evidence-based. Never hallucinate numbers or dates.
-- Only include a label if the statement clearly supports it; when in doubt, use "neutral".
+Rules:
+- Be precise and evidence-based.
+- Never hallucinate numbers or dates.
+- Only include a label if the statement clearly supports it.
 - For each label you select, provide a verbatim quote from the statement as evidence.
 - Do not invent or paraphrase quotes.
 - Quotes must be copied verbatim from the input text.
-- Choose key_phrases from different sections of the document where possible.
+- Choose quotes from different statements where possible.
 """
 
 _USER_TEMPLATE = """\
@@ -61,24 +65,6 @@ Analyse the following Federal Reserve {doc_type} for monetary-policy tone.
 The document has been segmented into weighted sections:
 {sections_block}
 
-## Scoring scale:
-  -1.0  strongly dovish  (rate cuts imminent, significant downside risks)
-   0.0  neutral / data-dependent (stable rates, balanced risks, no directional signal)
-  +1.0  strongly hawkish (rate hikes imminent, upside inflation risks)
-
-Use the full range. Scores near zero are correct and common — do not avoid them.
-
-## Score near zero (-0.2 to +0.2) when the document:
-  - Holds rates steady with no forward bias
-    e.g. "keep the target range for the federal funds rate at 0 to 1/4 percent"
-  - Describes inflation expectations as anchored without urgency
-    e.g. "Longer-term inflation expectations have remained stable"
-  - Uses symmetric risk language, e.g. "risks to the outlook are roughly balanced"
-  - Signals patience or data-dependence without leaning in either direction
-  - Confirms forward guidance already priced in by markets
-    e.g. "exceptionally low levels for the federal funds rate at least through mid-2013"
-
-## Output
 Return ONLY a JSON object with these exact keys:
 {{
   "tone_score": <float in [-1.0, +1.0]>,
@@ -89,6 +75,26 @@ Return ONLY a JSON object with these exact keys:
   "key_phrases": [<up to 5 verbatim short phrases that drove your score>],
   "confidence": <float in [0.0, 1.0]>
 }}
+
+Scoring conventions — use the FULL scale, not just the extremes:
+
+  -1.0  strongly dovish   — rate cuts imminent, significant downside risks flagged;
+                            language like "will cut", "substantial slack", "well below target".
+  -0.5  moderately dovish — easing bias present but not urgent; inflation below target or falling,
+                            labor market softening; language like "prepared to adjust downward".
+  -0.25 to +0.25  NEUTRAL — assign a score in this range when:
+                            • The statement is explicitly "data-dependent" with no clear direction.
+                            • Risks are described as "balanced" across inflation and employment.
+                            • The Committee is in a watching/monitoring posture with no rate signal.
+                            • Language like "patient", "gradual", "assessing incoming data",
+                              "will adjust as appropriate" dominates.
+                            • Both upside and downside risks are mentioned without one dominating.
+                            Do NOT force a hawkish or dovish score just because the Fed discusses
+                            inflation — neutral assessments of inflation are the norm, not the exception.
+  +0.5  moderately hawkish — tightening bias present; inflation above target; language like
+                             "prepared to tighten further", "upside risks to inflation remain".
+  +1.0  strongly hawkish   — rate hikes imminent, upside inflation risks dominate;
+                             language like "will hike", "inflation well above target".
 
 Do not include any text outside the JSON object.
 """
@@ -268,24 +274,25 @@ class AnalystAgent:
         normalized_type = _normalise_doc_type(doc_type)
         weights = WEIGHTS.get(normalized_type, WEIGHTS["statement"])
         sections_block = _format_sections_block(sections, weights)
-
         prompt = _USER_TEMPLATE.format(
-            doc_type=doc_type,
-            sections_block=sections_block,
-        )
+            doc_type=doc_type, sections_block=sections_block)
+        messages = [
+            {"role": "system", "content": _SYSTEM_PROMPT},
+            {"role": "user", "content": prompt},
+        ]
 
-        response = self._client.chat.completions.create(
-            model=_MODEL,
-            max_tokens=700,
-            temperature=0.0,
-            messages=[
-                {"role": "system", "content": _SYSTEM_PROMPT},
-                {"role": "user", "content": prompt},
-            ],
-        )
+        results: list[dict[str, Any]] = []
+        for model in _MODELS:
+            response = self._client.chat.completions.create(
+                model=model,
+                max_tokens=700,
+                temperature=0.0,
+                messages=messages,
+            )
+            raw = response.choices[0].message.content or ""
+            results.append(_parse_llm_json(raw))
 
-        raw = response.choices[0].message.content or ""
-        return _parse_llm_json(raw)
+        return _average_llm_results(results)
 
     def segment_document(self, text: str, doc_type: str) -> dict[str, str]:
         normalized_type = _normalise_doc_type(doc_type)
@@ -326,9 +333,11 @@ class AnalystAgent:
                     _classify_sentence(sentence, sections)
                     for sentence in _split_sentences(paragraph)
                 ]
-                non_fallback = [label for label in labels if label != sections[-1]]
+                non_fallback = [
+                    label for label in labels if label != sections[-1]]
                 if non_fallback:
-                    current_section = Counter(non_fallback).most_common(1)[0][0]
+                    current_section = Counter(
+                        non_fallback).most_common(1)[0][0]
 
             buckets[current_section].append(paragraph)
 
@@ -366,7 +375,7 @@ def validate_schema(conn: sqlite3.Connection) -> None:
             "raw_text",
             "processed",
         },
-        "sentiment": {
+        "sentiment2": {
             "id",
             "document_id",
             "overall_tone",
@@ -391,7 +400,8 @@ def validate_schema(conn: sqlite3.Connection) -> None:
 
         if missing_columns:
             missing = ", ".join(sorted(missing_columns))
-            raise RuntimeError(f"Table {table_name} is missing columns: {missing}")
+            raise RuntimeError(
+                f"Table {table_name} is missing columns: {missing}")
 
 
 def fetch_unprocessed_documents(
@@ -399,7 +409,8 @@ def fetch_unprocessed_documents(
     limit: int,
     include_speeches: bool = True,
 ) -> list[dict[str, Any]]:
-    doc_types = ("statement", "minutes", "speech") if include_speeches else ("statement", "minutes")
+    doc_types = ("statement", "minutes", "speech") if include_speeches else (
+        "statement", "minutes")
 
     placeholders = ",".join("?" for _ in doc_types)
 
@@ -421,7 +432,7 @@ def fetch_unprocessed_documents(
           AND LOWER(COALESCE(doc_type, 'statement')) IN ({placeholders})
           AND NOT EXISTS (
               SELECT 1
-              FROM sentiment s
+              FROM sentiment2 s
               WHERE s.document_id = documents.id
           )
         ORDER BY release_date ASC, id ASC
@@ -438,7 +449,7 @@ def insert_sentiment(conn: sqlite3.Connection, result: ToneResult) -> None:
 
     conn.execute(
         """
-        INSERT INTO sentiment (
+        INSERT INTO sentiment2 (
             document_id,
             overall_tone,
             tone_score,
@@ -517,7 +528,8 @@ def process_unprocessed_documents(
             url = document.get("url")
 
             print("-" * 80)
-            print(f"Processing document_id={doc_id} type={doc_type} release_date={release_date}")
+            print(
+                f"Processing document_id={doc_id} type={doc_type} release_date={release_date}")
             print(f"URL: {url}")
 
             try:
@@ -538,13 +550,15 @@ def process_unprocessed_documents(
                 conn.commit()
 
                 processed_count += 1
-                print(f"Saved sentiment and marked document {doc_id} as processed.")
+                print(
+                    f"Saved sentiment and marked document {doc_id} as processed.")
 
             except Exception as exc:
                 conn.rollback()
                 mark_document_failed(conn, doc_id)
                 conn.commit()
-                print(f"ERROR processing document {doc_id}: {exc}", file=sys.stderr)
+                print(
+                    f"ERROR processing document {doc_id}: {exc}", file=sys.stderr)
 
     finally:
         conn.close()
@@ -576,7 +590,8 @@ def _split_paragraphs(text: str) -> list[str]:
 
 
 def _classify_sentence(sentence: str, sections: list[str]) -> str:
-    priority = ["forward_guidance", "policy_discussion", "inflation", "labor_market"]
+    priority = ["forward_guidance", "policy_discussion",
+                "inflation", "labor_market"]
 
     for label in priority:
         if label in sections and _PATTERNS[label].search(sentence):
@@ -618,6 +633,42 @@ def _format_sections_block(sections: dict[str, str], weights: dict[str, float]) 
     return "\n\n".join(lines)
 
 
+def _average_llm_results(results: list[dict[str, Any]]) -> dict[str, Any]:
+    """Average numeric fields across models; take text fields from the highest-confidence result."""
+    avg_tone = sum(r["tone_score"] for r in results) / len(results)
+    avg_confidence = sum(r["confidence"] for r in results) / len(results)
+
+    best = max(results, key=lambda r: r["confidence"])
+
+    score = max(-1.0, min(1.0, avg_tone))
+    if score <= -0.25:
+        overall_tone = "dovish"
+    elif score >= 0.25:
+        overall_tone = "hawkish"
+    else:
+        overall_tone = "neutral"
+
+    seen: set[str] = set()
+    key_phrases: list[str] = []
+    for r in results:
+        for phrase in r.get("key_phrases", []):
+            if phrase not in seen:
+                seen.add(phrase)
+                key_phrases.append(phrase)
+            if len(key_phrases) == 5:
+                break
+
+    return {
+        "tone_score": score,
+        "overall_tone": overall_tone,
+        "inflation_assessment": best["inflation_assessment"],
+        "labor_market_assessment": best["labor_market_assessment"],
+        "forward_guidance": best["forward_guidance"],
+        "key_phrases": key_phrases,
+        "confidence": avg_confidence,
+    }
+
+
 def _parse_llm_json(raw: str) -> dict[str, Any]:
     clean = (raw or "").strip()
 
@@ -650,7 +701,8 @@ def _parse_llm_json(raw: str) -> dict[str, Any]:
 
     missing = required_keys - set(data)
     if missing:
-        raise ValueError(f"LLM response missing keys: {sorted(missing)}. Response: {data}")
+        raise ValueError(
+            f"LLM response missing keys: {sorted(missing)}. Response: {data}")
 
     data["tone_score"] = max(-1.0, min(1.0, float(data["tone_score"])))
     data["confidence"] = max(0.0, min(1.0, float(data["confidence"])))
