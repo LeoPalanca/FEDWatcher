@@ -48,7 +48,7 @@ Implemented:
 - Historical official Fed document backfill in `scripts/inital_data_download.py` using
   FedTools.
 - Direct Federal Reserve historical-page backfill in
-  `scripts/backfill_fed_historical_pages.py` for ranges FedTools misses, including
+  `agents/monitor-fed-historical-pages.py` for ranges FedTools misses, including
   2015-2020 statements and minutes.
 - FRED monthly macro/rate ingestion in `sources/fred.py` and `scripts/backfill_fred.py`:
   stores `CPILFESL`, `UNRATE`, and monthly-average `DGS2` in `macro_data`.
@@ -413,7 +413,7 @@ Current prototype commands:
 ```bash
 python scripts/init_db.py
 python scripts/inital_data_download.py
-python scripts/backfill_fed_historical_pages.py --start-year 2015 --end-year 2020
+python agents/monitor-fed-historical-pages.py --start-year 2015 --end-year 2020
 python scripts/backfill_fred.py
 python scripts/backfill_fred.py --dry-run
 uvicorn app.main:app --reload
