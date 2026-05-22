@@ -18,7 +18,13 @@ DEFAULT_START_DATE = "1994-01-01"
 SERIES_CORE_CPI = "CPILFESL"
 SERIES_UNEMPLOYMENT = "UNRATE"
 SERIES_US2Y = "DGS2"
-MACRO_VALUE_FIELDS = ("core_cpi_index", "unemployment_rate", "us2y_yield")
+SERIES_FEDFUNDS = "FEDFUNDS"
+MACRO_VALUE_FIELDS = (
+    "core_cpi_index",
+    "unemployment_rate",
+    "us2y_yield",
+    "policy_rate",
+)
 
 
 @dataclass(frozen=True)
@@ -185,15 +191,24 @@ def build_monthly_macro_rows(
     core_cpi: list[FredObservation],
     unemployment: list[FredObservation],
     us2y: list[FredObservation],
+    fed_funds: list[FredObservation] | None = None,
     output_start: str | None = None,
 ) -> list[dict[str, float | str | None]]:
-    """Align CPILFESL, UNRATE, and monthly-average DGS2 into one row per month."""
+    """Align CPILFESL, UNRATE, monthly-average DGS2, and FEDFUNDS into one row per month."""
+
+    fed_funds = fed_funds or []
 
     cpi_by_month = {month_key(obs.date): obs.value for obs in core_cpi}
     unemployment_by_month = {month_key(obs.date): obs.value for obs in unemployment}
     us2y_by_month = {month_key(obs.date): obs.value for obs in us2y}
+    fed_funds_by_month = {month_key(obs.date): obs.value for obs in fed_funds}
 
-    observed_months = sorted(set(cpi_by_month) | set(unemployment_by_month) | set(us2y_by_month))
+    observed_months = sorted(
+        set(cpi_by_month)
+        | set(unemployment_by_month)
+        | set(us2y_by_month)
+        | set(fed_funds_by_month)
+    )
     months = complete_month_range(observed_months)
     interpolated_by_month = {month: set() for month in months}
 
@@ -203,6 +218,10 @@ def build_monthly_macro_rows(
         months,
     )
     us2y_by_month, us2y_interpolated = interpolate_single_month_gaps(us2y_by_month, months)
+    fed_funds_by_month, fed_funds_interpolated = interpolate_single_month_gaps(
+        fed_funds_by_month,
+        months,
+    )
 
     for month in cpi_interpolated:
         interpolated_by_month[month].add("core_cpi_index")
@@ -210,6 +229,8 @@ def build_monthly_macro_rows(
         interpolated_by_month[month].add("unemployment_rate")
     for month in us2y_interpolated:
         interpolated_by_month[month].add("us2y_yield")
+    for month in fed_funds_interpolated:
+        interpolated_by_month[month].add("policy_rate")
 
     rows: list[dict[str, float | str | None]] = []
 
@@ -228,6 +249,7 @@ def build_monthly_macro_rows(
                 "core_cpi_yoy": percent_change(cpi_value, prior_year_cpi),
                 "unemployment_rate": unemployment_by_month.get(month),
                 "us2y_yield": us2y_by_month.get(month),
+                "policy_rate": fed_funds_by_month.get(month),
                 "interpolated_fields": ",".join(
                     field for field in MACRO_VALUE_FIELDS if field in interpolated_by_month[month]
                 ),
@@ -273,11 +295,17 @@ def fetch_monthly_macro_rows(
         frequency="m",
         aggregation_method="avg",
     )
+    fed_funds = client.observations(
+        SERIES_FEDFUNDS,
+        observation_start=observation_start,
+        observation_end=observation_end,
+    )
 
     return build_monthly_macro_rows(
         core_cpi,
         unemployment,
         us2y,
+        fed_funds=fed_funds,
         output_start=observation_start,
     )
 
@@ -298,6 +326,7 @@ def upsert_macro_rows(db_path: Path, rows: list[dict[str, float | str | None]]) 
                 core_cpi_yoy,
                 unemployment_rate,
                 us2y_yield,
+                policy_rate,
                 interpolated_fields
             )
             VALUES (
@@ -307,6 +336,7 @@ def upsert_macro_rows(db_path: Path, rows: list[dict[str, float | str | None]]) 
                 :core_cpi_yoy,
                 :unemployment_rate,
                 :us2y_yield,
+                :policy_rate,
                 :interpolated_fields
             )
             ON CONFLICT(observation_month) DO UPDATE SET
@@ -315,6 +345,7 @@ def upsert_macro_rows(db_path: Path, rows: list[dict[str, float | str | None]]) 
                 core_cpi_yoy = excluded.core_cpi_yoy,
                 unemployment_rate = excluded.unemployment_rate,
                 us2y_yield = excluded.us2y_yield,
+                policy_rate = excluded.policy_rate,
                 interpolated_fields = excluded.interpolated_fields,
                 updated_at = CURRENT_TIMESTAMP
             """,
@@ -335,3 +366,5 @@ def ensure_macro_data_columns(cursor: sqlite3.Cursor) -> None:
     }
     if "interpolated_fields" not in columns:
         cursor.execute("ALTER TABLE macro_data ADD COLUMN interpolated_fields TEXT")
+    if "policy_rate" not in columns:
+        cursor.execute("ALTER TABLE macro_data ADD COLUMN policy_rate REAL")
