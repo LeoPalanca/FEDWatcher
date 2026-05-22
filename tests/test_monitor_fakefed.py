@@ -90,6 +90,7 @@ class MonitorFakeFedTests(unittest.TestCase):
                         core_cpi_yoy REAL,
                         unemployment_rate REAL,
                         us2y_yield REAL,
+                        policy_rate REAL,
                         interpolated_fields TEXT,
                         source TEXT DEFAULT 'FRED',
                         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
@@ -106,6 +107,7 @@ class MonitorFakeFedTests(unittest.TestCase):
                     "core_cpi_yoy": 2.93,
                     "unemployment_rate": 6.6,
                     "us2y_yield": 4.14,
+                    "policy_rate": 3.0,
                     "interpolated_fields": "",
                 }
             ]
@@ -128,14 +130,15 @@ class MonitorFakeFedTests(unittest.TestCase):
                 saved = conn.execute(
                     """
                     SELECT observation_month, core_cpi_index, core_cpi_yoy,
-                           unemployment_rate, us2y_yield, interpolated_fields
+                           unemployment_rate, us2y_yield, policy_rate,
+                           interpolated_fields
                     FROM macro_data
                     """
                 ).fetchone()
 
             self.assertEqual(
                 saved,
-                ("1994-01", 154.5, 2.93, 6.6, 4.14, ""),
+                ("1994-01", 154.5, 2.93, 6.6, 4.14, 3.0, ""),
             )
 
 

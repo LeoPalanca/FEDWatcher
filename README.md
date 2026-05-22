@@ -40,10 +40,16 @@ Implemented:
   fetching from the official Fed site or FakeFed.
 - Static FakeFed fixture site in `fakefed/` for end-to-end fake statement tests.
 - Static FedWatcher brief homepage/dashboard in `fedwatcher/` for the first
-  `fedwatcher.ellep.it` deployment. It includes a full SQLite snapshot explorer and reads
-  static JSON from `fedwatcher/assets/data.json` and `fedwatcher/assets/documents.json`.
+  `fedwatcher.ellep.it` deployment. It includes a full SQLite explorer backed by the
+  FastAPI API.
+- Read-only FastAPI backend in `app/` exposing SQLite tables, documents, and a dashboard
+  snapshot through `/api/tables`, `/api/tables/{table}`, `/api/documents`, and
+  `/api/snapshot`.
 - Historical official Fed document backfill in `scripts/inital_data_download.py` using
   FedTools.
+- Direct Federal Reserve historical-page backfill in
+  `scripts/backfill_fed_historical_pages.py` for ranges FedTools misses, including
+  2015-2020 statements and minutes.
 - FRED monthly macro/rate ingestion in `sources/fred.py` and `scripts/backfill_fred.py`:
   stores `CPILFESL`, `UNRATE`, and monthly-average `DGS2` in `macro_data`.
 - `AnalystAgent` in `agents/analyst.py`:
@@ -67,7 +73,6 @@ Planned next:
 - Add FRED ingestion for policy-rate target series such as `DFEDTARU`, `DFEDTARL`,
   and `DFF`.
 - Calibrate `StrategistAgent` β coefficients and cut points on historical FOMC rate-move outcomes.
-- Add FastAPI endpoints.
 - Build the dashboard against the FastAPI API, including an admin-protected FakeFed fetch
   action that appends synthetic documents to the same document feed.
 - Add backtesting and academic documentation.
@@ -102,8 +107,9 @@ FRED API -> macro_data/market_data -> StrategistAgent -> signals table
                            Dashboard
 ```
 
-FastAPI is not the agent orchestrator. It exposes stored data, model results, and controlled
-pipeline actions. The pipeline itself remains a plain Python workflow that is easy to test.
+FastAPI is not the agent orchestrator. The current API is read-only and exposes stored data
+and model results. Controlled pipeline actions can be added later behind authentication. The
+pipeline itself remains a plain Python workflow that is easy to test.
 
 ## Runtime Agents
 
@@ -165,8 +171,9 @@ FEDWatcher/
 ├── docs/
 │   └── fakefed_deployment.md
 │
-├── api/                        # planned FastAPI backend
-│   └── main.py                 # FastAPI app
+├── app/                        # FastAPI backend
+│   ├── db.py                   # SQLite connection helpers
+│   └── main.py                 # read-only API app
 │
 ├── agents/
 │   ├── monitor.py              # MonitorAgent
@@ -314,23 +321,21 @@ This avoids the earlier binary-logit problem where `P(cut)` was needed but not e
 
 ## FastAPI Scope
 
-Minimum endpoints:
+Implemented read-only endpoints:
 
 ```text
-GET  /health
-GET  /documents
-GET  /sentiment/latest
-GET  /sentiment/history
-GET  /macro/latest
-GET  /signals/latest
-GET  /signals/history
-POST /pipeline/run
+GET /api/health
+GET /api/tables
+GET /api/tables/{table}?limit=100&offset=0&search=...
+GET /api/documents?limit=100&offset=0&search=...
+GET /api/snapshot
 ```
 
-Optional endpoint:
+Planned controlled endpoints:
 
 ```text
-GET /agents/status
+POST /api/pipeline/run
+GET  /api/agents/status
 ```
 
 If we want the course criterion "own API with authentication or rate limits", add one small
@@ -351,8 +356,8 @@ The dashboard should use FastAPI as its data source and show:
 - divergence history;
 - document explorer with extracted evidence phrases.
 
-The current static frontend in `fedwatcher/` is temporary. It reads static JSON files today;
-the final version should read from the FastAPI backend.
+The current frontend in `fedwatcher/` is static HTML/CSS/JS, but its data source is the
+FastAPI backend. It does not use stale database JSON snapshots.
 
 ## Database
 
@@ -408,8 +413,10 @@ Current prototype commands:
 ```bash
 python scripts/init_db.py
 python scripts/inital_data_download.py
+python scripts/backfill_fed_historical_pages.py --start-year 2015 --end-year 2020
 python scripts/backfill_fred.py
 python scripts/backfill_fred.py --dry-run
+uvicorn app.main:app --reload
 python agents/monitor.py
 python agents/monitor.py --refresh-macro
 python agents/analyst.py --limit 5
@@ -423,15 +430,8 @@ FakeFed test target:
 FED_BASE_URL=https://fakefed.ellep.it python agents/monitor.py
 ```
 
-Target commands:
-
-```bash
-python scripts/init_db.py
-python pipeline.py
-uvicorn api.main:app --reload
-```
-
-These target commands will become valid as the corresponding modules are implemented.
+The FastAPI backend is read-only for now, so it does not change agent execution. Agents keep
+writing to SQLite; the API exposes those stored rows to the dashboard.
 
 ## Development Workflow
 
@@ -480,16 +480,9 @@ The mode split is documented in `docs/dashboard_modes.md`.
 panels, AnalystAgent section-weight legend, macro context, rate-move buckets, document feed,
 a full SQLite table explorer, and the planned admin-only educational FakeFed mode.
 
-This static page is temporary. It currently reads `fedwatcher/assets/data.json` and
-`fedwatcher/assets/documents.json`. The final version should read from the FastAPI backend
-and replace placeholder values with database-backed documents, FRED data, sentiment results,
-and model probabilities.
-
-To refresh the database snapshot used by the static explorer:
-
-```bash
-rtk python scripts/export_db_json.py
-```
+This static page is temporary, but it now reads live database-backed JSON from the FastAPI
+backend. The old static database snapshots were removed so the website and SQLite database
+cannot drift apart.
 
 ## Course Criteria Coverage
 

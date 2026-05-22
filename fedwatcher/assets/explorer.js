@@ -49,11 +49,11 @@
   async function load() {
     try {
       const [d, docs] = await Promise.all([
-        fetch("/assets/data.json", { cache: "no-store" }).then(r => r.json()).catch(() => ({})),
-        fetch("/assets/documents.json", { cache: "no-store" }).then(r => r.ok ? r.json() : []).catch(() => []),
+        fetchJson("/api/snapshot", {}),
+        fetchJson("/api/documents?limit=1000", []),
       ]);
       DATA = d;
-      OFFICIAL_DOCS = Array.isArray(docs) ? docs : [];
+      OFFICIAL_DOCS = normalizeDocumentsPayload(docs);
       DOCS = OFFICIAL_DOCS.slice();
     } catch (e) {
       DATA = {}; OFFICIAL_DOCS = []; DOCS = [];
@@ -73,6 +73,22 @@
     renderFeed();
     wireFeed();
     wireSourceSwitch();
+  }
+
+  async function fetchJson(url, fallbackValue) {
+    try {
+      const response = await fetch(url, { cache: "no-store" });
+      if (response.ok) return await response.json();
+    } catch (e) {
+      console.error(`API unavailable for ${url}.`, e);
+    }
+    return fallbackValue;
+  }
+
+  function normalizeDocumentsPayload(payload) {
+    if (Array.isArray(payload)) return payload;
+    if (Array.isArray(payload?.rows)) return payload.rows;
+    return [];
   }
 
   function buildTableDefinitions(data) {
