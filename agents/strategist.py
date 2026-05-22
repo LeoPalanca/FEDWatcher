@@ -346,10 +346,10 @@ class StrategistAgent:
     ) -> tuple[float | None, str]:
         if market_implied is None:
             return None, "aligned"
-        diff = tone_implied - market_implied
+        diff = market_implied - tone_implied
         if abs(diff) < DIVERGENCE_TOLERANCE_PCT:
             return diff, "aligned"
-        return diff, "hawkish" if diff > 0 else "dovish"
+        return diff, "Market overestimates" if diff > 0 else "Market underestimates"
 
     def _narrative(
         self,
