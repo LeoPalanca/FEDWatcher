@@ -76,3 +76,45 @@ CREATE TABLE IF NOT EXISTS sentiment2 (
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (document_id) REFERENCES documents(id)
 );
+CREATE TABLE IF NOT EXISTS sentiment3 (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    document_id INTEGER,
+    overall_tone TEXT,
+    tone_score REAL,
+    inflation_assessment TEXT,
+    labor_market_assessment TEXT,
+    forward_guidance TEXT,
+    key_phrases TEXT,
+    confidence REAL,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (document_id) REFERENCES documents(id)
+);
+
+CREATE TABLE IF NOT EXISTS weights (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    doc_type TEXT NOT NULL,
+    dimension TEXT NOT NULL,
+    weight REAL NOT NULL,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(doc_type, dimension)
+);
+
+CREATE TABLE IF NOT EXISTS sentiment_w (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    document_id INTEGER,
+    forward_guidance_score REAL,
+    inflation_score REAL,
+    labor_market_score REAL,
+    general_score REAL,
+    policy_discussion_score REAL,
+    tone_score REAL,
+    overall_tone TEXT,
+    inflation_assessment TEXT,
+    labor_market_assessment TEXT,
+    forward_guidance TEXT,
+    key_phrases TEXT,
+    confidence REAL,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (document_id) REFERENCES documents(id)
+);
