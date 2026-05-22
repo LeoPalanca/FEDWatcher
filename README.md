@@ -46,10 +46,12 @@ Implemented:
   FedTools.
 - FRED monthly macro/rate ingestion in `sources/fred.py` and `scripts/backfill_fred.py`:
   stores `CPILFESL`, `UNRATE`, and monthly-average `DGS2` in `macro_data`.
-- `AnalystAgent`  in `agents/analyst.py`:
+- `AnalystAgent` in `agents/analyst.py`:
   - document segmentation: splits FOMC statements and minutes into weighted sections (`forward_guidance`, `inflation`, `labor_market`, `general` / `policy_discussion`) for downstream tone scoring.
-  - LLM tone scoring calls the OpenRouter API key (`OPENROUTER_API_KEY`) with the segmented sections and extracts a numeric `tone_score` in `[-1.0, +1.0]` (dovish → hawkish), plus `overall_tone`, `inflation_assessment`, `labor_market_assessment`, `forward_guidance`, `key_phrases`, and `confidence`.
-  Returns a typed `ToneResult` with a `to_db_row()` helper ready for the `sentiment` table.
+  - LLM tone scoring calls the OpenRouter API (`OPENROUTER_API_KEY`) with the segmented sections and extracts a numeric `tone_score` in `[-1.0, +1.0]` (dovish → hawkish), plus `overall_tone`, `inflation_assessment`, `labor_market_assessment`, `forward_guidance`, `key_phrases`, and `confidence`.
+  - Returns a typed `ToneResult` with a `to_db_row()` helper ready for the `sentiment` table.
+- `Dual-model AnalystAgent` in `agents/dual_model_analyst.py` *(testing)*: calls two OpenRouter models and averages their results; writes to `sentiment2`.
+- `DeepSeek AnalystAgent` in `agents/analyst_ds.py` *(testing)*: single-model pipeline using `deepseek/deepseek-v4-flash`; writes to `sentiment3` using `documents.processed3`.
 - `StrategistAgent` in `agents/strategist.py`:
   - EWMA time-aware tone smoothing (`S_t = α_t·tone_t + (1−α_t)·S_{t−1}`,
     `α_t = 1 − exp(−ln(2)/21 · Δt)`), where Δt is the calendar-day gap between FOMC releases.
@@ -127,6 +129,8 @@ Responsibilities:
 - Extract a numeric `tone_score` in `[-1.0, +1.0]` (dovish → hawkish) plus `overall_tone`, `inflation_assessment`, `labor_market_assessment`, `forward_guidance`, `key_phrases`, and `confidence`.
 - Return a typed `ToneResult`; call `result.to_db_row()` to get a dict ready for the `sentiment` table.
 
+Three pipeline variants exist for testing purposes: `analyst.py` (single model, `sentiment`), `dual_model_analyst.py` (two-model average, `sentiment2`), and `analyst_ds.py` (DeepSeek only, `sentiment3`).
+
 Future work: calibrate the section weights against historical 2-year Treasury yield reactions around FOMC releases. The current weights are transparent runtime assumptions; a proper event-study calibration should use daily or intraday 2Y yield changes and compare the empirical contribution of `forward_guidance`, `inflation`, `labor_market`, and `general` / `policy_discussion`.
 
 ### StrategistAgent
@@ -166,7 +170,9 @@ FEDWatcher/
 │
 ├── agents/
 │   ├── monitor.py              # MonitorAgent
-│   ├── analyst.py              # AnalystAgent
+│   ├── analyst.py              # AnalystAgent (single model, sentiment)
+│   ├── dual_model_analyst.py   # AnalystAgent (two-model average, sentiment2) - testing
+│   ├── analyst_ds.py           # AnalystAgent (DeepSeek only, sentiment3) - testing
 │   └── strategist.py           # planned StrategistAgent
 │
 ├── sources/
@@ -406,6 +412,9 @@ python scripts/backfill_fred.py
 python scripts/backfill_fred.py --dry-run
 python agents/monitor.py
 python agents/monitor.py --refresh-macro
+python agents/analyst.py --limit 5
+python agents/dual_model_analyst.py --limit 5   # two-model average, testing
+python agents/analyst_ds.py --limit 5            # DeepSeek only, testing
 ```
 
 FakeFed test target:
