@@ -78,6 +78,29 @@
         <span class="delta"><span class="v" id="metric-un-d">—</span><span>vs prior</span></span>
       </div>
     </div>
+
+    <div class="weight-legend" aria-label="Analyst Agent section weights">
+      <div class="weight-legend-head">
+        <span>Analyst Agent Weights</span>
+        <span>document sections</span>
+      </div>
+      <div class="weight-groups">
+        <div class="weight-group">
+          <div class="weight-type">Statement</div>
+          <div class="weight-row" style="--w:45%; --bar:var(--c-accent);"><span>Fed guidance</span><div class="weight-track"><i></i></div><strong>45%</strong></div>
+          <div class="weight-row" style="--w:25%; --bar:var(--c-neg);"><span>Inflation</span><div class="weight-track"><i></i></div><strong>25%</strong></div>
+          <div class="weight-row" style="--w:15%; --bar:var(--c-pos);"><span>Labor</span><div class="weight-track"><i></i></div><strong>15%</strong></div>
+          <div class="weight-row" style="--w:15%; --bar:var(--c-warn);"><span>General</span><div class="weight-track"><i></i></div><strong>15%</strong></div>
+        </div>
+        <div class="weight-group">
+          <div class="weight-type">Minutes</div>
+          <div class="weight-row" style="--w:40%; --bar:var(--c-accent);"><span>Fed guidance</span><div class="weight-track"><i></i></div><strong>40%</strong></div>
+          <div class="weight-row" style="--w:25%; --bar:var(--c-ink-2);"><span>Policy debate</span><div class="weight-track"><i></i></div><strong>25%</strong></div>
+          <div class="weight-row" style="--w:20%; --bar:var(--c-neg);"><span>Inflation</span><div class="weight-track"><i></i></div><strong>20%</strong></div>
+          <div class="weight-row" style="--w:15%; --bar:var(--c-pos);"><span>Labor</span><div class="weight-track"><i></i></div><strong>15%</strong></div>
+        </div>
+      </div>
+    </div>
   </section>
 
   <!-- §02 RATE-MOVE SCENARIOS -->
@@ -113,14 +136,16 @@
     <div class="sec-head">
       <div class="sec-num">§ 03 · DATA</div>
       <div>
-        <h2 class="sec-title" id="explorer-title">Explore the underlying series.</h2>
-        <p class="sec-desc">Click a table to inspect schema and rows. The chart renders any numeric columns; toggle individual series, switch to indexed view, or change the time window. Click a row for full detail.</p>
+        <h2 class="sec-title" id="explorer-title">Explore the full SQLite database.</h2>
+        <p class="sec-desc">Click any table to inspect schema and rows. Numeric columns chart automatically when available; search filters the visible rows and row clicks open the full record.</p>
       </div>
     </div>
 
+    <div class="db-overview" id="db-overview" aria-label="Database summary"></div>
+
     <div class="sub-head">
       <span>Tables</span>
-      <span id="explorer-sub">FRED &amp; pipeline tables</span>
+      <span id="explorer-sub">SQLite snapshot</span>
     </div>
     <div class="toggle" role="tablist" id="table-picker" style="margin-bottom: var(--s-5);"></div>
 

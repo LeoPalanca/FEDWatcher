@@ -1,13 +1,13 @@
 (() => {
   "use strict";
 
-  const TABLES = [
-    { key: "macro_data",   label: "Macro",     numeric: ["core_cpi_index","core_cpi_mom","core_cpi_yoy","unemployment_rate","us2y_yield"], xField: "observation_month", title: "Core CPI · Unemployment · 2Y Yield", sub: "Monthly observations · FRED" },
-    { key: "documents",    label: "Documents", numeric: [], xField: "release_date", title: "FOMC Documents", sub: "Statements & minutes" },
-    { key: "market_data",  label: "Markets",   numeric: ["sofr_rate","ois_1m","ois_3m","ois_6m","ois_1y","ois_2y","us2y_yield"], xField: "timestamp", title: "Market Implied Rates", sub: "SOFR / OIS / 2Y" },
-    { key: "sentiment",    label: "Sentiment", numeric: ["tone_score","confidence"], xField: "created_at", title: "Document Sentiment", sub: "Tone score & confidence" },
-    { key: "signals",      label: "Signals",   numeric: ["tone_implied_next_rate","market_implied_next_rate","divergence"], xField: "created_at", title: "Tone vs Market", sub: "Divergence signals" },
-  ];
+  const TABLE_OVERRIDES = {
+    macro_data: { label: "Macro", numeric: ["core_cpi_index","core_cpi_mom","core_cpi_yoy","unemployment_rate","us2y_yield"], xField: "observation_month", title: "Core CPI · Unemployment · 2Y Yield", sub: "Monthly observations · FRED" },
+    documents: { label: "Documents", numeric: [], xField: "release_date", title: "FOMC Documents", sub: "Statements & minutes" },
+    market_data: { label: "Markets", numeric: ["sofr_rate","ois_1m","ois_3m","ois_6m","ois_1y","ois_2y","us2y_yield"], xField: "timestamp", title: "Market Implied Rates", sub: "SOFR / OIS / 2Y" },
+    sentiment: { label: "Sentiment", numeric: ["tone_score","confidence"], xField: "created_at", title: "Document Sentiment", sub: "Tone score & confidence" },
+    signals: { label: "Signals", numeric: ["tone_implied_next_rate","market_implied_next_rate","divergence"], xField: "created_at", title: "Tone vs Market", sub: "Divergence signals" },
+  };
 
   const PALETTE = [
     "oklch(0.45 0.08 230)",
@@ -31,6 +31,7 @@
   const isNumLike = (v) => v !== null && v !== undefined && v !== "" && !isNaN(Number(v));
 
   let DATA = null;
+  let TABLES = [];
   let activeKey = "macro_data";
   let activeRange = "10Y";
   let scaleMode = "multi"; // multi | indexed | shared
@@ -58,6 +59,11 @@
       DATA = {}; OFFICIAL_DOCS = []; DOCS = [];
       console.error("data load failed", e);
     }
+    TABLES = buildTableDefinitions(DATA);
+    if (!TABLES.some(t => t.key === activeKey && (DATA[t.key]?.rows ?? []).length)) {
+      activeKey = TABLES.find(t => (DATA[t.key]?.rows ?? []).length)?.key ?? TABLES[0]?.key ?? activeKey;
+    }
+    renderDbOverview();
     renderTablePicker();
     renderRangePicker();
     wireScalePicker();
@@ -67,6 +73,68 @@
     renderFeed();
     wireFeed();
     wireSourceSwitch();
+  }
+
+  function buildTableDefinitions(data) {
+    return Object.keys(data || {}).sort((a, b) => {
+      const priority = ["macro_data", "documents", "sentiment", "signals", "market_data", "fomc_policy_moves"];
+      const ai = priority.indexOf(a);
+      const bi = priority.indexOf(b);
+      if (ai !== -1 || bi !== -1) return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+      return a.localeCompare(b);
+    }).map(key => {
+      const tbl = data[key] ?? { columns: [], rows: [] };
+      const override = TABLE_OVERRIDES[key] ?? {};
+      const numeric = override.numeric ?? inferNumericColumns(tbl);
+      const xField = override.xField ?? inferXField(tbl);
+      return {
+        key,
+        label: override.label ?? humanizeTableName(key),
+        numeric,
+        xField,
+        title: override.title ?? humanizeTableName(key),
+        sub: override.sub ?? `${(tbl.rows ?? []).length.toLocaleString()} rows · ${(tbl.columns ?? []).length.toLocaleString()} columns`,
+      };
+    });
+  }
+
+  function inferNumericColumns(tbl) {
+    const rows = tbl.rows ?? [];
+    return (tbl.columns ?? []).filter(col => {
+      if (col === "id" || col.endsWith("_id")) return false;
+      const sample = rows.map(row => row[col]).filter(v => v !== null && v !== undefined && v !== "").slice(0, 25);
+      return sample.length > 0 && sample.every(isNumLike);
+    });
+  }
+
+  function inferXField(tbl) {
+    const columns = tbl.columns ?? [];
+    const preferred = ["observation_month", "meeting_date", "release_date", "created_at", "updated_at", "timestamp", "run_at", "id"];
+    return preferred.find(col => columns.includes(col)) ?? columns[0] ?? "id";
+  }
+
+  function humanizeTableName(key) {
+    return key.replaceAll("_", " ").replace(/\b\w/g, c => c.toUpperCase());
+  }
+
+  function renderDbOverview() {
+    const root = $("db-overview");
+    if (!root) return;
+    const tables = TABLES.map(t => DATA[t.key] ?? { columns: [], rows: [] });
+    const rowTotal = tables.reduce((sum, tbl) => sum + (tbl.rows?.length ?? 0), 0);
+    const populated = TABLES.filter(t => (DATA[t.key]?.rows ?? []).length > 0).length;
+    const cells = [
+      ["Tables", TABLES.length],
+      ["Populated", populated],
+      ["Rows", rowTotal],
+      ["Snapshot", new Date().toLocaleDateString(undefined, { year: "numeric", month: "short", day: "2-digit" })],
+    ];
+    root.innerHTML = cells.map(([label, value]) => `
+      <div class="db-stat">
+        <span>${label}</span>
+        <strong>${typeof value === "number" ? value.toLocaleString() : value}</strong>
+      </div>
+    `).join("");
   }
 
   function hydrateHero() {
@@ -121,11 +189,10 @@
     for (const t of TABLES) {
       const b = document.createElement("button");
       b.type = "button";
-      b.textContent = t.label;
-      b.dataset.key = t.key;
       const rows = (DATA[t.key]?.rows ?? []).length;
+      b.innerHTML = `<span>${escapeHtml(t.label)}</span><small>${rows.toLocaleString()}</small>`;
+      b.dataset.key = t.key;
       if (rows === 0) {
-        b.disabled = true;
         b.title = "No rows yet";
       }
       if (t.key === activeKey) b.classList.add("active");
@@ -162,6 +229,7 @@
     document.querySelectorAll("#table-picker button").forEach(b => b.classList.toggle("active", b.dataset.key === activeKey));
     document.querySelectorAll("#range-picker button").forEach(b => b.classList.toggle("active", b.dataset.range === activeRange));
     const def = TABLES.find(t => t.key === activeKey);
+    if (!def) return;
     const tbl = DATA[activeKey] ?? { columns: [], rows: [] };
     $("chart-title").textContent = def.title;
     $("chart-sub").textContent = def.sub;
@@ -233,9 +301,11 @@
 
     if (!allDatasets.length || !rows.length) {
       ctx.style.display = "none";
+      $("chart-card").classList.add("is-empty");
       return;
     }
     ctx.style.display = "";
+    $("chart-card").classList.remove("is-empty");
 
     const scales = buildScales(scaleMode, allDatasets);
 
@@ -359,7 +429,7 @@
 
     if (!tbl.columns.length) {
       body.innerHTML = `<tr><td class="empty" colspan="1">No schema yet.</td></tr>`;
-      $("row-count").querySelector(".n").textContent = "0";
+      setRowCount(0);
       return;
     }
 
@@ -393,7 +463,7 @@
         const td = document.createElement("td");
         const v = r[c];
         td.textContent = fmt(v);
-        if (def.numeric.includes(c) || c === "id") td.classList.add("num");
+        if (def.numeric.includes(c) || c === "id" || c.endsWith("_id")) td.classList.add("num");
         if (shouldHighlightMissing(def, c, v, r)) {
           td.classList.add("missing-value");
           td.title = "Missing value";

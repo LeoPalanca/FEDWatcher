@@ -40,8 +40,8 @@ Implemented:
   fetching from the official Fed site or FakeFed.
 - Static FakeFed fixture site in `fakefed/` for end-to-end fake statement tests.
 - Static FedWatcher brief homepage/dashboard in `fedwatcher/` for the first
-  `fedwatcher.ellep.it` deployment. It currently reads static JSON from
-  `fedwatcher/assets/data.json` and `fedwatcher/assets/documents.json`.
+  `fedwatcher.ellep.it` deployment. It includes a full SQLite snapshot explorer and reads
+  static JSON from `fedwatcher/assets/data.json` and `fedwatcher/assets/documents.json`.
 - Historical official Fed document backfill in `scripts/inital_data_download.py` using
   FedTools.
 - FRED monthly macro/rate ingestion in `sources/fred.py` and `scripts/backfill_fred.py`:
@@ -126,6 +126,8 @@ Responsibilities:
 - Call an OpenRouter-hosted LLM through the OpenAI client with the segmented sections.
 - Extract a numeric `tone_score` in `[-1.0, +1.0]` (dovish → hawkish) plus `overall_tone`, `inflation_assessment`, `labor_market_assessment`, `forward_guidance`, `key_phrases`, and `confidence`.
 - Return a typed `ToneResult`; call `result.to_db_row()` to get a dict ready for the `sentiment` table.
+
+Future work: calibrate the section weights against historical 2-year Treasury yield reactions around FOMC releases. The current weights are transparent runtime assumptions; a proper event-study calibration should use daily or intraday 2Y yield changes and compare the empirical contribution of `forward_guidance`, `inflation`, `labor_market`, and `general` / `policy_discussion`.
 
 ### StrategistAgent
 
@@ -466,13 +468,19 @@ The mode split is documented in `docs/dashboard_modes.md`.
 
 `fedwatcher/` contains a static brief homepage/dashboard for the first public deployment at
 `https://fedwatcher.ellep.it`. It presents the project concept, current placeholder signal
-panels, macro context, rate-move buckets, document feed, and the planned admin-only
-educational FakeFed mode.
+panels, AnalystAgent section-weight legend, macro context, rate-move buckets, document feed,
+a full SQLite table explorer, and the planned admin-only educational FakeFed mode.
 
 This static page is temporary. It currently reads `fedwatcher/assets/data.json` and
 `fedwatcher/assets/documents.json`. The final version should read from the FastAPI backend
 and replace placeholder values with database-backed documents, FRED data, sentiment results,
 and model probabilities.
+
+To refresh the database snapshot used by the static explorer:
+
+```bash
+rtk python scripts/export_db_json.py
+```
 
 ## Course Criteria Coverage
 

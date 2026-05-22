@@ -358,6 +358,73 @@ section.ds {
 .metric .delta.neg .v { color: var(--c-neg); }
 .metric .spark { height: 36px; margin-top: var(--s-2); }
 
+.weight-legend {
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-3);
+  margin-top: var(--s-5);
+  overflow: hidden;
+}
+.weight-legend-head {
+  align-items: baseline;
+  background: var(--c-paper-2);
+  border-bottom: 1px solid var(--c-line);
+  color: var(--c-ink-3);
+  display: flex;
+  font-family: var(--f-mono);
+  font-size: 11px;
+  justify-content: space-between;
+  letter-spacing: 0.1em;
+  padding: var(--s-3) var(--s-5);
+  text-transform: uppercase;
+}
+.weight-legend-head span:first-child { color: var(--c-ink); font-weight: 600; }
+.weight-groups {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+}
+.weight-group {
+  display: grid;
+  gap: var(--s-3);
+  padding: var(--s-5);
+}
+.weight-group + .weight-group { border-left: 1px solid var(--c-line); }
+.weight-type {
+  color: var(--c-ink-strong);
+  font-family: var(--f-serif);
+  font-size: 18px;
+}
+.weight-row {
+  align-items: center;
+  display: grid;
+  gap: var(--s-3);
+  grid-template-columns: 112px 1fr 42px;
+}
+.weight-row span {
+  color: var(--c-ink-2);
+  font-size: 13px;
+  white-space: nowrap;
+}
+.weight-row strong {
+  color: var(--c-ink-strong);
+  font-family: var(--f-mono);
+  font-feature-settings: var(--tnum);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: right;
+}
+.weight-track {
+  background: var(--c-paper-3);
+  border-radius: var(--r-pill);
+  height: 8px;
+  overflow: hidden;
+}
+.weight-track i {
+  background: var(--bar);
+  display: block;
+  height: 100%;
+  width: var(--w);
+}
+
 /* === SCENARIO BAR (rate-move probabilities) === */
 .scenario {
   border: 1px solid var(--c-line);
@@ -416,6 +483,54 @@ section.ds {
   grid-template-columns: 1.4fr 1fr;
 }
 
+/* === DATABASE EXPLORER === */
+.db-overview {
+  display: grid;
+  gap: var(--s-3);
+  grid-template-columns: repeat(4, 1fr);
+  margin-bottom: var(--s-7);
+}
+.db-stat {
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-2);
+  display: grid;
+  gap: var(--s-2);
+  padding: var(--s-4);
+}
+.db-stat span {
+  color: var(--c-ink-3);
+  font-family: var(--f-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.db-stat strong {
+  color: var(--c-ink-strong);
+  font-family: var(--f-mono);
+  font-feature-settings: var(--tnum);
+  font-size: 22px;
+  font-weight: 500;
+}
+#table-picker {
+  display: flex;
+  width: 100%;
+}
+#table-picker button {
+  align-items: center;
+  display: inline-flex;
+  gap: var(--s-2);
+}
+#table-picker button small {
+  background: var(--c-paper);
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-pill);
+  color: var(--c-ink-3);
+  font-family: var(--f-mono);
+  font-size: 10px;
+  line-height: 1;
+  padding: 2px 6px;
+}
+
 /* === CHART CARD === */
 .chart-card {
   background: var(--c-paper);
@@ -425,6 +540,20 @@ section.ds {
   flex-direction: column;
   gap: var(--s-4);
   padding: var(--s-6);
+}
+.chart-card.is-empty .chart-wrap::before {
+  align-items: center;
+  border: 1px dashed var(--c-line-2);
+  border-radius: var(--r-2);
+  color: var(--c-ink-3);
+  content: "No numeric chart available for this table";
+  display: flex;
+  font-family: var(--f-mono);
+  font-size: 12px;
+  height: 100%;
+  justify-content: center;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 .chart-head {
   align-items: baseline;
@@ -982,13 +1111,18 @@ footer.page-foot {
 @media (max-width: 1040px) {
   .sec-head { grid-template-columns: 1fr; gap: var(--s-3); }
   .metric-grid,
+  .db-overview,
   .principles,
   .hero-meta { grid-template-columns: repeat(2, 1fr); }
+  .weight-groups { grid-template-columns: 1fr; }
+  .weight-group + .weight-group { border-left: 0; border-top: 1px solid var(--c-line); }
   .two-col { grid-template-columns: 1fr; }
 }
 @media (max-width: 640px) {
   .top-nav { display: none; }
   .metric-grid,
+  .db-overview,
   .principles,
   .hero-meta { grid-template-columns: 1fr; }
+  .weight-row { grid-template-columns: 92px 1fr 38px; }
 }
