@@ -1,17 +1,22 @@
 """
 AnalystAgent - document segmentation, tone scoring, and SQLite persistence.
 
-Reads unprocessed Fed documents from fedwatcher.db:
-    documents(id, doc_type, raw_text, processed)
+This version is for the second sentiment pipeline.
 
-Calls OpenRouter API to extract monetary-policy sentiment.
+Reads documents from:
+    documents(id, central_bank, doc_type, release_date, url, raw_text, processed2)
 
-Writes output to:
-    sentiment(document_id, overall_tone, tone_score, inflation_assessment,
-              labor_market_assessment, forward_guidance, key_phrases, confidence)
+Uses ONLY:
+    documents.processed2
+
+Does NOT read or update:
+    documents.processed
+
+Writes output ONLY to:
+    sentiment2
 
 Then marks:
-    documents.processed = 1
+    documents.processed2 = 1
 """
 
 from __future__ import annotations
@@ -26,6 +31,7 @@ from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+
 from dotenv import load_dotenv
 from openai import OpenAI
 
@@ -40,8 +46,8 @@ _MODELS = [
     "openai/gpt-oss-120b:free",
     "deepseek/deepseek-v4-flash",
 ]
-_OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 
+_OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 DEFAULT_DB_PATH = "fedwatcher.db"
 
 
@@ -58,6 +64,7 @@ Rules:
 - Quotes must be copied verbatim from the input text.
 - Choose quotes from different statements where possible.
 """
+
 
 _USER_TEMPLATE = """\
 Analyse the following Federal Reserve {doc_type} for monetary-policy tone.
@@ -166,6 +173,7 @@ _PATTERNS: dict[str, re.Pattern[str]] = {
     ),
 }
 
+
 _MINUTES_HEADER_RE = re.compile(
     r"^("
     r"Staff Review of (?:the )?Economic"
@@ -182,6 +190,7 @@ _MINUTES_HEADER_RE = re.compile(
     r")",
     re.IGNORECASE,
 )
+
 
 _HEADER_TO_SECTION: list[tuple[str, str]] = [
     ("participants", "forward_guidance"),
@@ -238,8 +247,8 @@ class AnalystAgent:
 
         if not api_key:
             raise RuntimeError(
-                "OPENROUTER_API_KEY is missing. Set it with:\n"
-                "export OPENROUTER_API_KEY='your_key_here'"
+                "OPENROUTER_API_KEY is missing. Set it in .env or export it:\n"
+                "OPENROUTER_API_KEY='your_key_here'"
             )
 
         self._client = OpenAI(
@@ -274,14 +283,19 @@ class AnalystAgent:
         normalized_type = _normalise_doc_type(doc_type)
         weights = WEIGHTS.get(normalized_type, WEIGHTS["statement"])
         sections_block = _format_sections_block(sections, weights)
+
         prompt = _USER_TEMPLATE.format(
-            doc_type=doc_type, sections_block=sections_block)
+            doc_type=doc_type,
+            sections_block=sections_block,
+        )
+
         messages = [
             {"role": "system", "content": _SYSTEM_PROMPT},
             {"role": "user", "content": prompt},
         ]
 
         results: list[dict[str, Any]] = []
+
         for model in _MODELS:
             response = self._client.chat.completions.create(
                 model=model,
@@ -302,7 +316,11 @@ class AnalystAgent:
 
         return self._segment_statement_or_speech(text, normalized_type)
 
-    def _segment_statement_or_speech(self, text: str, normalized_type: str) -> dict[str, str]:
+    def _segment_statement_or_speech(
+        self,
+        text: str,
+        normalized_type: str,
+    ) -> dict[str, str]:
         weights = WEIGHTS.get(normalized_type, WEIGHTS["statement"])
         sections = list(weights.keys())
         buckets: dict[str, list[str]] = {section: [] for section in sections}
@@ -334,10 +352,11 @@ class AnalystAgent:
                     for sentence in _split_sentences(paragraph)
                 ]
                 non_fallback = [
-                    label for label in labels if label != sections[-1]]
+                    label for label in labels
+                    if label != sections[-1]
+                ]
                 if non_fallback:
-                    current_section = Counter(
-                        non_fallback).most_common(1)[0][0]
+                    current_section = Counter(non_fallback).most_common(1)[0][0]
 
             buckets[current_section].append(paragraph)
 
@@ -373,7 +392,7 @@ def validate_schema(conn: sqlite3.Connection) -> None:
             "release_date",
             "url",
             "raw_text",
-            "processed",
+            "processed2",
         },
         "sentiment2": {
             "id",
@@ -401,16 +420,23 @@ def validate_schema(conn: sqlite3.Connection) -> None:
         if missing_columns:
             missing = ", ".join(sorted(missing_columns))
             raise RuntimeError(
-                f"Table {table_name} is missing columns: {missing}")
+                f"Table {table_name} is missing columns: {missing}"
+            )
 
 
-def fetch_unprocessed_documents(
+def fetch_unprocessed2_documents(
     conn: sqlite3.Connection,
     limit: int,
     include_speeches: bool = True,
 ) -> list[dict[str, Any]]:
-    doc_types = ("statement", "minutes", "speech") if include_speeches else (
-        "statement", "minutes")
+    doc_types = (
+        "statement",
+        "minutes",
+        "speech",
+    ) if include_speeches else (
+        "statement",
+        "minutes",
+    )
 
     placeholders = ",".join("?" for _ in doc_types)
 
@@ -423,9 +449,9 @@ def fetch_unprocessed_documents(
             release_date,
             url,
             raw_text,
-            processed
+            processed2
         FROM documents
-        WHERE COALESCE(processed, 0) = 0
+        WHERE COALESCE(processed2, 0) = 0
           AND raw_text IS NOT NULL
           AND TRIM(raw_text) != ''
           AND LOWER(COALESCE(central_bank, 'FED')) = 'fed'
@@ -444,7 +470,7 @@ def fetch_unprocessed_documents(
     return [dict(row) for row in rows]
 
 
-def insert_sentiment(conn: sqlite3.Connection, result: ToneResult) -> None:
+def insert_sentiment2(conn: sqlite3.Connection, result: ToneResult) -> None:
     row = result.to_db_row()
 
     conn.execute(
@@ -474,33 +500,33 @@ def insert_sentiment(conn: sqlite3.Connection, result: ToneResult) -> None:
     )
 
 
-def mark_document_processed(conn: sqlite3.Connection, document_id: int) -> None:
+def mark_document_processed2(conn: sqlite3.Connection, document_id: int) -> None:
     conn.execute(
         """
         UPDATE documents
-        SET processed = 1
+        SET processed2 = 1
         WHERE id = ?;
         """,
         (document_id,),
     )
 
 
-def mark_document_failed(conn: sqlite3.Connection, document_id: int) -> None:
+def mark_document_failed2(conn: sqlite3.Connection, document_id: int) -> None:
     """
-    Keeps failed documents unprocessed so they can be retried later.
-    This function is here for explicit operational behavior.
+    Keeps failed documents unprocessed for this second pipeline.
+    Does not touch documents.processed.
     """
     conn.execute(
         """
         UPDATE documents
-        SET processed = 0
+        SET processed2 = 0
         WHERE id = ?;
         """,
         (document_id,),
     )
 
 
-def process_unprocessed_documents(
+def process_unprocessed2_documents(
     db_path: str,
     limit: int,
     dry_run: bool = False,
@@ -509,14 +535,14 @@ def process_unprocessed_documents(
     validate_schema(conn)
 
     agent = AnalystAgent()
-    documents = fetch_unprocessed_documents(conn, limit=limit)
+    documents = fetch_unprocessed2_documents(conn, limit=limit)
 
     if not documents:
-        print("No unprocessed documents found.")
+        print("No documents with processed2 = 0 found.")
         conn.close()
         return 0
 
-    print(f"Found {len(documents)} unprocessed document(s).")
+    print(f"Found {len(documents)} document(s) with processed2 = 0.")
 
     processed_count = 0
 
@@ -529,7 +555,9 @@ def process_unprocessed_documents(
 
             print("-" * 80)
             print(
-                f"Processing document_id={doc_id} type={doc_type} release_date={release_date}")
+                f"Processing document_id={doc_id} "
+                f"type={doc_type} release_date={release_date}"
+            )
             print(f"URL: {url}")
 
             try:
@@ -542,29 +570,32 @@ def process_unprocessed_documents(
                 )
 
                 if dry_run:
-                    print("Dry run enabled: not writing to database.")
+                    print("Dry run enabled: not writing to sentiment2 and not updating processed2.")
                     continue
 
-                insert_sentiment(conn, result)
-                mark_document_processed(conn, doc_id)
+                insert_sentiment2(conn, result)
+                mark_document_processed2(conn, doc_id)
                 conn.commit()
 
                 processed_count += 1
                 print(
-                    f"Saved sentiment and marked document {doc_id} as processed.")
+                    f"Saved to sentiment2 and marked document {doc_id} as processed2 = 1."
+                )
 
             except Exception as exc:
                 conn.rollback()
-                mark_document_failed(conn, doc_id)
+                mark_document_failed2(conn, doc_id)
                 conn.commit()
                 print(
-                    f"ERROR processing document {doc_id}: {exc}", file=sys.stderr)
+                    f"ERROR processing document {doc_id}: {exc}",
+                    file=sys.stderr,
+                )
 
     finally:
         conn.close()
 
     print("-" * 80)
-    print(f"Done. Processed {processed_count} document(s).")
+    print(f"Done. Processed {processed_count} document(s) into sentiment2.")
     return processed_count
 
 
@@ -574,6 +605,7 @@ def process_unprocessed_documents(
 
 def _split_sentences(text: str) -> list[str]:
     normalized = re.sub(r"\s+", " ", text).strip()
+
     return [
         sentence.strip()
         for sentence in re.split(r"(?<=[.!?])\s+", normalized)
@@ -590,8 +622,12 @@ def _split_paragraphs(text: str) -> list[str]:
 
 
 def _classify_sentence(sentence: str, sections: list[str]) -> str:
-    priority = ["forward_guidance", "policy_discussion",
-                "inflation", "labor_market"]
+    priority = [
+        "forward_guidance",
+        "policy_discussion",
+        "inflation",
+        "labor_market",
+    ]
 
     for label in priority:
         if label in sections and _PATTERNS[label].search(sentence):
@@ -622,7 +658,10 @@ def _normalise_doc_type(raw: str) -> str:
     return "statement"
 
 
-def _format_sections_block(sections: dict[str, str], weights: dict[str, float]) -> str:
+def _format_sections_block(
+    sections: dict[str, str],
+    weights: dict[str, float],
+) -> str:
     lines: list[str] = []
 
     for name, text in sections.items():
@@ -634,13 +673,16 @@ def _format_sections_block(sections: dict[str, str], weights: dict[str, float]) 
 
 
 def _average_llm_results(results: list[dict[str, Any]]) -> dict[str, Any]:
-    """Average numeric fields across models; take text fields from the highest-confidence result."""
-    avg_tone = sum(r["tone_score"] for r in results) / len(results)
-    avg_confidence = sum(r["confidence"] for r in results) / len(results)
+    if not results:
+        raise ValueError("No LLM results to average.")
 
-    best = max(results, key=lambda r: r["confidence"])
+    avg_tone = sum(result["tone_score"] for result in results) / len(results)
+    avg_confidence = sum(result["confidence"] for result in results) / len(results)
+
+    best = max(results, key=lambda result: result["confidence"])
 
     score = max(-1.0, min(1.0, avg_tone))
+
     if score <= -0.25:
         overall_tone = "dovish"
     elif score >= 0.25:
@@ -650,13 +692,19 @@ def _average_llm_results(results: list[dict[str, Any]]) -> dict[str, Any]:
 
     seen: set[str] = set()
     key_phrases: list[str] = []
-    for r in results:
-        for phrase in r.get("key_phrases", []):
-            if phrase not in seen:
+
+    for result in results:
+        for phrase in result.get("key_phrases", []):
+            phrase = str(phrase).strip()
+            if phrase and phrase not in seen:
                 seen.add(phrase)
                 key_phrases.append(phrase)
+
             if len(key_phrases) == 5:
                 break
+
+        if len(key_phrases) == 5:
+            break
 
     return {
         "tone_score": score,
@@ -665,7 +713,7 @@ def _average_llm_results(results: list[dict[str, Any]]) -> dict[str, Any]:
         "labor_market_assessment": best["labor_market_assessment"],
         "forward_guidance": best["forward_guidance"],
         "key_phrases": key_phrases,
-        "confidence": avg_confidence,
+        "confidence": max(0.0, min(1.0, avg_confidence)),
     }
 
 
@@ -679,7 +727,6 @@ def _parse_llm_json(raw: str) -> dict[str, Any]:
         flags=re.DOTALL,
     ).strip()
 
-    # Defensive extraction if the model adds text around JSON.
     match = re.search(r"\{.*\}", clean, flags=re.DOTALL)
     if match:
         clean = match.group(0)
@@ -700,16 +747,20 @@ def _parse_llm_json(raw: str) -> dict[str, Any]:
     }
 
     missing = required_keys - set(data)
+
     if missing:
         raise ValueError(
-            f"LLM response missing keys: {sorted(missing)}. Response: {data}")
+            f"LLM response missing keys: {sorted(missing)}. Response: {data}"
+        )
 
     data["tone_score"] = max(-1.0, min(1.0, float(data["tone_score"])))
     data["confidence"] = max(0.0, min(1.0, float(data["confidence"])))
 
     tone = str(data["overall_tone"]).lower().strip()
+
     if tone not in {"dovish", "neutral", "hawkish"}:
         score = data["tone_score"]
+
         if score <= -0.2:
             tone = "dovish"
         elif score >= 0.2:
@@ -722,7 +773,11 @@ def _parse_llm_json(raw: str) -> dict[str, Any]:
     if not isinstance(data["key_phrases"], list):
         data["key_phrases"] = [str(data["key_phrases"])]
 
-    data["key_phrases"] = [str(item) for item in data["key_phrases"][:5]]
+    data["key_phrases"] = [
+        str(item).strip()
+        for item in data["key_phrases"][:5]
+        if str(item).strip()
+    ]
 
     for key in [
         "inflation_assessment",
@@ -740,7 +795,9 @@ def _parse_llm_json(raw: str) -> dict[str, Any]:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Analyze unprocessed Fed documents and write sentiment to fedwatcher.db."
+        description=(
+            "Analyze documents where processed2 = 0 and write output to sentiment2."
+        )
     )
 
     parser.add_argument(
@@ -759,7 +816,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="Run analysis but do not write to the database.",
+        help="Run analysis but do not write to sentiment2 or update processed2.",
     )
 
     return parser.parse_args()
@@ -771,7 +828,7 @@ def main() -> None:
     if args.limit < 1:
         raise ValueError("--limit must be at least 1")
 
-    process_unprocessed_documents(
+    process_unprocessed2_documents(
         db_path=args.db,
         limit=args.limit,
         dry_run=args.dry_run,
