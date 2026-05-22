@@ -40,6 +40,7 @@ class FredSourceTest(unittest.TestCase):
                 "core_cpi_yoy": None,
                 "unemployment_rate": 4.1,
                 "us2y_yield": 4.25,
+                "policy_rate": None,
                 "interpolated_fields": "",
             },
         )

@@ -21,7 +21,12 @@ from sources.fred import (
 
 
 DEFAULT_DB_PATH = Path("fedwatcher.db")
-SOURCE_VALUE_FIELDS = ("core_cpi_index", "unemployment_rate", "us2y_yield")
+SOURCE_VALUE_FIELDS = (
+    "core_cpi_index",
+    "unemployment_rate",
+    "us2y_yield",
+    "policy_rate",
+)
 
 
 def ensure_database_exists(db_path: Path) -> None:
@@ -55,7 +60,7 @@ def delete_macro_rows_before(db_path: Path, start_month: str) -> int:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Fetch CPILFESL, UNRATE, and DGS2 from FRED into macro_data."
+        description="Fetch CPILFESL, UNRATE, DGS2, and FEDFUNDS from FRED into macro_data."
     )
     parser.add_argument(
         "--db",
@@ -119,7 +124,8 @@ def print_row_audit(rows: list[dict[str, float | str | None]]) -> None:
         f"{latest['observation_month']} | "
         f"CPILFESL={latest['core_cpi_index']} | "
         f"UNRATE={latest['unemployment_rate']} | "
-        f"DGS2 monthly avg={latest['us2y_yield']}"
+        f"DGS2 monthly avg={latest['us2y_yield']} | "
+        f"FEDFUNDS={latest['policy_rate']}"
     )
 
 

@@ -5,7 +5,9 @@ CREATE TABLE IF NOT EXISTS documents (
     release_date TEXT,
     url TEXT UNIQUE,
     raw_text TEXT,
-    processed INTEGER DEFAULT 0
+    processed INTEGER DEFAULT 0,
+    processed2 INTEGER DEFAULT 0,
+    processed3 INTEGER DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS sentiment (
@@ -20,20 +22,6 @@ CREATE TABLE IF NOT EXISTS sentiment (
     confidence REAL,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (document_id) REFERENCES documents(id)
-);
-
-CREATE TABLE IF NOT EXISTS macro_data (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    observation_month TEXT UNIQUE NOT NULL,
-    core_cpi_index REAL,
-    core_cpi_mom REAL,
-    core_cpi_yoy REAL,
-    unemployment_rate REAL,
-    us2y_yield REAL,
-    interpolated_fields TEXT,
-    source TEXT DEFAULT 'FRED',
-    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS market_data (
@@ -63,6 +51,20 @@ CREATE TABLE IF NOT EXISTS signals (
     FOREIGN KEY (market_snapshot_id) REFERENCES market_data(id)
 );
 
+
+CREATE TABLE IF NOT EXISTS macro_data (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    observation_month TEXT UNIQUE NOT NULL,
+    core_cpi_index REAL,
+    core_cpi_mom REAL,
+    core_cpi_yoy REAL,
+    unemployment_rate REAL,
+    us2y_yield REAL,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    policy_rate REAL
+);
+
 CREATE TABLE IF NOT EXISTS sentiment2 (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     document_id INTEGER,
@@ -75,4 +77,28 @@ CREATE TABLE IF NOT EXISTS sentiment2 (
     confidence REAL,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (document_id) REFERENCES documents(id)
+);
+
+CREATE TABLE IF NOT EXISTS sentiment3 (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    document_id INTEGER,
+    overall_tone TEXT,
+    tone_score REAL,
+    inflation_assessment TEXT,
+    labor_market_assessment TEXT,
+    forward_guidance TEXT,
+    key_phrases TEXT,
+    confidence REAL,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (document_id) REFERENCES documents(id)
+);
+
+CREATE TABLE IF NOT EXISTS weights (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    doc_type TEXT NOT NULL,
+    dimension TEXT NOT NULL,
+    weight REAL NOT NULL,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(doc_type, dimension)
 );
