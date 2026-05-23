@@ -263,7 +263,8 @@ class AnalystAgent:
         normalized_type = _normalise_doc_type(doc_type)
         weights = self._weights.get(
             normalized_type,
-            _DEFAULT_WEIGHTS.get(normalized_type, _DEFAULT_WEIGHTS["statement"]),
+            _DEFAULT_WEIGHTS.get(
+                normalized_type, _DEFAULT_WEIGHTS["statement"]),
         )
 
         sections = self._segment_document(raw_text, normalized_type, weights)
@@ -362,7 +363,8 @@ class AnalystAgent:
                 ]
                 non_fallback = [l for l in labels if l != sections[-1]]
                 if non_fallback:
-                    current_section = Counter(non_fallback).most_common(1)[0][0]
+                    current_section = Counter(
+                        non_fallback).most_common(1)[0][0]
 
             buckets[current_section].append(paragraph)
 
@@ -399,9 +401,11 @@ def load_weights_from_db(conn: sqlite3.Connection) -> dict[str, dict[str, float]
 
 
 def ensure_processed_w_column(conn: sqlite3.Connection) -> None:
-    cols = {row["name"] for row in conn.execute("PRAGMA table_info(documents);").fetchall()}
+    cols = {row["name"] for row in conn.execute(
+        "PRAGMA table_info(documents);").fetchall()}
     if "processed_w" not in cols:
-        conn.execute("ALTER TABLE documents ADD COLUMN processed_w INTEGER DEFAULT 0;")
+        conn.execute(
+            "ALTER TABLE documents ADD COLUMN processed_w INTEGER DEFAULT 0;")
         conn.commit()
 
 
@@ -486,11 +490,13 @@ def insert_sentiment_w(conn: sqlite3.Connection, result: ToneResult) -> None:
 
 
 def mark_document_processed_w(conn: sqlite3.Connection, document_id: int) -> None:
-    conn.execute("UPDATE documents SET processed_w = 1 WHERE id = ?;", (document_id,))
+    conn.execute(
+        "UPDATE documents SET processed_w = 1 WHERE id = ?;", (document_id,))
 
 
 def mark_document_failed_w(conn: sqlite3.Connection, document_id: int) -> None:
-    conn.execute("UPDATE documents SET processed_w = 0 WHERE id = ?;", (document_id,))
+    conn.execute(
+        "UPDATE documents SET processed_w = 0 WHERE id = ?;", (document_id,))
 
 
 def process_unprocessed_w_documents(
@@ -540,7 +546,8 @@ def process_unprocessed_w_documents(
                 print(f"Section scores: {result.section_scores}")
 
                 if dry_run:
-                    print("Dry run: not writing to sentiment_w or updating processed_w.")
+                    print(
+                        "Dry run: not writing to sentiment_w or updating processed_w.")
                     continue
 
                 insert_sentiment_w(conn, result)
@@ -557,7 +564,8 @@ def process_unprocessed_w_documents(
                 conn.rollback()
                 mark_document_failed_w(conn, doc_id)
                 conn.commit()
-                print(f"ERROR processing document {doc_id}: {exc}", file=sys.stderr)
+                print(
+                    f"ERROR processing document {doc_id}: {exc}", file=sys.stderr)
 
     finally:
         conn.close()
@@ -581,7 +589,8 @@ def _split_paragraphs(text: str) -> list[str]:
 
 
 def _classify_sentence(sentence: str, sections: list[str]) -> str:
-    priority = ["forward_guidance", "policy_discussion", "inflation", "labor_market"]
+    priority = ["forward_guidance", "policy_discussion",
+                "inflation", "labor_market"]
     for label in priority:
         if label in sections and _PATTERNS[label].search(sentence):
             return label
@@ -618,10 +627,11 @@ def _compute_weighted_score(
     section_scores: dict[str, float],
     weights: dict[str, float],
 ) -> float:
-    total_weight = sum(weights.get(s, 0.0) for s in section_scores)
+    non_zero = {s: v for s, v in section_scores.items() if v != 0.0}
+    total_weight = sum(weights.get(s, 0.0) for s in non_zero)
     if total_weight == 0.0:
         return 0.0
-    score = sum(section_scores[s] * weights.get(s, 0.0) for s in section_scores)
+    score = sum(non_zero[s] * weights.get(s, 0.0) for s in non_zero)
     return max(-1.0, min(1.0, score / total_weight))
 
 
@@ -635,7 +645,8 @@ def _score_to_tone(score: float) -> str:
 
 def _parse_llm_json(raw: str, expected_sections: list[str]) -> dict[str, Any]:
     clean = (raw or "").strip()
-    clean = re.sub(r"^```(?:json)?\s*|\s*```$", "", clean, flags=re.DOTALL).strip()
+    clean = re.sub(r"^```(?:json)?\s*|\s*```$", "",
+                   clean, flags=re.DOTALL).strip()
 
     match = re.search(r"\{.*\}", clean, flags=re.DOTALL)
     if match:
@@ -652,10 +663,12 @@ def _parse_llm_json(raw: str, expected_sections: list[str]) -> dict[str, Any]:
     }
     missing = required_keys - set(data)
     if missing:
-        raise ValueError(f"LLM response missing keys: {sorted(missing)}. Response: {data}")
+        raise ValueError(
+            f"LLM response missing keys: {sorted(missing)}. Response: {data}")
 
     if not isinstance(data["section_scores"], dict):
-        raise ValueError(f"section_scores must be a dict, got: {data['section_scores']!r}")
+        raise ValueError(
+            f"section_scores must be a dict, got: {data['section_scores']!r}")
 
     sanitized: dict[str, float] = {}
     for section in expected_sections:
@@ -696,9 +709,12 @@ def parse_args() -> argparse.Namespace:
             "so weights can be adjusted without re-running the LLM."
         )
     )
-    parser.add_argument("--db", default=DEFAULT_DB_PATH, help="Path to SQLite database.")
-    parser.add_argument("--limit", type=int, default=5, help="Max documents to process.")
-    parser.add_argument("--dry-run", action="store_true", help="Run without writing to DB.")
+    parser.add_argument("--db", default=DEFAULT_DB_PATH,
+                        help="Path to SQLite database.")
+    parser.add_argument("--limit", type=int, default=5,
+                        help="Max documents to process.")
+    parser.add_argument("--dry-run", action="store_true",
+                        help="Run without writing to DB.")
     return parser.parse_args()
 
 
