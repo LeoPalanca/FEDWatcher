@@ -348,7 +348,8 @@ class AnalystAgent:
     ) -> dict[str, str]:
         sections = list(weights.keys())
         buckets: dict[str, list[str]] = {s: [] for s in sections}
-        current_section = sections[-1]
+        fallback = "policy_discussion" if "policy_discussion" in sections else sections[-1]
+        current_section = fallback
 
         for paragraph in _split_paragraphs(text):
             first_line = paragraph.split("\n")[0].strip()
@@ -356,17 +357,11 @@ class AnalystAgent:
 
             if match:
                 current_section = _map_header(match.group(0), sections)
+                buckets[current_section].append(paragraph)
             else:
-                labels = [
-                    _classify_sentence(sentence, sections)
-                    for sentence in _split_sentences(paragraph)
-                ]
-                non_fallback = [l for l in labels if l != sections[-1]]
-                if non_fallback:
-                    current_section = Counter(
-                        non_fallback).most_common(1)[0][0]
-
-            buckets[current_section].append(paragraph)
+                for sentence in _split_sentences(paragraph):
+                    label = _classify_sentence(sentence, sections)
+                    buckets[label].append(sentence)
 
         return {k: " ".join(v) for k, v in buckets.items() if v}
 
