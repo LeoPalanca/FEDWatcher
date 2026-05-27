@@ -73,6 +73,20 @@ Important model guardrails:
 - Backtest the full pipeline before presenting results.
 - Keep economic claims precise and cite the correct literature.
 
+## Database Schema Contract
+
+`db/schema.sql` is the single source of truth for the FedWatcher database. From now on:
+
+- Follow `db/schema.sql` strictly. Treat it as the authoritative list of tables and columns.
+- Do not read from or write to a table or column that is not declared in `db/schema.sql`.
+- If a feature needs a table or column that does not exist, do not silently introduce it.
+  State explicitly which table or column is missing, propose the schema change, and update
+  `db/schema.sql` in the same commit (or a dedicated migration commit) before any code uses it.
+- Never duplicate the schema in code with drifted types, defaults, or constraints. If code
+  needs to create the DB, it must execute `db/schema.sql`, not hand-rolled `CREATE TABLE`.
+- When in doubt about a column name or type, consult `db/schema.sql` first, not the live DB
+  (which may carry historical drift from prior ad-hoc migrations).
+
 ## Sync Workflow
 
 Use `/Users/leonardo/FEDWatcher` as the active working copy unless the user says otherwise.
