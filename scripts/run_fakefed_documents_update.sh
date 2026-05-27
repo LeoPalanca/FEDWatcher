@@ -1,13 +1,18 @@
 #!/bin/bash
 
-cd /home/programming/FEDWatcher || exit 1
+LOCKFILE="/tmp/fedwatcher_fakefed_update.lock"
+PROJECT_DIR="/home/programming/FEDWatcher"
+LOG_FILE="$PROJECT_DIR/logs/fakefed_documents_update.log"
 
-source venv/bin/activate
+(
+    flock -n 200 || exit 0
 
-echo "===== $(date '+%Y-%m-%d %H:%M:%S') FakeFed update started ====="
-python scripts/update_fakefed_documents.py --db fedwatcher.db
-echo "===== $(date '+%Y-%m-%d %H:%M:%S') FakeFed update finished ====="
-echo ""
-cd ~/FEDWatcher
-./scripts/run_fakefed_documents_update.sh >> logs/fakefed_documents_update.log 2>&1
-tail -n 50 logs/fakefed_documents_update.log
+    cd "$PROJECT_DIR" || exit 1
+    source venv/bin/activate
+
+    echo "===== $(date '+%Y-%m-%d %H:%M:%S') FakeFed update started ====="
+    python scripts/update_fakefed_documents.py --db fedwatcher.db
+    echo "===== $(date '+%Y-%m-%d %H:%M:%S') FakeFed update finished ====="
+    echo ""
+
+) 200>"$LOCKFILE" >> "$LOG_FILE" 2>&1
