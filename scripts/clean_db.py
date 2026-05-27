@@ -9,6 +9,7 @@ TABLES = [
     "sentiment",
     "market_data",
     "documents",
+    "macro_data",
 ]
 
 
@@ -32,7 +33,7 @@ def clean_database():
         cursor.execute(
             """
             DELETE FROM sqlite_sequence
-            WHERE name IN ('signals', 'sentiment', 'market_data', 'documents');
+            WHERE name IN ('signals', 'sentiment', 'market_data', 'documents', 'macro_data');
             """
         )
 
