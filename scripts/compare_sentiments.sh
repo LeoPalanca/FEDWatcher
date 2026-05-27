@@ -10,10 +10,17 @@ SELECT
     date(substr(d.release_date, 1, 10)) AS release_date,
     d.id AS document_id,
     d.doc_type,
+
     s.tone_score AS sentiment_tone_score,
     s2.tone_score AS sentiment2_tone_score,
     s3.tone_score AS sentiment3_tone_score,
+
+    ROUND(s.tone_score - s2.tone_score, 4) AS diff_sentiment_vs_sentiment2,
+    ROUND(s.tone_score - s3.tone_score, 4) AS diff_sentiment_vs_sentiment3,
+    ROUND(s2.tone_score - s3.tone_score, 4) AS diff_sentiment2_vs_sentiment3,
+
     md.us2y_yield AS macro_us2y_yield
+
 FROM documents d
 LEFT JOIN sentiment s
     ON s.document_id = d.id
@@ -23,8 +30,10 @@ LEFT JOIN sentiment3 s3
     ON s3.document_id = d.id
 LEFT JOIN macro_data md
     ON md.observation_month = substr(d.release_date, 1, 7)
+
 WHERE s.tone_score IS NOT NULL
    OR s2.tone_score IS NOT NULL
    OR s3.tone_score IS NOT NULL
+
 ORDER BY date(substr(d.release_date, 1, 10)) ASC, d.id ASC;
 SQL
