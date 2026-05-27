@@ -104,6 +104,12 @@ class PolicySignal:
             "signal_direction": self.signal_direction,
             "market_verdict": self.market_verdict,
             "narrative": self.narrative,
+            # Ordered-probit bucket probabilities (next FOMC move in bps).
+            "prob_cut_50":  self.probabilities.get(-50),
+            "prob_cut_25":  self.probabilities.get(-25),
+            "prob_hold":    self.probabilities.get(0),
+            "prob_hike_25": self.probabilities.get(25),
+            "prob_hike_50": self.probabilities.get(50),
         }
 
 
@@ -515,6 +521,10 @@ def _ensure_signals_columns(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE signals ADD COLUMN smoothed_tone REAL")
     if "market_verdict" not in existing:
         conn.execute("ALTER TABLE signals ADD COLUMN market_verdict TEXT")
+    for prob_column in ("prob_cut_50", "prob_cut_25", "prob_hold",
+                        "prob_hike_25", "prob_hike_50"):
+        if prob_column not in existing:
+            conn.execute(f"ALTER TABLE signals ADD COLUMN {prob_column} REAL")
 
 
 def _fetch_sentiment_history(
@@ -569,7 +579,12 @@ def _insert_signal(conn: sqlite3.Connection, signal: PolicySignal) -> None:
             divergence,
             signal_direction,
             market_verdict,
-            narrative
+            narrative,
+            prob_cut_50,
+            prob_cut_25,
+            prob_hold,
+            prob_hike_25,
+            prob_hike_50
         ) VALUES (
             :document_id,
             :smoothed_tone,
@@ -578,7 +593,12 @@ def _insert_signal(conn: sqlite3.Connection, signal: PolicySignal) -> None:
             :divergence,
             :signal_direction,
             :market_verdict,
-            :narrative
+            :narrative,
+            :prob_cut_50,
+            :prob_cut_25,
+            :prob_hold,
+            :prob_hike_25,
+            :prob_hike_50
         );
         """,
         signal.to_db_row(),

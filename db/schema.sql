@@ -105,6 +105,12 @@ CREATE TABLE IF NOT EXISTS signals (
     signal_direction TEXT,
     market_verdict TEXT,
     narrative TEXT,
+    -- Ordered-probit bucket probabilities for the next FOMC move (bps).
+    prob_cut_50 REAL,    -- P(move = -50 bps)
+    prob_cut_25 REAL,    -- P(move = -25 bps)
+    prob_hold REAL,      -- P(move =   0 bps)
+    prob_hike_25 REAL,   -- P(move = +25 bps)
+    prob_hike_50 REAL,   -- P(move = +50 bps)
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (document_id) REFERENCES documents(id)
 );
