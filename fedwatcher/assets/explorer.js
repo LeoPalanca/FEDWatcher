@@ -4,7 +4,6 @@
   const TABLE_OVERRIDES = {
     macro_data: { label: "Macro", numeric: ["core_cpi_index","core_cpi_mom","core_cpi_yoy","unemployment_rate","us2y_yield"], xField: "observation_month", title: "Core CPI · Unemployment · 2Y Yield", sub: "Monthly observations · FRED" },
     documents: { label: "Documents", numeric: [], xField: "release_date", title: "FOMC Documents", sub: "Statements & minutes" },
-    market_data: { label: "Markets", numeric: ["sofr_rate","ois_1m","ois_3m","ois_6m","ois_1y","ois_2y","us2y_yield"], xField: "timestamp", title: "Market Implied Rates", sub: "SOFR / OIS / 2Y" },
     sentiment: { label: "Sentiment", numeric: ["tone_score","confidence"], xField: "created_at", title: "Document Sentiment", sub: "Tone score & confidence" },
     signals: { label: "Signals", numeric: ["tone_implied_next_rate","market_implied_next_rate","divergence"], xField: "created_at", title: "Tone vs Market", sub: "Divergence signals" },
   };
@@ -93,7 +92,7 @@
 
   function buildTableDefinitions(data) {
     return Object.keys(data || {}).sort((a, b) => {
-      const priority = ["macro_data", "documents", "sentiment", "signals", "market_data"];
+      const priority = ["macro_data", "documents", "sentiment", "signals"];
       const ai = priority.indexOf(a);
       const bi = priority.indexOf(b);
       if (ai !== -1 || bi !== -1) return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);

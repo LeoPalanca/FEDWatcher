@@ -95,23 +95,9 @@ CREATE TABLE IF NOT EXISTS macro_data (
     policy_rate REAL
 );
 
-CREATE TABLE IF NOT EXISTS market_data (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
-    sofr_rate REAL,
-    ff_futures_implied TEXT,
-    ois_1m REAL,
-    ois_3m REAL,
-    ois_6m REAL,
-    ois_1y REAL,
-    ois_2y REAL,
-    us2y_yield REAL
-);
-
 CREATE TABLE IF NOT EXISTS signals (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     document_id INTEGER,
-    market_snapshot_id INTEGER,
     smoothed_tone REAL,
     tone_implied_next_rate REAL,
     market_implied_next_rate REAL,
@@ -120,6 +106,5 @@ CREATE TABLE IF NOT EXISTS signals (
     market_verdict TEXT,
     narrative TEXT,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (document_id) REFERENCES documents(id),
-    FOREIGN KEY (market_snapshot_id) REFERENCES market_data(id)
+    FOREIGN KEY (document_id) REFERENCES documents(id)
 );
