@@ -340,6 +340,7 @@ def insert_document(conn: sqlite3.Connection, statement: FakeFedStatement) -> No
     Inserts using the standard FedWatcher documents columns:
     central_bank, doc_type, release_date, url, raw_text, processed
 
+    release_date is saved as date only: YYYY-MM-DD.
     If your local table has an autoincrement id column, SQLite will handle it automatically.
     """
     columns = get_documents_columns(conn)
@@ -375,7 +376,7 @@ def insert_document(conn: sqlite3.Connection, statement: FakeFedStatement) -> No
         (
             "FED",
             "statement",
-            statement.release_date.strftime("%Y-%m-%d %H:%M:%S"),
+            statement.release_date.strftime("%Y-%m-%d"),
             statement.url,
             statement.raw_text,
             0,
