@@ -93,7 +93,7 @@
 
   function buildTableDefinitions(data) {
     return Object.keys(data || {}).sort((a, b) => {
-      const priority = ["macro_data", "documents", "sentiment", "signals", "market_data", "fomc_policy_moves"];
+      const priority = ["macro_data", "documents", "sentiment", "signals", "market_data"];
       const ai = priority.indexOf(a);
       const bi = priority.indexOf(b);
       if (ai !== -1 || bi !== -1) return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
