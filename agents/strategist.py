@@ -30,13 +30,19 @@ UNEMPLOYMENT_BASELINE_PCT once that FRED series is ingested.
 
 from __future__ import annotations
 
+import argparse
 import math
+import sqlite3
+import sys
 from dataclasses import dataclass
 from datetime import date, datetime
+from pathlib import Path
 from statistics import NormalDist
 from typing import Any, Iterable
 
 
+DEFAULT_DB_PATH = Path("fedwatcher.db")
+DEFAULT_SENTIMENT_TABLE = "sentiment_w"
 DEFAULT_HALFLIFE_DAYS = 21
 
 # Ordered-probit rate-move buckets, in basis points.
@@ -82,17 +88,20 @@ class PolicySignal:
     probabilities: dict[int, float]            # bucket bps -> probability
     tone_implied_next_rate: float              # in percentage points
     market_implied_next_rate: float | None     # in percentage points
-    divergence: float | None                   # tone − market, in pp
-    signal_direction: str                      # "hawkish" | "dovish" | "aligned"
+    divergence: float | None                   # market − tone, in pp
+    signal_direction: str                      # "Market overestimates" | "Market underestimates" | "aligned"
     narrative: str
+    market_verdict: str | None = None          # "right" | "wrong" | None
 
     def to_db_row(self) -> dict[str, Any]:
         return {
             "document_id": self.document_id,
+            "smoothed_tone": self.smoothed_tone,
             "tone_implied_next_rate": self.tone_implied_next_rate,
             "market_implied_next_rate": self.market_implied_next_rate,
             "divergence": self.divergence,
             "signal_direction": self.signal_direction,
+            "market_verdict": self.market_verdict,
             "narrative": self.narrative,
         }
 
@@ -201,6 +210,7 @@ class StrategistAgent:
             divergence=divergence,
             signal_direction=direction,
             narrative=self._narrative(probs, divergence, direction, verdict),
+            market_verdict=verdict,
         )
 
     # ------------------------------------------------------------------
@@ -448,3 +458,286 @@ def _parse_date(value: Any) -> date:
     if isinstance(value, date):
         return value
     return datetime.strptime(str(value)[:10], "%Y-%m-%d").date()
+
+
+# ---------------------------------------------------------------------------
+# Database integration: run the strategist over fedwatcher.db and persist
+# results into the signals table.
+# ---------------------------------------------------------------------------
+
+_REQUIRED_MACRO_COLUMNS = ("core_cpi_yoy", "unemployment_rate", "policy_rate")
+
+
+def _connect_db(db_path: Path) -> sqlite3.Connection:
+    if not db_path.exists():
+        raise FileNotFoundError(
+            f"Database file not found: {db_path}. Run scripts/init_db.py first."
+        )
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+def _ensure_signals_columns(conn: sqlite3.Connection) -> None:
+    """Defensively add columns introduced by this runner if the existing DB predates them."""
+
+    existing = {row["name"] for row in conn.execute("PRAGMA table_info(signals)")}
+    if not existing:
+        raise RuntimeError(
+            "signals table is missing. Run scripts/init_db.py with the latest schema."
+        )
+    if "smoothed_tone" not in existing:
+        conn.execute("ALTER TABLE signals ADD COLUMN smoothed_tone REAL")
+    if "market_verdict" not in existing:
+        conn.execute("ALTER TABLE signals ADD COLUMN market_verdict TEXT")
+
+
+def _fetch_sentiment_history(
+    conn: sqlite3.Connection, sentiment_table: str
+) -> list[dict[str, Any]]:
+    """Tone history joined with the document release date, oldest first."""
+
+    rows = conn.execute(
+        f"""
+        SELECT
+            s.id            AS sentiment_id,
+            s.document_id   AS document_id,
+            s.tone_score    AS tone_score,
+            d.release_date  AS release_date
+        FROM {sentiment_table} s
+        JOIN documents d ON d.id = s.document_id
+        WHERE s.tone_score   IS NOT NULL
+          AND d.release_date IS NOT NULL
+        ORDER BY d.release_date ASC, s.id ASC
+        """
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def _fetch_signalled_document_ids(conn: sqlite3.Connection) -> set[int]:
+    rows = conn.execute("SELECT document_id FROM signals").fetchall()
+    return {int(r["document_id"]) for r in rows if r["document_id"] is not None}
+
+
+def _fetch_macro_for_month(
+    conn: sqlite3.Connection, observation_month: str
+) -> dict[str, Any] | None:
+    row = conn.execute(
+        """
+        SELECT core_cpi_yoy, unemployment_rate, us2y_yield, policy_rate
+        FROM macro_data
+        WHERE observation_month = ?
+        """,
+        (observation_month,),
+    ).fetchone()
+    return dict(row) if row else None
+
+
+def _insert_signal(conn: sqlite3.Connection, signal: PolicySignal) -> None:
+    conn.execute(
+        """
+        INSERT INTO signals (
+            document_id,
+            smoothed_tone,
+            tone_implied_next_rate,
+            market_implied_next_rate,
+            divergence,
+            signal_direction,
+            market_verdict,
+            narrative
+        ) VALUES (
+            :document_id,
+            :smoothed_tone,
+            :tone_implied_next_rate,
+            :market_implied_next_rate,
+            :divergence,
+            :signal_direction,
+            :market_verdict,
+            :narrative
+        );
+        """,
+        signal.to_db_row(),
+    )
+
+
+def process_unprocessed_documents(
+    db_path: Path = DEFAULT_DB_PATH,
+    sentiment_table: str = DEFAULT_SENTIMENT_TABLE,
+    dry_run: bool = False,
+) -> int:
+    """
+    Run StrategistAgent over the full sentiment_w history and persist a
+    signals row for every document that doesn't already have one.
+
+    The EWMA chain is replayed from the start so that prior_smoothed_tone
+    is consistent regardless of how many signals were previously written.
+    Documents missing required macro inputs (policy_rate / core_cpi_yoy /
+    unemployment_rate) are skipped with a warning but still update the
+    smoothing state.
+
+    Returns the count of newly inserted signal rows.
+    """
+
+    conn = _connect_db(db_path)
+    _ensure_signals_columns(conn)
+    conn.commit()
+
+    agent = StrategistAgent()
+    history = _fetch_sentiment_history(conn, sentiment_table)
+    if not history:
+        print(f"No sentiment rows found in {sentiment_table}.")
+        conn.close()
+        return 0
+
+    already_signalled = _fetch_signalled_document_ids(conn)
+
+    observations = [
+        {"release_date": h["release_date"], "tone_score": h["tone_score"]}
+        for h in history
+    ]
+    smoothed_series = agent.smooth_tones(observations)
+
+    inserted = 0
+    skipped = 0
+    prior: SmoothedTone | None = None
+
+    print(
+        f"Loaded {len(history)} sentiment row(s) from {sentiment_table}. "
+        f"{len(already_signalled)} already in signals."
+    )
+
+    try:
+        for h, smoothed in zip(history, smoothed_series):
+            doc_id = int(h["document_id"])
+
+            if doc_id in already_signalled:
+                prior = smoothed
+                continue
+
+            month = str(h["release_date"])[:7]
+            macro_row = _fetch_macro_for_month(conn, month)
+
+            if macro_row is None:
+                print(
+                    f"SKIP document_id={doc_id} ({h['release_date']}): "
+                    f"no macro_data row for {month}.",
+                    file=sys.stderr,
+                )
+                skipped += 1
+                prior = smoothed
+                continue
+
+            missing = [
+                column
+                for column in _REQUIRED_MACRO_COLUMNS
+                if macro_row.get(column) is None
+            ]
+            if missing:
+                print(
+                    f"SKIP document_id={doc_id} ({month}): missing macro "
+                    f"fields: {', '.join(missing)}.",
+                    file=sys.stderr,
+                )
+                skipped += 1
+                prior = smoothed
+                continue
+
+            try:
+                signal = agent.run(
+                    sentiment={
+                        "document_id": doc_id,
+                        "tone_score": h["tone_score"],
+                        "release_date": h["release_date"],
+                    },
+                    macro={
+                        "core_cpi_yoy": macro_row["core_cpi_yoy"],
+                        "unemployment_rate": macro_row["unemployment_rate"],
+                    },
+                    market={
+                        "current_rate": macro_row["policy_rate"],
+                        "us2y_yield": macro_row.get("us2y_yield"),
+                    },
+                    prior_smoothed_tone=prior.smoothed_tone if prior else None,
+                    prior_release_date=prior.observation_date if prior else None,
+                )
+
+                market_implied_disp = (
+                    f"{signal.market_implied_next_rate:.3f}"
+                    if signal.market_implied_next_rate is not None
+                    else "n/a"
+                )
+                divergence_disp = (
+                    f"{signal.divergence:+.3f}"
+                    if signal.divergence is not None
+                    else "n/a"
+                )
+                print(
+                    f"document_id={doc_id} {h['release_date']}: "
+                    f"S={signal.smoothed_tone:+.3f} "
+                    f"tone={signal.tone_implied_next_rate:.3f} "
+                    f"market={market_implied_disp} "
+                    f"div={divergence_disp} "
+                    f"dir='{signal.signal_direction}' "
+                    f"verdict={signal.market_verdict}"
+                )
+
+                if not dry_run:
+                    _insert_signal(conn, signal)
+                    conn.commit()
+                    inserted += 1
+
+            except Exception as exc:
+                conn.rollback()
+                print(
+                    f"ERROR processing document_id={doc_id}: {exc}",
+                    file=sys.stderr,
+                )
+
+            prior = smoothed
+    finally:
+        conn.close()
+
+    print("-" * 80)
+    print(
+        f"Done. Inserted {inserted}, skipped {skipped}, "
+        f"already-signalled {len(already_signalled)}."
+    )
+    return inserted
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description=(
+            "Run StrategistAgent over sentiment_w + macro_data and "
+            "persist results into the signals table."
+        )
+    )
+    parser.add_argument(
+        "--db",
+        default=str(DEFAULT_DB_PATH),
+        help=f"SQLite database path. Default: {DEFAULT_DB_PATH}",
+    )
+    parser.add_argument(
+        "--sentiment-table",
+        default=DEFAULT_SENTIMENT_TABLE,
+        help=f"Tone source table. Default: {DEFAULT_SENTIMENT_TABLE}",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Compute signals but do not write to the signals table.",
+    )
+    return parser.parse_args()
+
+
+def main() -> None:
+    args = parse_args()
+    process_unprocessed_documents(
+        db_path=Path(args.db),
+        sentiment_table=args.sentiment_table,
+        dry_run=args.dry_run,
+    )
+
+
+if __name__ == "__main__":
+    main()
