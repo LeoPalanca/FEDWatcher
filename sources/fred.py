@@ -256,6 +256,12 @@ def build_monthly_macro_rows(
             }
         )
 
+    # Drop trailing months where every base series is still unpublished;
+    # internal gaps stay so multi-month gaps remain visible.
+    base_fields = ("core_cpi_index", "unemployment_rate", "us2y_yield", "policy_rate")
+    while rows and all(rows[-1].get(f) is None for f in base_fields):
+        rows.pop()
+
     if output_start is None:
         return rows
 
