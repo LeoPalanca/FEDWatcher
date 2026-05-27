@@ -340,11 +340,17 @@ def classify_doc_type_from_url(url: str, link_text: str = "") -> str | None:
     return None
 
 
-def fetch_from_calendar(
+def discover_calendar_candidates(
     base_url: str,
     calendar_path: str,
     timeout: int,
 ) -> list[dict[str, Any]]:
+    """Scrape an FOMC calendar page and return candidate document rows.
+
+    Body text is NOT fetched. Caller chains into ``deduplicate_documents``
+    and then ``fetch_calendar_body_text`` (or runs the agent's full pipeline).
+    """
+
     calendar_url = urljoin(f"{base_url}/", calendar_path.lstrip("/"))
     response = requests.get(calendar_url, timeout=timeout)
     response.raise_for_status()
@@ -372,13 +378,13 @@ def fetch_from_calendar(
             }
         )
 
-    return _deduplicate_and_fetch_text(candidates, timeout=timeout)
+    return candidates
 
 
-def _deduplicate_and_fetch_text(
-    documents: list[dict[str, Any]], timeout: int
+def deduplicate_documents(
+    documents: list[dict[str, Any]],
 ) -> list[dict[str, Any]]:
-    """Dedupe by (bank, doc_type, release_date), prefer HTML, then fetch body."""
+    """Dedupe by (bank, doc_type, release_date), preferring HTML over PDF."""
 
     deduped: dict[tuple[str, str, str], dict[str, Any]] = {}
     for doc in documents:
@@ -390,17 +396,36 @@ def _deduplicate_and_fetch_text(
         if is_html(doc["url"]) and not is_html(existing.get("url", "")):
             deduped[key] = doc
 
-    out: list[dict[str, Any]] = []
-    for doc in sorted(
+    return sorted(
         deduped.values(), key=lambda d: d["release_date"], reverse=True
-    ):
+    )
+
+
+def fetch_calendar_body_text(
+    documents: list[dict[str, Any]], timeout: int
+) -> list[dict[str, Any]]:
+    """Fetch HTML body for each calendar candidate and clean it."""
+
+    out: list[dict[str, Any]] = []
+    for doc in documents:
         if is_html(doc["url"]):
             response = requests.get(doc["url"], timeout=timeout)
             response.raise_for_status()
-            doc["raw_text"] = clean_fed_text(clean_html_text(response.text), doc["doc_type"])
+            doc["raw_text"] = clean_fed_text(
+                clean_html_text(response.text), doc["doc_type"]
+            )
         out.append(doc)
-
     return out
+
+
+def fetch_from_calendar(
+    base_url: str,
+    calendar_path: str,
+    timeout: int,
+) -> list[dict[str, Any]]:
+    candidates = discover_calendar_candidates(base_url, calendar_path, timeout=timeout)
+    deduped = deduplicate_documents(candidates)
+    return fetch_calendar_body_text(deduped, timeout=timeout)
 
 
 # ---------------------------------------------------------------------------

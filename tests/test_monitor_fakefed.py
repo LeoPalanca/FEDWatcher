@@ -1,16 +1,16 @@
-import unittest
 import sqlite3
 import tempfile
-from datetime import datetime
+import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from agents.monitor import (
-    MonitorAgent,
-    classify_doc_type,
+from agents.monitor_fed import (
+    classify_doc_type_from_url,
     deduplicate_documents,
-    extract_release_date,
+    discover_calendar_candidates,
+    extract_release_date_from_url,
 )
+from agents.monitor_fred import MonitorFredAgent
 
 
 class MonitorFakeFedTests(unittest.TestCase):
@@ -25,9 +25,12 @@ class MonitorFakeFedTests(unittest.TestCase):
             def raise_for_status(self):
                 return None
 
-        with patch("agents.monitor.requests.get", return_value=Response()):
-            agent = MonitorAgent(base_url="https://fakefed.ellep.it")
-            candidates = agent.fetch_candidate_documents()
+        with patch("agents.monitor_fed.requests.get", return_value=Response()):
+            candidates = discover_calendar_candidates(
+                base_url="https://fakefed.ellep.it",
+                calendar_path="/monetarypolicy/fomccalendars.htm",
+                timeout=10,
+            )
 
         urls = {doc["url"] for doc in candidates}
 
@@ -43,30 +46,24 @@ class MonitorFakeFedTests(unittest.TestCase):
 
     def test_classifies_fed_press_release_statement_from_link_text(self):
         url = "https://fakefed.ellep.it/newsevents/pressreleases/monetary20260507a.htm"
-
-        doc_type = classify_doc_type(url, "FOMC statement")
-
-        self.assertEqual(doc_type, "statement")
+        self.assertEqual(classify_doc_type_from_url(url, "FOMC statement"), "statement")
 
     def test_extracts_release_date_from_fed_style_url(self):
         url = "https://fakefed.ellep.it/newsevents/pressreleases/monetary20260507a.htm"
-
-        release_date = extract_release_date(url)
-
-        self.assertEqual(release_date, datetime(2026, 5, 7))
+        self.assertEqual(extract_release_date_from_url(url), "2026-05-07")
 
     def test_deduplicate_prefers_html_over_pdf_for_same_document(self):
         docs = [
             {
                 "central_bank": "FED",
                 "doc_type": "statement",
-                "release_date": datetime(2026, 5, 7),
+                "release_date": "2026-05-07",
                 "url": "https://fakefed.ellep.it/newsevents/pressreleases/monetary20260507a.pdf",
             },
             {
                 "central_bank": "FED",
                 "doc_type": "statement",
-                "release_date": datetime(2026, 5, 7),
+                "release_date": "2026-05-07",
                 "url": "https://fakefed.ellep.it/newsevents/pressreleases/monetary20260507a.htm",
             },
         ]
@@ -112,16 +109,16 @@ class MonitorFakeFedTests(unittest.TestCase):
                 }
             ]
 
-            with patch("agents.monitor.FredClient"), patch(
-                "agents.monitor.fetch_monthly_macro_rows",
+            with patch("agents.monitor_fred.FredClient"), patch(
+                "agents.monitor_fred.fetch_monthly_macro_rows",
                 return_value=rows,
             ) as fetch_rows:
-                agent = MonitorAgent(
+                agent = MonitorFredAgent(
                     db_path=db_path,
-                    macro_start="1994-01-01",
-                    macro_end="1994-01-31",
+                    start="1994-01-01",
+                    end="1994-01-31",
                 )
-                written_rows = agent.refresh_macro_data()
+                written_rows = agent.run()
 
             self.assertEqual(written_rows, rows)
             fetch_rows.assert_called_once()
