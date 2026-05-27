@@ -14,8 +14,9 @@ End-to-end pipeline (matching the model spec in README.md):
        points c_1 < ... < c_{K-1}:
            P(Y_t = j_k) = Phi(c_k - eta_t) - Phi(c_{k-1} - eta_t)
        Buckets are next-meeting moves in basis points: -50, -25, 0, +25, +50.
-    4. Tone-implied next rate (pct):
-           tone_implied_rate_t = current_rate_t + sum_k P(Y = j_k) * j_k / 100.
+    4. Tone-implied next rate (pct). policy_rate_t is the effective fed
+       funds rate ER at time t (FEDFUNDS series in macro_data.policy_rate):
+           tone_implied_rate_t = policy_rate_t + sum_k P(Y = j_k) * j_k / 100.
     5. Divergence vs the market proxy (e.g. DGS2 two-year yield), in
        percentage points. Sign convention: positive means the market is
        pricing a higher next-meeting rate than the tone model.
@@ -125,7 +126,7 @@ class StrategistAgent:
                        "tone_score": 0.30,
                        "release_date": "2026-03-19"},
             macro={"core_cpi_yoy": 3.1, "unemployment_rate": 4.0},
-            market={"current_rate": 5.25, "us2y_yield": 4.60},
+            market={"policy_rate": 5.25, "us2y_yield": 4.60},
             prior_smoothed_tone=series[-1].smoothed_tone,
             prior_release_date=series[-1].observation_date,
         )
@@ -174,11 +175,18 @@ class StrategistAgent:
             sentiment: dict with 'tone_score' and 'release_date'. 'document_id'
                        is forwarded to the result if present.
             macro:     dict with 'core_cpi_yoy' (pct) and 'unemployment_rate' (pct).
-            market:    dict with 'current_rate' (pct, policy midpoint) and
-                       optional 'us2y_yield' (pct) as the market proxy.
+            market:    dict with 'policy_rate' (pct, effective fed funds rate ER
+                       from macro_data.policy_rate) and optional 'us2y_yield' (pct)
+                       as the market proxy. 'current_rate' is accepted as a legacy
+                       alias for 'policy_rate'.
             prior_smoothed_tone: most recent S_{t-1}, or None to seed.
             prior_release_date:  date associated with prior_smoothed_tone,
                        required when prior_smoothed_tone is provided.
+
+        The effective fed funds rate ER used as the anchor for both the
+        tone-implied rate and the market verdict is read from
+        market['policy_rate'], which the runner populates with
+        macro_data.policy_rate (FEDFUNDS) for the document's release month.
         """
         smoothed = self._smooth_step(
             release_date=sentiment["release_date"],
@@ -193,13 +201,28 @@ class StrategistAgent:
             unemployment_rate=float(macro["unemployment_rate"]),
         )
 
-        current_rate = float(market["current_rate"])
-        tone_implied = self.tone_implied_rate(probs, current_rate)
+        # Effective fed funds rate ER: sourced from macro_data.policy_rate (FEDFUNDS).
+        # 'current_rate' is kept as a legacy alias so older callers do not break.
+        if "policy_rate" in market:
+            policy_rate = float(market["policy_rate"])
+        elif "current_rate" in market:
+            policy_rate = float(market["current_rate"])
+        else:
+            raise KeyError(
+                "market must include 'policy_rate' (the effective fed funds rate ER, "
+                "i.e. macro_data.policy_rate)."
+            )
+
+        tone_implied = self.tone_implied_rate(probs, policy_rate)
 
         market_proxy = market.get("us2y_yield")
         market_implied = float(market_proxy) if market_proxy is not None else None
         divergence, direction = self._divergence(tone_implied, market_implied)
-        verdict = self._market_verdict(tone_implied, market_implied, current_rate)
+        verdict = self._market_verdict(
+            tone_implied=tone_implied,
+            market_implied=market_implied,
+            effective_rate=policy_rate,
+        )
 
         return PolicySignal(
             document_id=sentiment.get("document_id"),
@@ -305,14 +328,16 @@ class StrategistAgent:
         }
 
     def tone_implied_rate(
-        self, probabilities: dict[int, float], current_rate: float
+        self, probabilities: dict[int, float], policy_rate: float
     ) -> float:
         """
-        Expected next-meeting rate in pct:
-            tone_implied_rate = current_rate + E[move_bps] / 100.
+        Expected next-meeting rate in pct, anchored on the effective fed funds
+        rate ER (policy_rate, sourced from macro_data.policy_rate / FEDFUNDS):
+
+            tone_implied_rate = policy_rate + E[move_bps] / 100.
         """
         expected_bps = sum(prob * bps for bps, prob in probabilities.items())
-        return current_rate + expected_bps / 100.0
+        return policy_rate + expected_bps / 100.0
 
     # ------------------------------------------------------------------
     # Internals
@@ -654,7 +679,9 @@ def process_unprocessed_documents(
                         "unemployment_rate": macro_row["unemployment_rate"],
                     },
                     market={
-                        "current_rate": macro_row["policy_rate"],
+                        # Effective fed funds rate ER: read straight from
+                        # macro_data.policy_rate (FEDFUNDS) for the document month.
+                        "policy_rate": macro_row["policy_rate"],
                         "us2y_yield": macro_row.get("us2y_yield"),
                     },
                     prior_smoothed_tone=prior.smoothed_tone if prior else None,
