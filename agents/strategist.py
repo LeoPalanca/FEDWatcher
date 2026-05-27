@@ -17,8 +17,9 @@ End-to-end pipeline (matching the model spec in README.md):
     4. Tone-implied next rate (pct):
            tone_implied_rate_t = current_rate_t + sum_k P(Y = j_k) * j_k / 100.
     5. Divergence vs the market proxy (e.g. DGS2 two-year yield), in
-       percentage points:
-           divergence_t = tone_implied_rate_t - market_implied_rate_t
+       percentage points. Sign convention: positive means the market is
+       pricing a higher next-meeting rate than the tone model.
+           divergence_t = market_implied_rate_t - tone_implied_rate_t
 
 Default beta and cut points below are placeholders calibrated to economic
 priors. They are sign-coherent (hawkish tone → hike skew, slack → cut
@@ -189,6 +190,7 @@ class StrategistAgent:
         market_proxy = market.get("us2y_yield")
         market_implied = float(market_proxy) if market_proxy is not None else None
         divergence, direction = self._divergence(tone_implied, market_implied)
+        verdict = self._market_verdict(tone_implied, market_implied, current_rate)
 
         return PolicySignal(
             document_id=sentiment.get("document_id"),
@@ -198,7 +200,7 @@ class StrategistAgent:
             market_implied_next_rate=market_implied,
             divergence=divergence,
             signal_direction=direction,
-            narrative=self._narrative(probs, divergence, direction),
+            narrative=self._narrative(probs, divergence, direction, verdict),
         )
 
     # ------------------------------------------------------------------
@@ -344,24 +346,91 @@ class StrategistAgent:
     def _divergence(
         self, tone_implied: float, market_implied: float | None
     ) -> tuple[float | None, str]:
+        """
+        Signed gap between the market-implied and tone-implied next-meeting
+        rate, in percentage points:
+
+            divergence = market_implied - tone_implied
+
+        Where:
+            - tone_implied   is built from the EWMA-smoothed FOMC tone, the
+              core-CPI gap, and the unemployment gap (eta -> ordered probit
+              -> expected basis-point move on top of the current policy rate).
+            - market_implied is the market proxy for the next-meeting rate,
+              currently the 2-year US Treasury yield (DGS2).
+
+        Label semantics describe the *direction* of disagreement only,
+        not whether the market is correct:
+            - divergence > 0  (market above tone):     "Market overestimates"
+            - divergence < 0  (market below tone):     "Market underestimates"
+            - |divergence| < DIVERGENCE_TOLERANCE_PCT: "aligned"
+
+        Whether the market's expectation is right or wrong (using the
+        current effective fed funds rate ER as the anchor) is computed
+        separately in `_market_verdict`.
+        """
         if market_implied is None:
             return None, "aligned"
         diff = market_implied - tone_implied
         if abs(diff) < DIVERGENCE_TOLERANCE_PCT:
             return diff, "aligned"
-        return diff, "Market overestimates" if diff > 0 else "Market underestimates"
+        return diff, "Divergence: market overestimates" if diff > 0 else "Divergence: market underestimates"
+
+    def _market_verdict(
+        self,
+        tone_implied: float,
+        market_implied: float | None,
+        effective_rate: float | None,
+    ) -> str | None:
+        """
+        Judge whether the market's next-meeting expectation is consistent
+        with the tone-implied path, anchored on the current effective fed
+        funds rate ER (FEDFUNDS, latest observation in macro_data).
+
+        The verdict is a directional-agreement test: market is "right"
+        when M and T fall on the same side of ER (both pricing a hike or
+        both pricing a cut), and "wrong" when they fall on opposite sides.
+
+        Notation: M = market_implied, T = tone_implied, ER = effective_rate.
+
+        Rules:
+            - M > ER (market pricing a hike):
+                * T > ER → tone also pricing a hike → market RIGHT.
+                * T < ER → tone pricing a cut → market WRONG.
+            - M < ER (market pricing a cut):
+                * T > ER → tone pricing a hike → market WRONG.
+                * T < ER → tone also pricing a cut → market RIGHT.
+
+        Returns None when there is no market proxy, no policy rate
+        available, or when M ≈ ER within DIVERGENCE_TOLERANCE_PCT
+        (market is effectively flat — nothing to judge).
+        """
+        if market_implied is None or effective_rate is None:
+            return None
+        if abs(market_implied - effective_rate) < DIVERGENCE_TOLERANCE_PCT:
+            return None
+        if market_implied > effective_rate:
+            return "right" if tone_implied > effective_rate else "wrong"
+        # market_implied < effective_rate
+        return "wrong" if tone_implied > effective_rate else "right"
 
     def _narrative(
         self,
         probs: dict[int, float],
         divergence: float | None,
         direction: str,
+        verdict: str | None = None,
     ) -> str:
         modal_bps, modal_p = max(probs.items(), key=lambda kv: kv[1])
         bits = [f"Modal next-meeting move: {modal_bps:+d} bps (p={modal_p:.2f})."]
         if divergence is not None:
             bits.append(
                 f"Tone vs market proxy: {divergence:+.2f} pp ({direction})."
+            )
+        if verdict is not None:
+            bits.append(
+                f"Market expectations look {verdict} relative to the "
+                f"current effective fed funds rate."
             )
         return " ".join(bits)
 
