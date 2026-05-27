@@ -29,7 +29,6 @@ import os
 import re
 import sqlite3
 import sys
-from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -56,12 +55,6 @@ _DEFAULT_WEIGHTS: dict[str, dict[str, float]] = {
         "labor_market": 0.15,
         "general": 0.15,
     },
-    "minutes": {
-        "forward_guidance": 0.40,
-        "policy_discussion": 0.25,
-        "inflation": 0.20,
-        "labor_market": 0.15,
-    },
     "speech": {
         "forward_guidance": 0.35,
         "inflation": 0.25,
@@ -73,7 +66,7 @@ _DEFAULT_WEIGHTS: dict[str, dict[str, float]] = {
 
 _SYSTEM_PROMPT = """\
 You are a monetary-policy analyst specialised in Federal Reserve communications.
-You read FOMC statements, minutes, and speeches and return a structured JSON object.
+You read FOMC statements and speeches and return a structured JSON object.
 
 Rules:
 - Be precise and evidence-based.
@@ -141,14 +134,6 @@ _PATTERNS: dict[str, re.Pattern[str]] = {
         r")\b",
         re.IGNORECASE,
     ),
-    "policy_discussion": re.compile(
-        r"\b("
-        r"(?:several|many|a few|most|some) (?:participants|members|policymakers)"
-        r"|staff projected|the staff|baseline projection"
-        r"|balance of risks|uncertainty|risk to the outlook"
-        r")\b",
-        re.IGNORECASE,
-    ),
     "inflation": re.compile(
         r"\b("
         r"inflation|prices?|price level|price stability|pce|cpi"
@@ -164,31 +149,6 @@ _PATTERNS: dict[str, re.Pattern[str]] = {
         re.IGNORECASE,
     ),
 }
-
-_MINUTES_HEADER_RE = re.compile(
-    r"^("
-    r"Staff Review of (?:the )?Economic"
-    r"|Staff Review of (?:the )?Financial"
-    r"|Developments in Financial"
-    r"|Staff Economic Outlook"
-    r"|Open Market Operations"
-    r"|Participants'? Views"
-    r"|Committee Policy"
-    r"|Monetary Policy"
-    r"|Discussion of (?:the )?Economic"
-    r"|Financial Conditions"
-    r"|Review of (?:the )?Economic"
-    r")",
-    re.IGNORECASE,
-)
-
-_HEADER_TO_SECTION: list[tuple[str, str]] = [
-    ("participants", "forward_guidance"),
-    ("committee policy", "forward_guidance"),
-    ("monetary policy", "forward_guidance"),
-    ("staff economic outlook", "policy_discussion"),
-    ("discussion of", "policy_discussion"),
-]
 
 
 # ---------------------------------------------------------------------------
@@ -323,8 +283,6 @@ class AnalystAgent:
         normalized_type: str,
         weights: dict[str, float],
     ) -> dict[str, str]:
-        if normalized_type == "minutes":
-            return self._segment_minutes(text, weights)
         return self._segment_generic(text, weights)
 
     def _segment_generic(
@@ -341,29 +299,6 @@ class AnalystAgent:
 
         return {k: " ".join(v) for k, v in buckets.items() if v}
 
-    def _segment_minutes(
-        self,
-        text: str,
-        weights: dict[str, float],
-    ) -> dict[str, str]:
-        sections = list(weights.keys())
-        buckets: dict[str, list[str]] = {s: [] for s in sections}
-        fallback = "policy_discussion" if "policy_discussion" in sections else sections[-1]
-        current_section = fallback
-
-        for paragraph in _split_paragraphs(text):
-            first_line = paragraph.split("\n")[0].strip()
-            match = _MINUTES_HEADER_RE.match(first_line)
-
-            if match:
-                current_section = _map_header(match.group(0), sections)
-                buckets[current_section].append(paragraph)
-            else:
-                for sentence in _split_sentences(paragraph):
-                    label = _classify_sentence(sentence, sections)
-                    buckets[label].append(sentence)
-
-        return {k: " ".join(v) for k, v in buckets.items() if v}
 
 
 # ---------------------------------------------------------------------------
@@ -437,8 +372,8 @@ def fetch_unprocessed_w_documents(
     include_speeches: bool = True,
 ) -> list[dict[str, Any]]:
     doc_types = (
-        ("statement", "minutes", "speech") if include_speeches
-        else ("statement", "minutes")
+        ("statement", "speech") if include_speeches
+        else ("statement",)
     )
     placeholders = ",".join("?" for _ in doc_types)
 
@@ -579,31 +514,16 @@ def _split_sentences(text: str) -> list[str]:
     return [s.strip() for s in re.split(r"(?<=[.!?])\s+", normalized) if s.strip()]
 
 
-def _split_paragraphs(text: str) -> list[str]:
-    return [p.strip() for p in re.split(r"\n{2,}", text) if p.strip()]
-
-
 def _classify_sentence(sentence: str, sections: list[str]) -> str:
-    priority = ["forward_guidance", "policy_discussion",
-                "inflation", "labor_market"]
+    priority = ["forward_guidance", "inflation", "labor_market"]
     for label in priority:
         if label in sections and _PATTERNS[label].search(sentence):
             return label
     return sections[-1]
 
 
-def _map_header(header_text: str, sections: list[str]) -> str:
-    lower = header_text.lower()
-    for fragment, section in _HEADER_TO_SECTION:
-        if fragment in lower and section in sections:
-            return section
-    return _classify_sentence(header_text, sections)
-
-
 def _normalise_doc_type(raw: str) -> str:
     value = (raw or "").lower()
-    if "minute" in value:
-        return "minutes"
     if "speech" in value:
         return "speech"
     return "statement"
