@@ -340,13 +340,13 @@ def upsert_macro_rows(db_path: Path, rows: list[dict[str, float | str | None]]) 
                 :interpolated_fields
             )
             ON CONFLICT(observation_month) DO UPDATE SET
-                core_cpi_index = excluded.core_cpi_index,
-                core_cpi_mom = excluded.core_cpi_mom,
-                core_cpi_yoy = excluded.core_cpi_yoy,
-                unemployment_rate = excluded.unemployment_rate,
-                us2y_yield = excluded.us2y_yield,
-                policy_rate = excluded.policy_rate,
-                interpolated_fields = excluded.interpolated_fields,
+                core_cpi_index = COALESCE(excluded.core_cpi_index, macro_data.core_cpi_index),
+                core_cpi_mom = COALESCE(excluded.core_cpi_mom, macro_data.core_cpi_mom),
+                core_cpi_yoy = COALESCE(excluded.core_cpi_yoy, macro_data.core_cpi_yoy),
+                unemployment_rate = COALESCE(excluded.unemployment_rate, macro_data.unemployment_rate),
+                us2y_yield = COALESCE(excluded.us2y_yield, macro_data.us2y_yield),
+                policy_rate = COALESCE(excluded.policy_rate, macro_data.policy_rate),
+                interpolated_fields = COALESCE(excluded.interpolated_fields, macro_data.interpolated_fields),
                 updated_at = CURRENT_TIMESTAMP
             """,
             rows,
