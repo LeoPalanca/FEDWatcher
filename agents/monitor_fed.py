@@ -42,7 +42,6 @@ DEFAULT_TIMEOUT = 30
 RECENT_LOOKBACK_DAYS = 90
 HISTORICAL_HTML_START_YEAR = 1994
 HISTORICAL_HTML_END_YEAR = 2014
-FEDTOOLS_MINUTES_START_YEAR = 2015
 
 Mode = Literal["recent", "calendar", "historical"]
 
@@ -67,13 +66,6 @@ def clean_fed_text(raw_text: str, doc_type: str) -> str:
             "Recent indicators suggest",
             "Recent indicators",
             "The Committee seeks to achieve",
-        ]
-    elif doc_type == "minutes":
-        start_markers = [
-            "A meeting of the Federal Open Market Committee",
-            "Minutes of the Federal Open Market Committee",
-            "Developments in Financial Markets and Open Market Operations",
-            "Staff Review of the Economic Situation",
         ]
     else:
         start_markers = []
@@ -159,8 +151,6 @@ def extract_raw_text_from_fedtools_row(row_dict: dict) -> str:
         or row_dict.get("Contents")
         or row_dict.get("statement")
         or row_dict.get("Statement")
-        or row_dict.get("minutes")
-        or row_dict.get("Minutes")
         or ""
     )
 
@@ -267,16 +257,13 @@ def _normalize_fedtools_dataframe(
 
 def fetch_via_fedtools(
     cutoff_date: str | None = None,
-    minutes_start_year: int | None = None,
 ) -> list[dict[str, Any]]:
-    """Fetch statements and minutes through FedTools.
+    """Fetch statements through FedTools.
 
     cutoff_date: keep only release_date >= cutoff (YYYY-MM-DD). None = no cutoff.
-    minutes_start_year: keep minutes only from this year onward. None = no cutoff.
     """
 
     from FedTools import MonetaryPolicyCommittee
-    from FedTools import FederalReserveMins
 
     documents: list[dict[str, Any]] = []
 
@@ -293,21 +280,6 @@ def fetch_via_fedtools(
         )
     except Exception as exc:
         print(f"WARNING: Failed to fetch FOMC statements via FedTools: {exc}")
-
-    try:
-        minutes_df = FederalReserveMins(
-            verbose=True, thread_num=1
-        ).find_minutes()
-        documents.extend(
-            _normalize_fedtools_dataframe(
-                minutes_df,
-                doc_type="minutes",
-                cutoff_date=cutoff_date,
-                start_year=minutes_start_year,
-            )
-        )
-    except Exception as exc:
-        print(f"WARNING: Failed to fetch FOMC minutes via FedTools: {exc}")
 
     documents.sort(key=lambda doc: doc["release_date"], reverse=True)
     return documents
@@ -328,7 +300,7 @@ def classify_doc_type_from_url(url: str, link_text: str = "") -> str | None:
         return None
 
     if "minutes" in url_lower or "minutes" in text_lower:
-        return "minutes"
+        return None
 
     if "fomcstatement" in url_lower or "fomc statement" in text_lower:
         return "statement"
@@ -457,7 +429,7 @@ def _discover_documents_for_year(
                     discovered.append(("statement", full_url))
                     continue
                 if "Minutes" in paragraph_text and label == "HTML":
-                    discovered.append(("minutes", full_url))
+                    pass  # minutes removed
 
     deduped = []
     seen: set[tuple[str, str]] = set()
@@ -569,10 +541,7 @@ class MonitorFedAgent:
                 end_year=self.historical_end_year,
                 timeout=self.timeout,
             )
-            fedtools_docs = fetch_via_fedtools(
-                cutoff_date=None,
-                minutes_start_year=FEDTOOLS_MINUTES_START_YEAR,
-            )
+            fedtools_docs = fetch_via_fedtools(cutoff_date=None)
 
             merged: dict[str, dict[str, Any]] = {}
             for doc in html_docs + fedtools_docs:
@@ -588,10 +557,9 @@ class MonitorFedAgent:
     @staticmethod
     def _print_summary(documents: list[dict[str, Any]]) -> None:
         statement_count = sum(1 for d in documents if d["doc_type"] == "statement")
-        minutes_count = sum(1 for d in documents if d["doc_type"] == "minutes")
         print(
             f"Prepared {len(documents)} documents "
-            f"(statements: {statement_count}, minutes: {minutes_count})."
+            f"(statements: {statement_count})."
         )
         for doc in documents[:20]:
             preview = (doc.get("raw_text") or "")[:140].replace("\n", " ")
