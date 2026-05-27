@@ -299,7 +299,7 @@ class AnalystAgent:
         for model in _MODELS:
             response = self._client.chat.completions.create(
                 model=model,
-                max_tokens=700,
+                max_tokens=1200,
                 temperature=0.0,
                 messages=messages,
             )
