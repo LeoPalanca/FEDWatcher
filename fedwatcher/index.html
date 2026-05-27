@@ -4,11 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>FedWatcher — A calm interface for reading the Fed.</title>
-  <meta name="description" content="FedWatcher turns Federal Reserve releases into structured economic intelligence: tone, macro, market-implied moves.">
+  <meta name="description" content="FedWatcher — Fed policy monitor: tone, macro, market-implied moves.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,300..900;1,8..60,300..900&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap">
   <link rel="stylesheet" href="/assets/fedwatcher.css">
+  <link rel="stylesheet" href="/assets/fedwatcher-v2.css">
 </head>
 <body>
 
@@ -19,11 +20,10 @@
       <span class="topbar-tag">Policy&nbsp;Monitor</span>
     </div>
     <nav class="top-nav">
-      <a href="#signal">Signal</a>
-      <a href="#scenario">Scenarios</a>
-      <a href="#explorer">Data</a>
+      <a href="#overview">Overview</a>
+      <a href="#breakdown">Breakdown</a>
+      <a href="#data">Data</a>
       <a href="#feed">Feed</a>
-      <a href="#brief">Brief</a>
     </nav>
     <div class="source-switch" id="source-switch" aria-label="Document source">
       <button type="button" class="badge badge-outline" data-source="fakefed">FakeFed</button>
@@ -33,121 +33,230 @@
 
 <main class="page">
 
-  <!-- HERO -->
-  <section class="hero">
-    <div class="hero-eyebrow"><span class="dot"></span>FOMC · MAY 7 · 2026 · LATEST READ</div>
-    <h1>A cautious hold, with <em>hawkish</em> inflation language.</h1>
-    <p>FedWatcher reads the Federal Reserve's communication, joins it with FRED macro series, and projects probabilities over rate-move outcomes. Numbers, sources, no narrative theatre.</p>
-    <dl class="hero-meta">
-      <div><dt>Tone score</dt><dd>+0.31<span class="delta neg">moderately hawkish</span></dd></div>
-      <div><dt>Next-move bucket</dt><dd>Hold<span class="delta">55% probability</span></dd></div>
-      <div><dt>Core CPI · YoY</dt><dd id="hero-cpi">—<span class="delta warn">FRED CPILFESL</span></dd></div>
-      <div><dt>Unemployment</dt><dd id="hero-un">—<span class="delta">FRED UNRATE</span></dd></div>
-    </dl>
+  <!-- HERO — agent's main takeaway, first thing -->
+  <section class="hero hero-takeaway">
+    <div class="takeaway-line">
+      <span class="dot"></span>
+      <span style="font-size: 15px">FOMC · May 7 · 2026 · latest read</span>
+    </div>
+    <div class="takeaway-pills">
+      <span class="pill hawkish">Moderately hawkish · tone +0.31</span>
+      <span class="pill">Hold · 55% probability</span>
+    </div>
+    <h1 class="takeaway-headline">A cautious hold, with <em>hawkish</em> inflation language.</h1>
+    <p class="takeaway-body">FedWatcher reads the Federal Reserve's communication, joins it with FRED macro series, and projects probabilities over rate-move outcomes. Numbers, sources, no narrative theatre.</p>
   </section>
 
-  <!-- §01 SIGNAL -->
-  <section class="ds" id="signal">
+  <!-- §01 OVERVIEW -->
+  <section class="ds" id="overview">
     <div class="sec-head">
-      <div class="sec-num">§ 01 · SIGNAL</div>
-      <div>
-        <h2 class="sec-title">What the latest statement implies.</h2>
-        <p class="sec-desc">A tone score is computed from the FOMC's language and joined against macro context. The dashboard expresses the read as a probability distribution — not a single hike-or-not call.</p>
+      <h2 class="sec-title"><span class="sec-num-pretty">01</span><span class="sec-name">Overview</span></h2>
+      <p class="sec-desc">Tap the <span style="font-family: var(--f-serif); font-style: italic;">i</span> on any tile to see how it was computed and what it cites.</p>
+    </div>
+
+    <div class="overview-grid">
+
+      <!-- TILE 1 · Tone score (gauge) -->
+      <div class="tile" data-tile="tone">
+        <div class="tile-head">
+          <span class="tile-label">Tone score</span>
+          <button class="tile-info" type="button" data-info="tone" aria-label="About tone score">i</button>
+        </div>
+        <div class="gauge-wrap">
+          <svg class="gauge-svg" viewBox="0 0 200 100" id="tone-gauge">
+            <!-- Three colored arcs: dovish / neutral / hawkish -->
+            <!-- Half circle centered at (100,80), radius 70 -->
+            <path class="gauge-track gauge-dovish"  d="M 30 80 A 70 70 0 0 1 65.5 21.5" />
+            <path class="gauge-track gauge-neutral" d="M 65.5 21.5 A 70 70 0 0 1 134.5 21.5" />
+            <path class="gauge-track gauge-hawkish" d="M 134.5 21.5 A 70 70 0 0 1 170 80" />
+            <!-- Ticks -->
+            <g>
+              <line class="gauge-tick" x1="30" y1="80" x2="36" y2="80"/>
+              <line class="gauge-tick" x1="65.5" y1="21.5" x2="69.5" y2="26.5"/>
+              <line class="gauge-tick" x1="100" y1="10" x2="100" y2="16"/>
+              <line class="gauge-tick" x1="134.5" y1="21.5" x2="130.5" y2="26.5"/>
+              <line class="gauge-tick" x1="170" y1="80" x2="164" y2="80"/>
+              <text class="gauge-tick-label" x="30" y="94" text-anchor="middle">−1</text>
+              <text class="gauge-tick-label" x="100" y="6" text-anchor="middle">0</text>
+              <text class="gauge-tick-label" x="170" y="94" text-anchor="middle">+1</text>
+            </g>
+            <!-- Needle (line + tip rotated together as a group) -->
+            <g id="tone-needle" class="gauge-needle-group">
+              <line class="gauge-needle-line" x1="100" y1="80" x2="100" y2="14"/>
+              <circle class="gauge-needle-tip" cx="100" cy="14" r="3"/>
+            </g>
+            <circle class="gauge-hub" cx="100" cy="80" r="5"/>
+          </svg>
+          <div class="gauge-axis-row">
+            <span>Dovish</span>
+            <span>Neutral</span>
+            <span>Hawkish</span>
+          </div>
+        </div>
+        <div class="tile-foot">
+          <span class="gauge-value" id="tone-value" style="color: var(--c-ink-strong);">+0.31</span>
+          <span class="delta" style="color: var(--c-ink-2);">+0.04 · vs prior release</span>
+        </div>
+      </div>
+
+      <!-- TILE 2 · Next-move bucket histogram -->
+      <div class="tile" data-tile="bucket">
+        <div class="tile-head">
+          <span class="tile-label">Next-move bucket</span>
+          <button class="tile-info" type="button" data-info="bucket" aria-label="About next-move bucket">i</button>
+        </div>
+        <div class="bucket-mini-headline">
+          <span class="pct">55<span class="unit" style="font-size:12px;color:var(--c-ink-3);font-weight:400;margin-left:2px;">%</span></span>
+          <span class="label">Hold · 0 bps</span>
+        </div>
+        <div class="bucket-mini" id="bucket-mini">
+          <!-- 5 bars, rendered by JS for animation -->
+        </div>
+        <div class="bucket-mini-labels" id="bucket-mini-labels">
+          <span>−50</span>
+          <span>−25</span>
+          <span class="active">0</span>
+          <span>+25</span>
+          <span>+50</span>
+        </div>
+        <div class="tile-foot">
+          <span class="source">bps · next meeting</span>
+          <span>Jun 17 · FOMC</span>
+        </div>
+      </div>
+
+      <!-- TILE 3 · Core CPI -->
+      <div class="tile" data-tile="cpi">
+        <div class="tile-head">
+          <span class="tile-label">Core CPI · YoY</span>
+          <button class="tile-info" type="button" data-info="cpi" aria-label="About core CPI">i</button>
+        </div>
+        <div class="tile-value" id="metric-cpi-v2">—<span class="unit">%</span></div>
+        <div class="spark-block">
+          <svg class="spark" id="cpi-spark" viewBox="0 0 200 36" width="100%" height="36" preserveAspectRatio="none">
+            <path d="M0,20 L200,20" stroke="var(--c-line)" stroke-width="1" stroke-dasharray="2 3"/>
+          </svg>
+          <div class="spark-meta" id="cpi-spark-meta">—</div>
+        </div>
+        <div class="tile-foot">
+          <span class="source">FRED · CPILFESL</span>
+          <span class="delta" id="metric-cpi-d-v2">—</span>
+        </div>
+      </div>
+
+      <!-- TILE 4 · Unemployment -->
+      <div class="tile" data-tile="un">
+        <div class="tile-head">
+          <span class="tile-label">Unemployment</span>
+          <button class="tile-info" type="button" data-info="un" aria-label="About unemployment">i</button>
+        </div>
+        <div class="tile-value" id="metric-un-v2">—<span class="unit">%</span></div>
+        <div class="spark-block">
+          <svg class="spark" id="un-spark" viewBox="0 0 200 36" width="100%" height="36" preserveAspectRatio="none">
+            <path d="M0,20 L200,20" stroke="var(--c-line)" stroke-width="1" stroke-dasharray="2 3"/>
+          </svg>
+          <div class="spark-meta" id="un-spark-meta">—</div>
+        </div>
+        <div class="tile-foot">
+          <span class="source">FRED · UNRATE</span>
+          <span class="delta" id="metric-un-d-v2">—</span>
+        </div>
       </div>
     </div>
 
-    <div class="metric-grid">
-      <div class="metric">
-        <span class="label">Tone score</span>
-        <span class="value">+0.31</span>
-        <span class="delta neg"><span class="v">+0.04</span><span>vs March '26</span></span>
+    <!-- WEIGHTS v2 — with explanation column -->
+    <div class="weights-v2">
+      <div class="weights-explain">
+        <h4>Why these weights?</h4>
+        <p>The analyst agent splits each release into sections, scores each section's tone independently, then weights them by how predictive they have historically been of the next FOMC decision.</p>
+        <p>Forward-guidance sentences move the most; the inflation paragraph is second. The general-context block carries almost no signal on its own — it is included for completeness.</p>
+        <a class="why" href="#breakdown">For transparency · open § Breakdown for the math</a>
       </div>
-      <div class="metric">
-        <span class="label">Implied move</span>
-        <span class="value">Hold</span>
-        <span class="delta"><span class="v">0 bps</span><span>highest bucket</span></span>
-      </div>
-      <div class="metric">
-        <span class="label">Core CPI · YoY</span>
-        <span class="value" id="metric-cpi">—<span class="unit">%</span></span>
-        <span class="delta"><span class="v" id="metric-cpi-d">—</span><span>vs prior</span></span>
-      </div>
-      <div class="metric">
-        <span class="label">Unemployment</span>
-        <span class="value" id="metric-un">—<span class="unit">%</span></span>
-        <span class="delta"><span class="v" id="metric-un-d">—</span><span>vs prior</span></span>
-      </div>
-    </div>
-
-    <div class="weight-legend" aria-label="Analyst Agent section weights">
-      <div class="weight-legend-head">
-        <span>Analyst Agent Weights</span>
-        <span>document sections</span>
-      </div>
-      <div class="weight-groups">
+      <div class="weights-bars">
         <div class="weight-group">
           <div class="weight-type">Statement</div>
-          <div class="weight-row" style="--w:45%; --bar:var(--c-accent);"><span>Fed guidance</span><div class="weight-track"><i></i></div><strong>45%</strong></div>
-          <div class="weight-row" style="--w:25%; --bar:var(--c-neg);"><span>Inflation</span><div class="weight-track"><i></i></div><strong>25%</strong></div>
-          <div class="weight-row" style="--w:15%; --bar:var(--c-pos);"><span>Labor</span><div class="weight-track"><i></i></div><strong>15%</strong></div>
-          <div class="weight-row" style="--w:15%; --bar:var(--c-warn);"><span>General</span><div class="weight-track"><i></i></div><strong>15%</strong></div>
-        </div>
-        <div class="weight-group">
-          <div class="weight-type">Minutes</div>
-          <div class="weight-row" style="--w:40%; --bar:var(--c-accent);"><span>Fed guidance</span><div class="weight-track"><i></i></div><strong>40%</strong></div>
-          <div class="weight-row" style="--w:25%; --bar:var(--c-ink-2);"><span>Policy debate</span><div class="weight-track"><i></i></div><strong>25%</strong></div>
-          <div class="weight-row" style="--w:20%; --bar:var(--c-neg);"><span>Inflation</span><div class="weight-track"><i></i></div><strong>20%</strong></div>
-          <div class="weight-row" style="--w:15%; --bar:var(--c-pos);"><span>Labor</span><div class="weight-track"><i></i></div><strong>15%</strong></div>
+          <div class="weight-row" style="--w:45%; --bar:oklch(0.45 0.08 230);"><span>Fed guidance</span><div class="weight-track"><i></i></div><strong>45%</strong></div>
+          <div class="weight-row" style="--w:25%; --bar:oklch(0.58 0.07 230);"><span>Inflation</span><div class="weight-track"><i></i></div><strong>25%</strong></div>
+          <div class="weight-row" style="--w:15%; --bar:oklch(0.72 0.05 230);"><span>Labor</span><div class="weight-track"><i></i></div><strong>15%</strong></div>
+          <div class="weight-row" style="--w:15%; --bar:oklch(0.82 0.04 230);"><span>General</span><div class="weight-track"><i></i></div><strong>15%</strong></div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- §02 RATE-MOVE SCENARIOS -->
-  <section class="ds" id="scenario">
+  <!-- §02 BREAKDOWN -->
+  <section class="ds" id="breakdown">
     <div class="sec-head">
-      <div class="sec-num">§ 02 · SCENARIOS</div>
-      <div>
-        <h2 class="sec-title">Rate-move probability buckets.</h2>
-        <p class="sec-desc">Probability assigned to each plausible Committee outcome at the next meeting. Values are placeholders until the agent pipeline writes live signals.</p>
-      </div>
+      <h2 class="sec-title"><span class="sec-num-pretty">02</span><span class="sec-name">Breakdown</span></h2>
+      <p class="sec-desc">Each plausible Committee outcome with the probability the agent assigns. The right column explains the overall shape of the distribution — not every bucket on its own.</p>
     </div>
 
-    <div class="two-col">
-      <div class="scenario">
-        <div class="scenario-row"><div class="label">−25 bps<small>cut</small></div><div class="track"><div class="fill pos" style="width: 14%"></div></div><div class="pct">14%</div></div>
-        <div class="scenario-row"><div class="label">0 bps<small>hold</small></div><div class="track"><div class="fill" style="width: 55%"></div></div><div class="pct">55%</div></div>
-        <div class="scenario-row"><div class="label">+25 bps<small>hike</small></div><div class="track"><div class="fill neg" style="width: 26%"></div></div><div class="pct">26%</div></div>
-        <div class="scenario-row"><div class="label">+50 bps<small>tighten</small></div><div class="track"><div class="fill neg" style="width: 5%"></div></div><div class="pct">5%</div></div>
+    <div class="breakdown-grid">
+      <!-- Left: buckets table -->
+      <div class="bucket-table" id="bucket-table">
+        <div class="head"><span>Bucket</span><span>Probability</span></div>
+        <!-- rendered by JS -->
       </div>
-      <div class="alert accent">
-        <div class="stripe"></div>
+      <!-- Right: SINGLE distribution explanation -->
+      <aside class="breakdown-summary" id="breakdown-summary">
+        <div class="breakdown-summary-head">
+          <span class="eyebrow">Distribution · read</span>
+          <span class="shape-tag">Right-skewed</span>
+        </div>
+        <h4>Mass concentrated on a hold, with a hawkish skew.</h4>
+        <p>The modal outcome is a hold at <strong>55%</strong>, but the distribution leans right: cumulative hike probability (+25 and +50 bps) sits at <strong>27%</strong> versus a cumulative cut probability of <strong>18%</strong>. The May statement's new “inflation has been somewhat elevated” line is the largest single contributor to that skew.</p>
+        <p>Two consecutive softer CPI prints would flip the distribution back to symmetric within one meeting cycle; a third hawkish surprise would compress mass at +25 bps and make a hike the modal outcome.</p>
+        <dl class="breakdown-stats">
+          <div><dt>Modal</dt><dd>0 bps · 55%</dd></div>
+          <div><dt>Cumulative cut</dt><dd>18%</dd></div>
+          <div><dt>Cumulative hike</dt><dd>27%</dd></div>
+          <div><dt>Skew</dt><dd>+0.21 (hawkish)</dd></div>
+        </dl>
+      </aside>
+    </div>
+
+    <!-- SIGNAL DIVERGENCE -->
+    <div class="divergence-card">
+      <div class="divergence-head">
         <div>
-          <h4>Inflation language drove the hawkish skew.</h4>
-          <p>Statement adds "inflation has been somewhat elevated" — language not present since March 2024. Labor-market sentence retained "solid" and removed the prior "modest cooling" qualifier. Net effect: probability mass shifts right by ~6 points vs prior meeting.</p>
+          <h3>Signal Divergence</h3>
+          <div class="sub">Tone-implied path vs market-implied path · basis points</div>
         </div>
-        <div class="meta">11 min ago</div>
+        <div class="divergence-controls">
+          <div class="divergence-legend">
+            <button type="button" class="ent ent-toggle" data-divseries="Tone-implied"><span class="swatch tone"></span>Tone-implied</button>
+            <button type="button" class="ent ent-toggle" data-divseries="Market-implied (OIS)"><span class="swatch market"></span>Market-implied (OIS)</button>
+            <button type="button" class="ent ent-toggle" data-divseries="Policy rate (FEDFUNDS)"><span class="swatch policy"></span>Policy rate (FEDFUNDS)</button>
+            <span class="ent"><span class="swatch area area-pos"></span>Tone &gt; Market</span>
+            <span class="ent"><span class="swatch area area-neg"></span>Tone &lt; Market</span>
+          </div>
+          <div class="toggle" id="divergence-range" role="tablist" aria-label="Divergence time range">
+            <button type="button" data-divrange="1Y">1Y</button>
+            <button type="button" data-divrange="5Y">5Y</button>
+            <button type="button" data-divrange="10Y" class="active">10Y</button>
+            <button type="button" data-divrange="MAX">Max</button>
+          </div>
+        </div>
+      </div>
+      <p class="divergence-explain">
+        FedWatcher's read of the Committee's language (in blue) versus what the OIS market is pricing (in gray, dashed). Divergence is reported as <code>market − tone</code> (in pp): the shaded gap is <strong style="color: var(--c-pos);">green</strong> when tone runs above the market (market underestimates, tone is more hawkish; divergence &lt; 0) and <strong style="color: var(--c-neg);">red</strong> when tone runs below (market overestimates, tone is more dovish; divergence &gt; 0). Historically, market expectations have moved toward the tone-implied path within two meetings.
+      </p>
+      <div class="divergence-chart-wrap"><canvas id="divergence-chart" aria-label="Signal divergence chart"></canvas></div>
+      <div class="divergence-foot">
+        <span id="divergence-meta">—</span>
+        <span>t = current meeting · E = next meeting horizon</span>
       </div>
     </div>
   </section>
 
-  <!-- §03 DATA EXPLORER -->
-  <section class="ds" id="explorer" aria-labelledby="explorer-title">
+  <!-- §03 DATA -->
+  <section class="ds" id="data" aria-labelledby="explorer-title">
     <div class="sec-head">
-      <div class="sec-num">§ 03 · DATA</div>
-      <div>
-        <h2 class="sec-title" id="explorer-title">Explore the full SQLite database.</h2>
-        <p class="sec-desc">Click any table to inspect schema and rows. Numeric columns chart automatically when available; search filters the visible rows and row clicks open the full record.</p>
-      </div>
+      <h2 class="sec-title" id="explorer-title"><span class="sec-num-pretty">03</span><span class="sec-name">Data</span></h2>
+      <p class="sec-desc">Pick any table from the pills to see its chart and rows. Click any row for the full record.</p>
     </div>
 
-    <div class="db-overview" id="db-overview" aria-label="Database summary"></div>
-
-    <div class="sub-head">
-      <span>Tables</span>
-      <span id="explorer-sub">Live SQLite API</span>
-    </div>
-    <div class="toggle" role="tablist" id="table-picker" style="margin-bottom: var(--s-5);"></div>
+    <div class="pill-selector" role="tablist" id="table-picker"></div>
 
     <div class="chart-card" id="chart-card">
       <div class="chart-head">
@@ -162,9 +271,12 @@
             <button type="button" data-scale="indexed" title="Rebase to 100 at range start">Indexed</button>
             <button type="button" data-scale="shared" title="All series share one Y axis">Shared</button>
           </div>
+          <button type="button" class="btn-toggle" id="toggle-releases" title="Overlay FOMC statement markers (■)">■ Releases</button>
+          <button type="button" class="btn-toggle" id="toggle-table" title="Show data table below">▤ Show table</button>
         </div>
       </div>
       <div class="series-legend" id="chart-legend"></div>
+      <div class="series-note" id="series-note" hidden></div>
       <div class="chart-wrap chart-wrap-tall"><canvas id="series-chart" aria-label="series chart"></canvas></div>
       <div class="chart-foot">
         <span id="range-meta">—</span>
@@ -172,21 +284,23 @@
       </div>
     </div>
 
-    <div class="sub-head" style="margin-top: var(--s-9);">
-      <span>Rows</span>
-      <span><span id="row-count-text">0</span> rows · click any row</span>
-    </div>
-    <div class="table-card">
-      <div class="table-toolbar">
-        <span class="title" id="table-title">macro_data</span>
-        <span class="badge badge-outline" id="row-count-badge">0 rows</span>
-        <input class="input input-search" id="table-filter" type="search" placeholder="Filter rows…" aria-label="Filter table" style="max-width: 280px;">
+    <div id="data-table-wrap" hidden>
+      <div class="sub-head" style="margin-top: var(--s-9);">
+        <span>Rows</span>
+        <span><span id="row-count-text">0</span> rows · click any row</span>
       </div>
-      <div class="table-scroll">
-        <table class="data-table" id="data-table">
-          <thead><tr id="table-head"></tr></thead>
-          <tbody id="table-body"></tbody>
-        </table>
+      <div class="table-card">
+        <div class="table-toolbar">
+          <span class="title" id="table-title">macro_data</span>
+          <span class="badge badge-outline" id="row-count-badge">0 rows</span>
+          <input class="input input-search" id="table-filter" type="search" placeholder="Filter rows…" aria-label="Filter table" style="max-width: 280px;">
+        </div>
+        <div class="table-scroll">
+          <table class="data-table" id="data-table">
+            <thead><tr id="table-head"></tr></thead>
+            <tbody id="table-body"></tbody>
+          </table>
+        </div>
       </div>
     </div>
   </section>
@@ -194,17 +308,13 @@
   <!-- §04 FEED -->
   <section class="ds" id="feed">
     <div class="sec-head">
-      <div class="sec-num">§ 04 · FEED</div>
-      <div>
-        <h2 class="sec-title">Document &amp; release log.</h2>
-        <p class="sec-desc">Live ingestion target. Statements, minutes, and synthetic FakeFed fixtures flow through the analyst agent and accumulate here.</p>
-      </div>
+      <h2 class="sec-title"><span class="sec-num-pretty">04</span><span class="sec-name">Feed</span></h2>
+      <p class="sec-desc">Live ingestion target. FOMC statements and synthetic FakeFed fixtures flow through the analyst agent and accumulate here.</p>
     </div>
     <div class="feed-toolbar">
       <div class="toggle" id="feed-filter" role="tablist" aria-label="Document type">
         <button type="button" data-feed="all" class="active">All</button>
         <button type="button" data-feed="statement">Statements</button>
-        <button type="button" data-feed="minutes">Minutes</button>
       </div>
       <input class="input input-search" id="feed-search" type="search" placeholder="Search by date, type, text…" aria-label="Search documents" style="max-width: 320px;">
       <span class="badge badge-outline" id="feed-count">0 docs</span>
@@ -214,45 +324,13 @@
     </div>
   </section>
 
-  <!-- §05 BRIEF / PRINCIPLES -->
-  <section class="ds" id="brief">
-    <div class="sec-head">
-      <div class="sec-num">§ 05 · BRIEF</div>
-      <div>
-        <h2 class="sec-title">Four guardrails for every decision.</h2>
-        <p class="sec-desc">FedWatcher is a course prototype. The principles below describe how the dashboard should behave when more data, better models, or richer narratives arrive.</p>
-      </div>
-    </div>
-    <div class="principles">
-      <div class="principle">
-        <div class="num">01</div>
-        <h4>Numbers are the&nbsp;subject.</h4>
-        <p>Tabular monospace numerals, generous whitespace, restrained chrome. Charts use thin lines and minimal grids — the data carries the weight.</p>
-      </div>
-      <div class="principle">
-        <div class="num">02</div>
-        <h4>One accent, used&nbsp;sparingly.</h4>
-        <p>A single institutional teal-blue marks intent and primary action. It never decorates. If everything is highlighted, nothing is.</p>
-      </div>
-      <div class="principle">
-        <div class="num">03</div>
-        <h4>Serif headlines, sans&nbsp;machinery.</h4>
-        <p>A serif voice gives the agent's prose the authority of a research paper; sans and mono carry the interface and the data without competing.</p>
-      </div>
-      <div class="principle">
-        <div class="num">04</div>
-        <h4>Cite or stay&nbsp;silent.</h4>
-        <p>Every claim points back to a source — FOMC document, BLS series, speech, dataset. Trust is built from traceability, not confidence.</p>
-      </div>
-    </div>
-  </section>
-
   <footer class="page-foot">
-    <span>FedWatcher · course prototype · not investment advice</span>
-    <span>Source Serif 4 · Inter · JetBrains Mono</span>
+    <span>FedWatcher · not investment advice</span>
+    <span class="page-foot-authors" id="page-foot-authors">Palanca · Mottinelli · Magon · Pasz</span>
   </footer>
 </main>
 
+<!-- ROW / DOC MODAL (kept from v1) -->
 <div class="modal" id="row-modal" hidden role="dialog" aria-modal="true" aria-labelledby="modal-title">
   <div class="modal-backdrop" data-close></div>
   <div class="modal-panel" role="document">
@@ -264,6 +342,20 @@
       <button class="modal-close" type="button" data-close aria-label="Close">×</button>
     </header>
     <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<!-- TILE INFO POPOVER (new in v2 — personalization) -->
+<div class="popover-overlay" id="popover" hidden>
+  <div class="popover">
+    <header class="popover-head">
+      <div>
+        <div class="popover-eyebrow" id="popover-eyebrow">About</div>
+        <h3 class="popover-title" id="popover-title">—</h3>
+      </div>
+      <button class="popover-close" type="button" data-popover-close aria-label="Close">×</button>
+    </header>
+    <div class="popover-body" id="popover-body"></div>
   </div>
 </div>
 

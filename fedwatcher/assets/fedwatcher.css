@@ -72,7 +72,8 @@ a:hover { color: var(--c-accent-hover); }
   background: color-mix(in oklab, var(--c-paper), transparent 20%);
   backdrop-filter: saturate(140%) blur(8px);
   border-bottom: 1px solid var(--c-line);
-  position: sticky; top: 0; z-index: 50;
+  isolation: isolate;
+  position: sticky; top: 0; z-index: 1000;
 }
 .topbar-inner {
   align-items: center;
