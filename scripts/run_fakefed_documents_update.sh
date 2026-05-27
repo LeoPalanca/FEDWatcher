@@ -11,7 +11,7 @@ LOG_FILE="$PROJECT_DIR/logs/fakefed_documents_update.log"
     source venv/bin/activate
 
     echo "===== $(date '+%Y-%m-%d %H:%M:%S') FakeFed update started ====="
-    python scripts/update_fakefed_documents.py --db fedwatcher.db
+    python -m agents.monitor_fakefed --db fedwatcher.db
     echo "===== $(date '+%Y-%m-%d %H:%M:%S') FakeFed update finished ====="
     echo ""
 
