@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date
 from typing import Any
 
 from fastapi import APIRouter
@@ -11,6 +12,16 @@ router = APIRouter()
 
 BUCKETS: list[str] = ["cut_50", "cut_25", "hold", "hike_25", "hike_50"]
 BUCKET_BPS: dict[str, int] = {"cut_50": -50, "cut_25": -25, "hold": 0, "hike_25": 25, "hike_50": 50}
+
+# Any statement that follows the previous one by fewer than this many days is
+# treated as an intermeeting / emergency action. Regular FOMC cycles are
+# 42–56 days; emergencies (Jan 2008, Mar 2020, etc.) fall well below this.
+EMERGENCY_GAP_DAYS = 35
+
+# Max distance from a statement to the next non-emergency statement for the
+# pair to be used as a (forecast, outcome) anchor. Beyond this we assume a
+# meeting is missing from the corpus and decline to score.
+MAX_VALIDATION_GAP_DAYS = 90
 
 
 def _month_offset(ym: str, delta: int) -> str:
@@ -25,15 +36,18 @@ def _month_offset(ym: str, delta: int) -> str:
     return f"{y:04d}-{m:02d}"
 
 
-def _infer_outcome(release_date: str, policy: dict[str, float]) -> str | None:
+def _parse_iso(s: str) -> date:
+    return date.fromisoformat(str(s)[:10])
+
+
+def _infer_outcome_at(anchor_ym: str, policy: dict[str, float]) -> str | None:
     """
-    Derive the actual FOMC move from FEDFUNDS monthly averages.
-    Compares the month before the meeting to the month after to avoid
-    mid-month blending in the meeting month itself.
+    Bps move at the meeting in anchor_ym, derived from FEDFUNDS monthly
+    averages. Uses the months on either side to skip the meeting month's
+    intra-month blending.
     """
-    ym = release_date[:7]
-    pre = policy.get(_month_offset(ym, -1))
-    post = policy.get(_month_offset(ym, 1))
+    pre = policy.get(_month_offset(anchor_ym, -1))
+    post = policy.get(_month_offset(anchor_ym, 1))
     if pre is None or post is None:
         return None
     move_bps = round((post - pre) * 100 / 25) * 25
@@ -44,16 +58,16 @@ def _infer_outcome(release_date: str, policy: dict[str, float]) -> str | None:
 @router.get("/api/accountability")
 def accountability() -> dict[str, Any]:
     """
-    Track-record metrics for every FOMC statement that has a signal row.
+    Track-record metrics for the strategist's ordered-probit signals.
 
-    Actual outcome is inferred from macro_data.policy_rate (FEDFUNDS monthly
-    average): diff between the month before and the month after the meeting,
-    rounded to the nearest 25 bps and clamped to [−50, +50].
+    Each statement S(M) carries probabilities for the *next* FOMC move, so
+    each S(M) is validated against the outcome of the next non-emergency
+    statement S(M+1), measured from FEDFUNDS monthly averages.
 
-    Returns:
-      kpi       — hit_rate, mae_bps, brier_score, coverage, meeting counts
-      recent    — last 8 meetings (for the predictions table)
-      all       — full history
+    Emergency / intermeeting statements (gap < EMERGENCY_GAP_DAYS from the
+    prior one) are kept in the table but excluded from scoring — both as
+    the forecast and as the anchor — because the strategist forecasts the
+    next *scheduled* meeting and cannot fairly be graded on a surprise.
     """
     try:
         conn = connect()
@@ -92,26 +106,72 @@ def accountability() -> dict[str, Any]:
             WHERE d.doc_type = 'statement'
               AND d.release_date IS NOT NULL
               AND s.prob_hold IS NOT NULL
-            ORDER BY d.release_date DESC
+            ORDER BY d.release_date ASC
             """
         ).fetchall()
 
-    meetings: list[dict[str, Any]] = []
+    # First pass: parse rows, compute argmax + emergency flag.
+    items: list[dict[str, Any]] = []
+    prev_dt: date | None = None
     for r in raw:
         rd = row_to_dict(r)
+        try:
+            dt = _parse_iso(rd["release_date"])
+        except ValueError:
+            continue
+
+        gap = (dt - prev_dt).days if prev_dt is not None else None
+        is_emergency = gap is not None and gap < EMERGENCY_GAP_DAYS
+
         probs = {b: float(rd.get(f"prob_{b}") or 0.0) for b in BUCKETS}
         modal = max(probs, key=lambda b: probs[b])
-        actual = _infer_outcome(str(rd["release_date"]), policy)
-        meetings.append(
+
+        items.append(
             {
                 "release_date": rd["release_date"],
                 "predicted_bucket": modal,
                 "predicted_prob": round(probs[modal], 4),
                 "probs": {b: round(probs[b], 4) for b in BUCKETS},
-                "actual_bucket": actual,
-                "hit": (modal == actual) if actual is not None else None,
+                "is_emergency": is_emergency,
+                "actual_bucket": None,
+                "hit": None,
+                "skip_reason": None,
+                "_dt": dt,
             }
         )
+        prev_dt = dt
+
+    # Second pass: validate each non-emergency S(i) against the next
+    # non-emergency S(j) by reading FEDFUNDS around S(j)'s month.
+    for i, s in enumerate(items):
+        if s["is_emergency"]:
+            s["skip_reason"] = "emergency"
+            continue
+
+        nxt = next(
+            (items[j] for j in range(i + 1, len(items)) if not items[j]["is_emergency"]),
+            None,
+        )
+        if nxt is None:
+            s["skip_reason"] = "no_next_statement"
+            continue
+
+        gap_to_next = (nxt["_dt"] - s["_dt"]).days
+        if gap_to_next > MAX_VALIDATION_GAP_DAYS:
+            s["skip_reason"] = "next_too_far"
+            continue
+
+        actual = _infer_outcome_at(nxt["release_date"][:7], policy)
+        if actual is None:
+            s["skip_reason"] = "no_policy_data"
+            continue
+
+        s["actual_bucket"] = actual
+        s["hit"] = s["predicted_bucket"] == actual
+
+    meetings = sorted(items, key=lambda x: x["release_date"], reverse=True)
+    for m in meetings:
+        m.pop("_dt", None)
 
     scored = [m for m in meetings if m["actual_bucket"] is not None]
 
@@ -124,7 +184,10 @@ def accountability() -> dict[str, Any]:
 
         mae = round(
             sum(
-                abs(sum(BUCKET_BPS[b] * m["probs"][b] for b in BUCKETS) - BUCKET_BPS[m["actual_bucket"]])
+                abs(
+                    sum(BUCKET_BPS[b] * m["probs"][b] for b in BUCKETS)
+                    - BUCKET_BPS[m["actual_bucket"]]
+                )
                 for m in scored
             )
             / len(scored),
@@ -151,6 +214,7 @@ def accountability() -> dict[str, Any]:
             "coverage": round(len(scored) / len(meetings), 4) if meetings else 0.0,
             "meetings_total": len(meetings),
             "meetings_scored": len(scored),
+            "meetings_emergency": sum(1 for m in meetings if m["is_emergency"]),
         },
         "recent": meetings[:8],
         "all": meetings,
