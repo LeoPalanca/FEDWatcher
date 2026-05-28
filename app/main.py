@@ -6,6 +6,7 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
 from .db import connect, database_path, row_to_dict
+from .accountability import router as accountability_router
 
 
 MAX_LIMIT = 1_000
@@ -24,6 +25,8 @@ app.add_middleware(
     allow_methods=["GET"],
     allow_headers=["*"],
 )
+
+app.include_router(accountability_router)
 
 
 def quote_identifier(identifier: str) -> str:
