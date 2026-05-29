@@ -1,0 +1,54 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage[a4paper, margin=2.5cm]{geometry}
+\usepackage{microtype}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{xurl}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{titlesec}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=black,
+  citecolor=black,
+  urlcolor=blue!50!black,
+  pdftitle={FedWatcher: an Agentic System for FOMC Tone and Policy-Rate Nowcasting},
+  pdfauthor={FedWatcher Team}
+}
+
+\titlespacing*{\section}{0pt}{1.4ex plus 0.4ex minus 0.2ex}{0.8ex plus 0.2ex}
+\titlespacing*{\subsection}{0pt}{1.0ex plus 0.3ex minus 0.2ex}{0.5ex plus 0.2ex}
+
+\title{\textbf{FedWatcher}\\\large An Agentic System for FOMC Tone Extraction and Policy-Rate Nowcasting}
+\author{Leonardo Palanca \and Sebastian Pasz \and Lorenzo Mottinelli \and Johnny Magon\\
+\small Programming in Finance II, Spring 2026 -- Universit\`a della Svizzera italiana}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{center}
+\small
+GitHub: \url{https://github.com/LeoPalanca/FEDWatcher} \quad Live dashboard: \url{https://fedwatcher.ellep.it}
+\end{center}
+
+\vspace{0.3em}
+\hrule
+\vspace{0.6em}
+
+\input{sections/00_project_plan}
+\input{sections/01_diary}
+\input{sections/02_methods}
+\input{sections/03_results}
+\input{sections/04_lessons}
+\input{sections/05_ai_acknowledgement}
+
+\end{document}

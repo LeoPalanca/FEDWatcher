@@ -24,3 +24,10 @@ data/processed/
 outputs/
 reports/generated/
 TRASH/
+
+# LaTeX build artifacts for the academic report. Keep sources and main.pdf tracked.
+academic_doc/*.aux
+academic_doc/*.fdb_latexmk
+academic_doc/*.fls
+academic_doc/*.log
+academic_doc/*.out

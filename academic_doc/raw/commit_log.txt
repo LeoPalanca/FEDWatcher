@@ -1,0 +1,50 @@
+b738e84 | 2026-04-30 | LeoPalanca | Add FakeFed test site deployment
+    
+    ---
+1779a51 | 2026-04-30 | LeoPalanca | Add FedWatcher homepage dashboard
+    Create the first static homepage/dashboard for fedwatcher.ellep.it, inclu...
+    
+    Verified with unittest discovery and HTTPS smoke testing during deployment.
+    
+    ---
+d1935b0 | 2026-04-30 | Sebastian Pasz | deleting stuff
+    
+    ---
+73c51ce | 2026-04-30 | Sebastian Pasz | deleted files upload
+    
+    ---
+b8370d2 | 2026-05-05 | johnnymagon | created analyst agent with doc segmentat...
+    
+    ---
+a48a688 | 2026-05-06 | mottinellilorenzo | Update README (Analyst agent)
+    
+    ---
+8f8fb75 | 2026-05-06 | mottinellilorenzo | Update Analyst agent + README
+    Adding:
+    - LLM call (model TBD)
+    - prompt construction
+    - scoring engine
+    
+    ---
+18d4920 | 2026-05-06 | mottinellilorenzo | Revert "Update Analyst agent + REA...
+    This reverts commit 8f8fb7593513e7e5040c994eac997c3333ce51d7.
+    
+    ---
+2b38c26 | 2026-05-06 | mottinellilorenzo | Update Analyst agent + README
+    Adding:
+    - LLM call (model TBD)
+    - prompt construction
+    - scoring engine
+    
+    ---
+6ff8127 | 2026-05-06 | LeoPalanca | Document OpenRouter AI key support
+    Add OPENROUTER_API_KEY to the example environment and README so the proje...
+    
+    Verified that the tracked repo does not contain the provided secret. The ...
+    
+    ---
+4a1014e | 2026-05-06 | mottinellilorenzo | Update README
+    
+    ---
+98ffb05 | 2026-05-06 | LeoPalanca | Add FRED macro data ingestion
+    Create a monthly macro_data table and a FRED backfill command for CPILFES...

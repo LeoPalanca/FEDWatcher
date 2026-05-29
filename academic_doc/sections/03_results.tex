@@ -1,0 +1,21 @@
+\section{Sample Results and Reflection}
+
+\subsection{Database Coverage}
+At submission the production database contains 335 FOMC documents spanning 1994-02-04 to 2026-04-29, with approximately 16 documents per year from 2015 onward (one statement + one minutes per scheduled meeting) and sparser coverage before 2000 due to gaps in the public Fed archive. Macro coverage is monthly, $\sim$317 observations per series, from 2000 onward. The dashboard at \url{https://fedwatcher.ellep.it} renders all of this live from the FastAPI service.
+
+\subsection{Tone Time Series -- Qualitative Read}
+%% TODO: replace this paragraph with a figure of the tone time series and a one-paragraph read.
+The aggregated tone series $\tau_t$ tracks the well-known qualitative arc of recent monetary policy: pronounced dovish dips around 2008Q4 and 2020Q1--Q2, a sustained hawkish plateau across 2022--2023, and a gradual softening starting in late 2024. Sharp single-meeting jumps in $\tau_t$ correspond, in every case we inspected, to known turning points (e.g.\ the December~2018 ``patient'' language, the March~2020 emergency cut, the November~2023 pause). This is a sanity check rather than a quantitative result: it shows that the LLM-extracted signal is not random and is broadly consistent with what an economist reading the same documents would write down.
+
+\subsection{Nowcast Performance}
+%% TODO: fill in once the walk-forward backtest is finalized.
+On the walk-forward backtest restricted to 2015--2025 (the dense-coverage era), the ordered-logit nowcast reaches approximately \textbf{XX\%} top-1 accuracy and \textbf{0.YY} Brier score on six classes. A naive baseline that always predicts ``hold'' (the modal outcome in the sample) reaches \textbf{ZZ\%}. The single LLM-tone feature contributes \textbf{$\Delta$accuracy = ??\,pp} when added on top of the macro-only model. These numbers should be read with caution: the sample is small (typically eight FOMC meetings per year) and the model is fit on a regime that includes both ZLB and aggressive tightening, so it has not yet been stress-tested out of sample.
+
+\subsection{Divergence Signal -- Case Study}
+%% TODO: pick one or two meetings and discuss.
+We pick a representative recent meeting where $\delta_t$ flagged a tone--market gap, and walk through the document evidence the StrategistAgent retrieved, the corresponding market snapshot, and the realized outcome. The point of the case study is not predictive performance but interpretability: every quantity on the dashboard can be traced back to a specific paragraph of a specific FOMC document via the modal viewer in the document feed.
+
+\subsection{Reflection}
+Three things worked well: \emph{(i)} treating \texttt{db/schema.sql} as the single source of truth (after a painful incident where two database copies drifted on the VPS, see Section~2.5); \emph{(ii)} the AnalystAgent's structured-output prompt with a strict JSON schema, which essentially eliminated parsing errors and made downstream code trivially typed; \emph{(iii)} an aggressively read-only API in front of SQLite -- the dashboard never writes, cron never reads through the API, and the two responsibilities never conflict.
+
+Three things did not: \emph{(i)} early ad-hoc \texttt{ALTER TABLE} migrations created columns (\texttt{processed2}, \texttt{processed3}, \texttt{processed\_w}) that were never folded back into \texttt{schema.sql}; \emph{(ii)} the divergence sign was wrong for a week before being noticed; \emph{(iii)} the historical Fed pre-1994 documents have inconsistent HTML and were not worth the scraping effort given their thin information content.

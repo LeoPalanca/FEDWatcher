@@ -1,0 +1,14 @@
+\section{Generative-AI Acknowledgement}
+\label{sec:ai}
+
+In accordance with the course brief, we acknowledge that generative AI was used throughout the project. The following tools were involved and the role of each is summarized for transparency.
+
+\begin{description}[leftmargin=1.4em,style=nextline,itemsep=1pt]
+  \item[Anthropic Claude (Claude Code, Opus 4.6 and 4.7)] Used as the primary pair-programming agent: code edits, refactors, AGENTS.md drafting, the May~27 server consolidation (database merge, systemd repointing, archive download), and the draft of this very document. Invoked through the Claude Code CLI, not the chat UI, so that the full conversation, tool calls and diffs are reviewable.
+  \item[OpenAI GPT-4 / GPT-4o (via OpenRouter)] Used as the secondary LLM in the dual-model AnalystAgent and for spot checks of the Claude-produced JSON output. Access goes through OpenRouter so that the API key is provider-agnostic.
+  \item[GitHub Copilot] Used opportunistically in-editor for line-level completions, mostly in \texttt{explorer.js} and the FRED ingestion scripts.
+\end{description}
+
+\paragraph{Foreign code and citations.} The project depends on standard open-source libraries: \texttt{fastapi}, \texttt{uvicorn}, \texttt{requests}, \texttt{beautifulsoup4}, \texttt{pandas}, \texttt{numpy}, \texttt{scikit-learn}, and \texttt{Chart.js}. All are listed in \texttt{requirements.txt} or loaded from a CDN in \texttt{fedwatcher/index.html}. No code was copied verbatim from external tutorials or Q\&A sites; where an approach was inspired by an online reference (e.g.\ the FOMC regex anchors), the comment block in the relevant file names the source. The FRED data is public-domain via the Federal Reserve Bank of St.\ Louis API; the Fed documents are public-domain.
+
+\paragraph{Repository and reproducibility.} The full source code, commit history, issues and pull requests are available at \url{https://github.com/LeoPalanca/FEDWatcher}. Installation and deployment steps are in \texttt{README.md}; the cron schedule and systemd unit are reproduced verbatim in \texttt{deploy/}. Anyone with the GitHub URL can recreate the entire pipeline on a fresh VPS in under an hour.

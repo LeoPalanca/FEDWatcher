@@ -1,0 +1,39 @@
+\section{Economics, Mathematics and Data Science}
+
+\subsection{What FedWatcher Actually Models}
+The object of interest is the categorical outcome of the next FOMC meeting, defined as the change in the upper bound of the federal-funds target range relative to the current one:
+\[
+  Y_{t+1} \in \mathcal{Y} = \{-50,\,-25,\,0,\,+25,\,+50,\,+75\}\ \text{basis points}.
+\]
+The course brief explicitly rules out a binary ``hike vs.\ no hike'' classifier as the final nowcast, so $\mathcal{Y}$ is treated either as an ordered categorical variable (ordered logit) or, as a robustness check, as an unordered multinomial. The conditioning set is
+\[
+  \mathcal{X}_t = \underbrace{\bigl(\tau_t^{(1)}, \ldots, \tau_t^{(K)}\bigr)}_{\text{LLM tone scores}} \cup \underbrace{\bigl(\pi_t,\, \pi_t^{\text{core}},\, u_t,\, u_t - u_t^\ast,\, y_t^{2y},\, r_t^{\text{ff}},\, y_t^{2y} - r_t^{\text{ff}}\bigr)}_{\text{macro and rates}}.
+\]
+Here $\pi_t$ and $\pi_t^{\text{core}}$ are year-on-year headline and core CPI, $u_t$ is unemployment, $u_t^\ast$ is the natural rate (FRED \texttt{NROU}) so that $u_t - u_t^\ast$ is the unemployment gap, $y_t^{2y}$ is the 2-year Treasury yield, $r_t^{\text{ff}}$ is the current Fed-funds target, and $y_t^{2y} - r_t^{\text{ff}}$ is a crude proxy for the market's pricing of forthcoming policy.
+
+\subsection{Tone Extraction}
+For each new document $d$, AnalystAgent splits the text into $K\!\approx\!5$ sections using regex anchors trained on the structure of FOMC statements (assessment, outlook, policy stance, voting record). The LLM is then prompted with a strict JSON schema and returns, per section, an overall tone in $[-1,1]$, an inflation assessment label (\texttt{cooling}, \texttt{stable}, \texttt{heating}), a labor-market assessment, a forward-guidance label (\texttt{dovish}, \texttt{neutral}, \texttt{hawkish}) and a confidence score. Section scores are aggregated to a single document tone by a calibrated weighted average:
+\[
+  \tau_t = \frac{\sum_k w_k \, \text{conf}_k \, s_k}{\sum_k w_k \, \text{conf}_k}, \qquad w_k \text{ from } \texttt{section\_weight\_calibration},
+\]
+where the section weights $w_k$ are estimated by regressing historical document tone against the realized next-meeting outcome on the training window. The dual-model analyst runs two distinct LLMs in parallel and takes a confidence-weighted average to reduce single-model variance; the resulting tone is stored in \texttt{sentiment2}/\texttt{sentiment3}, and a weighted variant in \texttt{sentiment\_w}.
+
+\subsection{Nowcast Model}
+The baseline nowcast is an \emph{ordered logit} over $\mathcal{Y}$ with linear utility $\eta_t = \beta^{\top} \mathcal{X}_t$ and cutpoints $c_1 < c_2 < \cdots < c_5$:
+\[
+  \Pr(Y_{t+1} = y_j \mid \mathcal{X}_t) = \Phi(c_j - \eta_t) - \Phi(c_{j-1} - \eta_t),\qquad c_0 = -\infty,\ c_6 = +\infty,
+\]
+with $\Phi$ the logistic CDF. The model is regularized with an $\ell_2$ penalty and validated by walk-forward cross-validation: at each FOMC meeting $t$, fit on $\{1,\ldots,t-1\}$ and score the held-out $t$. We report accuracy, Brier score, and per-class precision/recall.
+
+\subsection{Tone\,/\,Market Divergence Signal}
+Independently of the nowcast, StrategistAgent computes the divergence
+\[
+  \delta_t = \widehat{r}^{\text{tone}}_{t+1} - r^{\text{mkt}}_{t+1},
+\]
+where $\widehat{r}^{\text{tone}}_{t+1}$ is the tone-implied next-meeting rate (a calibrated mapping from $\tau_t$ to basis points) and $r^{\text{mkt}}_{t+1}$ is the market-implied next-meeting rate from Fed-funds futures or, when unavailable, from the 1m OIS. The sign convention was flipped from an early version (\texttt{f327b1f}) so that $\delta_t > 0$ corresponds to a tone that is more hawkish than the market is pricing.
+
+\subsection{Data Sources}
+All macro series come from FRED via the public REST API: \texttt{DFEDTARU}, \texttt{DFEDTARL}, \texttt{DFF}, \texttt{FEDFUNDS}, \texttt{CPIAUCSL}, \texttt{CPILFESL}, \texttt{UNRATE}, \texttt{NROU}, \texttt{DGS2}, \texttt{SOFR}. FOMC documents are scraped from \url{federalreserve.gov} (statements and minutes) and from the synthetic \texttt{fakefed.ellep.it} used for parser tests. The historical backfill covers 1994--present and yields 335 documents at the time of writing.
+
+\subsection{Why SQLite}
+The schema (\texttt{db/schema.sql}) deliberately favors clarity over performance: every \texttt{sentiment*} table uses \texttt{document\_id} as a foreign key to \texttt{documents}, and signals are reconstructable joins rather than materialized views. SQLite was chosen over Postgres because the entire dataset fits in $\sim$4\,MB, the read pattern is dashboard-style (few writers, many readers), and a single file is trivially backupable and reproducible.

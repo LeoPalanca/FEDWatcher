@@ -1,0 +1,37 @@
+\section{Project Plan}
+
+\subsection{Problem}
+The U.S. Federal Reserve communicates monetary-policy intent through periodic FOMC statements and minutes. Markets re-price aggressively around these releases, but the textual signal embedded in the documents is high-dimensional, qualitative, and partially redundant with what is already implied by Fed-funds futures. \emph{FedWatcher} asks a single, narrow question: \emph{given the latest FOMC text and a current snapshot of macro and rates data, what is the most likely outcome of the next FOMC meeting (cut~/~hold~/~hike, in basis-point buckets)?}
+
+\subsection{Solution at a Glance}
+FedWatcher is an \emph{agentic} pipeline made of three named agents that read from and write to a single SQLite database:
+\begin{description}[leftmargin=1.2em,style=nextline,itemsep=0pt]
+  \item[MonitorAgent] Scrapes new FOMC statements and minutes from the Federal Reserve website (and a synthetic \texttt{FakeFed} mirror used for scraper tests) and inserts them into the \texttt{documents} table.
+  \item[AnalystAgent] Splits each document into rhetorical sections, asks an LLM to score the tone of each section on a structured rubric (overall tone, inflation assessment, labor-market assessment, forward guidance), and writes the result into \texttt{sentiment} and its variants (\texttt{sentiment2}, \texttt{sentiment3}, \texttt{sentiment\_w}) used for ablations.
+  \item[StrategistAgent] Joins the latest sentiment row with macro features (CPI, core CPI, unemployment, 2y yield, policy rate) from FRED and produces a probability vector over the next-meeting outcome plus a short natural-language explanation.
+\end{description}
+
+A FastAPI service exposes the database read-only over HTTPS; a static HTML/JavaScript dashboard renders document feeds, macro charts and signal tables on top of that API.
+
+\subsection{Generic Project Criteria Coverage}
+The course allows any project that combines three of the listed elements with at least one \emph{advanced} (starred) component. FedWatcher covers:
+\begin{itemize}[leftmargin=1.2em,itemsep=1pt]
+  \item \textbf{Cloud-based infrastructure}: deployed on a Debian VPS (\texttt{Bavaria}, OVH) behind Nginx; \texttt{systemd} supervises the API; \texttt{cron} drives all ingestion and analyst loops.
+  \item \textbf{$\ast$ Large language model}: AnalystAgent uses an LLM (Anthropic Claude and OpenAI models via OpenRouter) for structured tone extraction; StrategistAgent uses an LLM for narrative synthesis.
+  \item \textbf{$\ast$ Machine learning}: an ordered/multinomial nowcast over $\{-50,-25,0,+25,+50,+75\}$ basis-point buckets, trained on macro features and tone aggregates.
+  \item \textbf{Non-trivial database}: SQLite with $\sim$15 related tables (documents, multi-version sentiment, signals, weights, section weight calibration, market and macro data, policy moves).
+  \item \textbf{Real-time data}: hourly cron polling of Fed pages and FRED series.
+  \item \textbf{Advanced data visualization}: an interactive single-page dashboard with document feed, modal viewer, range/scale pickers, and per-table charts.
+  \item \textbf{Own API}: a read-only FastAPI service with health, table, snapshot, and document endpoints.
+\end{itemize}
+
+\subsection{Repository Layout}
+\begin{itemize}[leftmargin=1.2em,itemsep=1pt]
+  \item \texttt{agents/} -- runtime agents (analyst variants, dual-model analyst, w\_agent, strategist).
+  \item \texttt{scripts/} -- ingestion, backfill, schema, and cron-wrapper shell scripts.
+  \item \texttt{app/} -- FastAPI app exposing the SQLite store.
+  \item \texttt{fedwatcher/} -- static dashboard (HTML, CSS, vanilla JS).
+  \item \texttt{fakefed/} -- synthetic Fed-like static site used as a scraper fixture.
+  \item \texttt{db/schema.sql} -- the canonical schema (single source of truth).
+  \item \texttt{AGENTS.md} -- contributor contract for human and AI collaborators.
+\end{itemize}
