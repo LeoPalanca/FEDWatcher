@@ -1,11 +1,15 @@
-\section{Economics, Mathematics and Data Science}
+\section{Economics and Mathematics behind the FEDWatcher}
 
-\subsection{What FedWatcher Actually Models}
-The object of interest is the categorical outcome of the next FOMC meeting, defined as the change in the upper bound of the federal-funds target range relative to the current one:
+\subsection{Theory}
+The object of interest of this project is the outcome of the next FOMC meeting, defined as the change in the upper bound of the federal funds target range relative to the current one. In order to compute the prediction, we described the possible actions of the FED through five buckets:
 \[
-  Y_{t+1} \in \mathcal{Y} = \{-50,\,-25,\,0,\,+25,\,+50,\,+75\}\ \text{basis points}.
+  Y_{t+1} \in \mathcal{Y} = \{-50,\,-25,\,0,\,+25,\,+50\}\ \text{basis points}.
 \]
-The course brief explicitly rules out a binary ``hike vs.\ no hike'' classifier as the final nowcast, so $\mathcal{Y}$ is treated either as an ordered categorical variable (ordered logit) or, as a robustness check, as an unordered multinomial. The conditioning set is
+Then, the estimation model is a Probit that follows this specification:
+\[
+  Y^*_t = X_t \beta + \epsilon_t,
+\]
+and the conditioning set is
 \[
   \mathcal{X}_t = \underbrace{\bigl(\tau_t^{(1)}, \ldots, \tau_t^{(K)}\bigr)}_{\text{LLM tone scores}} \cup \underbrace{\bigl(\pi_t,\, \pi_t^{\text{core}},\, u_t,\, u_t - u_t^\ast,\, y_t^{2y},\, r_t^{\text{ff}},\, y_t^{2y} - r_t^{\text{ff}}\bigr)}_{\text{macro and rates}}.
 \]
@@ -19,18 +23,35 @@ For each new document $d$, AnalystAgent splits the text into $K\!\approx\!5$ sec
 where the section weights $w_k$ are estimated by regressing historical document tone against the realized next-meeting outcome on the training window. The dual-model analyst runs two distinct LLMs in parallel and takes a confidence-weighted average to reduce single-model variance; the resulting tone is stored in \texttt{sentiment2}/\texttt{sentiment3}, and a weighted variant in \texttt{sentiment\_w}.
 
 \subsection{Nowcast Model}
-The baseline nowcast is an \emph{ordered logit} over $\mathcal{Y}$ with linear utility $\eta_t = \beta^{\top} \mathcal{X}_t$ and cutpoints $c_1 < c_2 < \cdots < c_5$:
+The baseline nowcast is an \emph{ordered probit} over \emph{j} with cutpoints $c_1 < c_2 < \cdots < c_5$:
 \[
-  \Pr(Y_{t+1} = y_j \mid \mathcal{X}_t) = \Phi(c_j - \eta_t) - \Phi(c_{j-1} - \eta_t),\qquad c_0 = -\infty,\ c_6 = +\infty,
+  Y^*_t = X_t \beta + \epsilon_t
+  \Pr(Y_{t} = j \mid \mathcal{X}_t) = \frac{\exp{\mathcal{X}_t}\beta_j}{1+\sum_{k=1}^J\exp{\mathcal{X}_t}}),\qquad c_0 = -\infty,\ c_6 = +\infty,
 \]
-with $\Phi$ the logistic CDF. The model is regularized with an $\ell_2$ penalty and validated by walk-forward cross-validation: at each FOMC meeting $t$, fit on $\{1,\ldots,t-1\}$ and score the held-out $t$. We report accuracy, Brier score, and per-class precision/recall.
+The full specification is then defined as
+\[
+  Y^*_t = \beta_1 \cdot S_t + \beta_2 \cdot \Delta CPI_t + \beta_3 \cdot Ugap_t + \epsilon_t
+\]
+where \Delta$CPI_t$ is the variation in the Consumer Price Index, $Ugap_t$ is the unemployment gap and $\epsilon_t$ is the error term. $S_t$ represents the tone score, extracted by a text analysis performed by an LLM from all the statements and documents published by the FED. In particular, $S_t$ is an Exponentially Weighted Moving Average (EWMA) defined as follows:
 
-\subsection{Tone\,/\,Market Divergence Signal}
-Independently of the nowcast, StrategistAgent computes the divergence
 \[
-  \delta_t = \widehat{r}^{\text{tone}}_{t+1} - r^{\text{mkt}}_{t+1},
+  \text{S}_t = \alpha_t \cdot \text{tone\_score}_t + (1 - \alpha_t) \cdot \text{S}_{t-1}, \alpha_t = 1 - e^{-\lambda \Delta t}, \quad \text{where } \lambda = \frac{\ln(2)}{h}.
 \]
-where $\widehat{r}^{\text{tone}}_{t+1}$ is the tone-implied next-meeting rate (a calibrated mapping from $\tau_t$ to basis points) and $r^{\text{mkt}}_{t+1}$ is the market-implied next-meeting rate from Fed-funds futures or, when unavailable, from the 1m OIS. The sign convention was flipped from an early version (\texttt{f327b1f}) so that $\delta_t > 0$ corresponds to a tone that is more hawkish than the market is pricing.
+The first observation in our database seeds the series with alpha = 1.0 and $S_{t-1}$ =  $S_t$. After some research and literature review, we decided to set \emph{h} equal to 21. We believe this is the best option for our purposes the project objectives.
+
+\subsection{Computation of Tone Implied Rate and Signal Divergence}
+The final tone implied rate $\widehat{r}^{\text{tone}}_{t+1}$ is computed by summing to the current Fed-funds target the sum of the probabilities of each bucket $j$ multiplied by the corresponding basis points:
+
+\[
+  \widehat{r}^{\text{tone}}_{t+1} = r_t^{\text{ff}} + \sum_{j} \Pr(Y_{t} = j \mid \mathcal{X}_t) \cdot \text{bp}_j.
+\]
+The StrategistAgent then computes the divergence
+\[
+  \delta_t = r^{\text{mkt}}_{t+1} - \widehat{r}^{\text{tone}}_{t+1}\,
+\]
+where $r^{\text{mkt}}_{t+1}$ is the market-implied next-meeting rate from Fed-funds futures or, when unavailable, from the 1m OIS and $\widehat{r}^{\text{tone}}_{t+1}$ is the tone-implied next-meeting rate (a calibrated mapping from $\tau_t$ to basis points).
+
+\section{Data Science}
 
 \subsection{Data Sources}
 All macro series come from FRED via the public REST API: \texttt{DFEDTARU}, \texttt{DFEDTARL}, \texttt{DFF}, \texttt{FEDFUNDS}, \texttt{CPIAUCSL}, \texttt{CPILFESL}, \texttt{UNRATE}, \texttt{NROU}, \texttt{DGS2}, \texttt{SOFR}. FOMC documents are scraped from \url{federalreserve.gov} (statements and minutes) and from the synthetic \texttt{fakefed.ellep.it} used for parser tests. The historical backfill covers 1994--present and yields 335 documents at the time of writing.
