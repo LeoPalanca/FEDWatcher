@@ -8,17 +8,16 @@ FedWatcher is an \emph{agentic} pipeline made of three named agents that read fr
 \begin{description}[leftmargin=1.2em,style=nextline,itemsep=0pt]
   \item[MonitorAgent] Scrapes new FOMC statements and minutes from the Federal Reserve website (and a synthetic \texttt{FakeFed} mirror used for scraper tests) and inserts them into the \texttt{documents} table.
   \item[AnalystAgent] Splits each document into rhetorical sections, asks an LLM to score the tone of each section on a structured rubric (overall tone, inflation assessment, labor-market assessment, forward guidance), and writes the result into \texttt{sentiment} and its variants (\texttt{sentiment2}, \texttt{sentiment3}, \texttt{sentiment\_w}) used for ablations.
-  \item[StrategistAgent] Joins the latest sentiment row with macro features (CPI, core CPI, unemployment, 2y yield, policy rate) from FRED and produces a probability vector over the next-meeting outcome plus a short natural-language explanation.
+  \item[StrategistAgent] Applies a time smoothing on all the stored sentiments and joins the final sentiment row with macro features (CPI, core CPI, unemployment, 2y yield, policy rate) from FRED and produces a probability vector over the next-meeting outcome plus a short natural-language explanation.
 \end{description}
-
 A FastAPI service exposes the database read-only over HTTPS; a static HTML/JavaScript dashboard renders document feeds, macro charts and signal tables on top of that API.
 
 \subsection{Generic Project Criteria Coverage}
 The course allows any project that combines three of the listed elements with at least one \emph{advanced} (starred) component. FedWatcher covers:
 \begin{itemize}[leftmargin=1.2em,itemsep=1pt]
   \item \textbf{Cloud-based infrastructure}: deployed on a Debian VPS (\texttt{Bavaria}, OVH) behind Nginx; \texttt{systemd} supervises the API; \texttt{cron} drives all ingestion and analyst loops.
-  \item \textbf{$\ast$ Large language model}: AnalystAgent uses an LLM (Anthropic Claude and OpenAI models via OpenRouter) for structured tone extraction; StrategistAgent uses an LLM for narrative synthesis.
-  \item \textbf{$\ast$ Machine learning}: an ordered/multinomial nowcast over $\{-50,-25,0,+25,+50,+75\}$ basis-point buckets, trained on macro features and tone aggregates.
+  \item \textbf{Large language model}: AnalystAgent uses an LLM (Anthropic Claude and OpenAI models via OpenRouter) for structured tone extraction; StrategistAgent uses an LLM for narrative synthesis.
+  \item \textbf{Machine learning}: an ordered/multinomial nowcast over $\{-50,-25,0,+25,+50\}$ basis-point buckets, trained on macro features and tone aggregates.
   \item \textbf{Non-trivial database}: SQLite with $\sim$15 related tables (documents, multi-version sentiment, signals, weights, section weight calibration, market and macro data, policy moves).
   \item \textbf{Real-time data}: hourly cron polling of Fed pages and FRED series.
   \item \textbf{Advanced data visualization}: an interactive single-page dashboard with document feed, modal viewer, range/scale pickers, and per-table charts.

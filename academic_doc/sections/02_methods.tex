@@ -25,17 +25,16 @@ where the section weights $w_k$ are estimated by regressing historical document 
 \subsection{Nowcast Model}
 The baseline nowcast is an \emph{ordered probit} over \emph{j} with cutpoints $c_1 < c_2 < \cdots < c_5$:
 \[
-  Y^*_t = X_t \beta + \epsilon_t
-  \Pr(Y_{t} = j \mid \mathcal{X}_t) = \frac{\exp{\mathcal{X}_t}\beta_j}{1+\sum_{k=1}^J\exp{\mathcal{X}_t}}),\qquad c_0 = -\infty,\ c_6 = +\infty,
+  Y^*_t = X_t \beta + \epsilon_t,\qquad \Pr(Y_{t} = j \mid \mathcal{X}_t) = \frac{\exp{\mathcal{X}_t}\beta_j}{1+\sum_{k=1}^J\exp{\mathcal{X}_t\beta_j}}),\qquad c_0 = -\infty,\ c_6 = +\infty,
 \]
 The full specification is then defined as
 \[
   Y^*_t = \beta_1 \cdot S_t + \beta_2 \cdot \Delta CPI_t + \beta_3 \cdot Ugap_t + \epsilon_t
 \]
-where \Delta$CPI_t$ is the variation in the Consumer Price Index, $Ugap_t$ is the unemployment gap and $\epsilon_t$ is the error term. $S_t$ represents the tone score, extracted by a text analysis performed by an LLM from all the statements and documents published by the FED. In particular, $S_t$ is an Exponentially Weighted Moving Average (EWMA) defined as follows:
+where $\Delta CPI_t$ is the variation in the Consumer Price Index, $Ugap_t$ is the unemployment gap and $\epsilon_t$ is the error term. $S_t$ represents the tone score, extracted by a text analysis performed by an LLM from all the statements and documents published by the FED. In particular, $S_t$ is an Exponentially Weighted Moving Average (EWMA) defined as follows:
 
 \[
-  \text{S}_t = \alpha_t \cdot \text{tone\_score}_t + (1 - \alpha_t) \cdot \text{S}_{t-1}, \alpha_t = 1 - e^{-\lambda \Delta t}, \quad \text{where } \lambda = \frac{\ln(2)}{h}.
+  \text{S}_t = \alpha_t \cdot \text{tone\_score}_t + (1 - \alpha_t) \cdot \text{S}_{t-1},\quad \alpha_t = 1 - e^{-\lambda \Delta t}, \quad \text{where } \lambda = \frac{\ln(2)}{h}.
 \]
 The first observation in our database seeds the series with alpha = 1.0 and $S_{t-1}$ =  $S_t$. After some research and literature review, we decided to set \emph{h} equal to 21. We believe this is the best option for our purposes the project objectives.
 
