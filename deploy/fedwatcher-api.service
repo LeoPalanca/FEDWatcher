@@ -4,10 +4,10 @@ After=network.target
 
 [Service]
 Type=simple
-User=debian
-WorkingDirectory=/opt/FEDWatcher
-Environment=DATABASE_URL=sqlite:////opt/FEDWatcher/fedwatcher.db
-ExecStart=/opt/FEDWatcher/.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8018
+User=programming
+WorkingDirectory=/home/programming/FEDWatcher
+Environment=DATABASE_URL=sqlite:////home/programming/FEDWatcher/fedwatcher.db
+ExecStart=/home/programming/FEDWatcher/venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8018
 Restart=always
 RestartSec=5
 

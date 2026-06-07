@@ -16,7 +16,7 @@ BOLD='\033[1m'
 DEFAULT_HOST="fedwatcher.ellep.it"
 DEFAULT_USER="programming"
 DEFAULT_FRONTEND_DEST="/var/www/fedwatcher"
-DEFAULT_BACKEND_DEST="/opt/FEDWatcher"
+DEFAULT_BACKEND_DEST="/home/programming/FEDWatcher"
 DEFAULT_FAKEFED_DEST="/var/www/fakefed"
 BACKEND_SERVICE="fedwatcher-api.service"
 GITHUB_REPO="https://github.com/LeoPalanca/FEDWatcher.git"
@@ -309,25 +309,48 @@ test_connection() {
 
 ensure_dir() {
     local dest="$1"
-    run_sudo mkdir -p "$dest"
+    local use_sudo="$2"
+
+    if [[ "$use_sudo" == true ]]; then
+        run_sudo mkdir -p "$dest"
+    elif [[ "$DRY_RUN" == true ]]; then
+        echo -n "[DRY RUN] "
+        if [[ "$LOCAL_MODE" == true ]]; then
+            print_cmd mkdir -p "$dest"
+        else
+            print_cmd ssh "${SSH_ARGS[@]}" "${REMOTE_USER}@${HOST}" mkdir -p "$dest"
+        fi
+    elif [[ "$LOCAL_MODE" == true ]]; then
+        mkdir -p "$dest"
+    else
+        run_remote mkdir -p "$dest"
+    fi
 }
 
 deploy_dir() {
     local src="$1"
     local dest="$2"
-    shift 2
+    local use_sudo="$3"
+    shift 3
     local excludes=("$@")
     local -a rsync_cmd
 
     [[ -d "$src" ]] || fail "Source directory does not exist: $src"
-    ensure_dir "$dest"
+    ensure_dir "$dest" "$use_sudo"
 
     if [[ "$LOCAL_MODE" == true ]]; then
         echo -e "${CYAN}Syncing ${src} to ${dest}...${NC}"
-        rsync_cmd=(sudo rsync -az --delete)
+        if [[ "$use_sudo" == true ]]; then
+            rsync_cmd=(sudo rsync -rzltD --delete)
+        else
+            rsync_cmd=(rsync -rzltD --delete)
+        fi
     else
         echo -e "${CYAN}Deploying ${src} to ${REMOTE_USER}@${HOST}:${dest}...${NC}"
-        rsync_cmd=(rsync -az --delete --rsync-path "sudo rsync")
+        rsync_cmd=(rsync -rzltD --delete)
+        if [[ "$use_sudo" == true ]]; then
+            rsync_cmd+=(--rsync-path "sudo rsync")
+        fi
         local ssh_transport="ssh -o ConnectTimeout=5 -o ControlMaster=auto -o ControlPath=$SSH_CONTROL_SOCKET -o ControlPersist=120"
         if [[ -n "$SSH_KEY" ]]; then
             ssh_transport+=" -i $SSH_KEY"
@@ -417,17 +440,17 @@ main() {
 
     if [[ "$DEPLOY_FRONTEND" == true ]]; then
         echo -e "\n${BOLD}=== Deploying Frontend ===${NC}"
-        deploy_dir "fedwatcher/" "$DEFAULT_FRONTEND_DEST/" "${FRONTEND_EXCLUDES[@]}"
+        deploy_dir "fedwatcher/" "$DEFAULT_FRONTEND_DEST/" true "${FRONTEND_EXCLUDES[@]}"
     fi
 
     if [[ "$DEPLOY_BACKEND" == true ]]; then
         echo -e "\n${BOLD}=== Deploying Backend ===${NC}"
-        deploy_dir "./" "$DEFAULT_BACKEND_DEST/" "${BACKEND_EXCLUDES[@]}"
+        deploy_dir "./" "$DEFAULT_BACKEND_DEST/" false "${BACKEND_EXCLUDES[@]}"
     fi
 
     if [[ "$DEPLOY_FAKEFED" == true ]]; then
         echo -e "\n${BOLD}=== Deploying FakeFed ===${NC}"
-        deploy_dir "fakefed/" "$DEFAULT_FAKEFED_DEST/" "${FAKEFED_EXCLUDES[@]}"
+        deploy_dir "fakefed/" "$DEFAULT_FAKEFED_DEST/" true "${FAKEFED_EXCLUDES[@]}"
     fi
 
     if [[ "$RESTART_BACKEND" == true ]]; then
