@@ -85,6 +85,9 @@
   let FAKEFED_DOCS = [];
   let docFilter = "all";
   let docQuery = "";
+  // §05 Feed: collapsed state shows only the latest document; "Show all"
+  // expands the list. Any active search/filter implicitly expands.
+  let feedExpanded = false;
   let fakeFedLoaded = false;
   let fakeFedEnabled = false;
 
@@ -566,8 +569,10 @@
     const grid  = { color: "oklch(0.910 0.005 80)", drawTicks: false };
     const ticks = { color: "oklch(0.460 0.010 80)", font: { family: "JetBrains Mono", size: 10 } };
 
-    const POS_FILL = "oklch(0.45 0.22 300 / 0.28)"; // deep purple: tone > market
-    const NEG_FILL = "oklch(0.66 0.20 310 / 0.28)"; // soft purple: tone < market
+    // Visually distinct, semantically neutral fill colors for the tone-vs-market
+    // gap. Cool teal when tone runs above market, warm amber when tone runs below.
+    const POS_FILL = "oklch(0.62 0.14 200 / 0.30)"; // teal:  tone > market
+    const NEG_FILL = "oklch(0.72 0.16  65 / 0.30)"; // amber: tone < market
 
     const marketHidden = hiddenDivSeries.has("Market-implied (OIS)");
     const toneHidden   = hiddenDivSeries.has("Tone-implied");
@@ -1007,6 +1012,7 @@
 
     chart = new Chart(ctx, {
       type: "line",
+      plugins: releaseMap ? [releaseLinesPlugin(releaseMap)] : [],
       data: { labels, datasets: allDatasets },
       options: {
         responsive: true, maintainAspectRatio: false,
@@ -1043,22 +1049,36 @@
     });
   }
 
-  // Decorate a dataset's points with FOMC statement markers (shared by macro + rates views)
-  function decorateReleaseMarkers(ds, labels, releaseMap) {
-    const color = ds.borderColor;
-    ds.pointStyle = labels.map((_, j) => {
-      const types = releaseMap.get(j);
-      return types && types.has("statement") ? "rect" : "circle";
-    });
-    ds.pointRadius = labels.map((_, j) => releaseMap.has(j) ? 5 : 0);
-    ds.pointHoverRadius = labels.map((_, j) => releaseMap.has(j) ? 8 : 4);
-    ds.pointBackgroundColor = labels.map((_, j) => {
-      const types = releaseMap.get(j);
-      if (!types) return color;
-      return types.has("statement") ? color : "white";
-    });
-    ds.pointBorderColor = color;
-    ds.pointBorderWidth = 1.5;
+  // FOMC statement markers are rendered as full-height black dashed verticals
+  // by the releaseLinesPlugin attached at chart construction. Point styling
+  // is left alone so the line geometry stays clean.
+  function decorateReleaseMarkers(_ds, _labels, _releaseMap) { /* no-op */ }
+
+  // Chart.js inline plugin: draws a vertical black dashed line at each index
+  // present in releaseMap. Used by the §03 Data chart to mark FOMC statement
+  // release dates (replaces the per-point square markers).
+  function releaseLinesPlugin(releaseMap) {
+    return {
+      id: "fomc-release-lines",
+      beforeDatasetsDraw(chart) {
+        if (!releaseMap || !releaseMap.size) return;
+        const { ctx, chartArea, scales } = chart;
+        if (!ctx || !chartArea || !scales || !scales.x) return;
+        ctx.save();
+        ctx.strokeStyle = "rgba(0, 0, 0, 0.72)";
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 4]);
+        for (const idx of releaseMap.keys()) {
+          const x = scales.x.getPixelForValue(idx);
+          if (!isFinite(x) || x < chartArea.left || x > chartArea.right) continue;
+          ctx.beginPath();
+          ctx.moveTo(x, chartArea.top);
+          ctx.lineTo(x, chartArea.bottom);
+          ctx.stroke();
+        }
+        ctx.restore();
+      },
+    };
   }
 
   // "Rates" view: policy rate + 2Y yield (monthly) + tone-implied (on FOMC dates), all in %
@@ -1332,7 +1352,15 @@
     });
     if (count) count.textContent = `${filtered.length} doc${filtered.length === 1 ? "" : "s"}`;
     if (!filtered.length) { root.innerHTML = `<div class="doc-empty">No documents ${docQuery ? "match search" : "yet"}.</div>`; return; }
-    for (const d of filtered) {
+
+    // Collapsed by default: only show the latest doc unless the user is
+    // actively searching/filtering or has clicked "Show all".
+    const searchingOrFiltering = !!docQuery || docFilter !== "all";
+    const showAll = feedExpanded || searchingOrFiltering;
+    const visibleDocs = showAll ? filtered : filtered.slice(0, 1);
+    const hiddenCount = filtered.length - visibleDocs.length;
+
+    for (const d of visibleDocs) {
       const row = document.createElement("div");
       row.className = "doc-row";
       const dateLabel = formatReleaseDate(d.release_date);
@@ -1357,6 +1385,30 @@
       `;
       row.addEventListener("click", () => openDocModal(d));
       root.appendChild(row);
+    }
+
+    // "Show all" toggle: only appears when there are hidden docs.
+    if (hiddenCount > 0) {
+      const toggle = document.createElement("button");
+      toggle.type = "button";
+      toggle.className = "btn btn-secondary feed-show-all";
+      toggle.textContent = `Show all (${hiddenCount} more)`;
+      toggle.addEventListener("click", () => {
+        feedExpanded = true;
+        renderFeed();
+      });
+      root.appendChild(toggle);
+    } else if (feedExpanded && !searchingOrFiltering && filtered.length > 1) {
+      // Allow collapsing back to the latest only.
+      const toggle = document.createElement("button");
+      toggle.type = "button";
+      toggle.className = "btn btn-secondary feed-show-all";
+      toggle.textContent = "Show only the latest";
+      toggle.addEventListener("click", () => {
+        feedExpanded = false;
+        renderFeed();
+      });
+      root.appendChild(toggle);
     }
   }
 
@@ -1383,12 +1435,8 @@
     }
     body.appendChild(meta);
     const actions = document.createElement("div"); actions.className = "doc-actions";
-    if (d.url) {
-      const a = document.createElement("a");
-      a.className = "btn btn-accent"; a.href = d.url; a.target = "_blank"; a.rel = "noopener noreferrer";
-      a.innerHTML = `Open on federalreserve.gov <span class="arrow">↗</span>`;
-      actions.appendChild(a);
-    }
+    // "Open on federalreserve.gov" link intentionally removed — the modal stays
+    // self-contained; the source URL is still surfaced in the metadata table.
     const copyBtn = document.createElement("button");
     copyBtn.className = "btn btn-secondary btn-sm"; copyBtn.type = "button"; copyBtn.textContent = "Copy text";
     copyBtn.addEventListener("click", async () => {

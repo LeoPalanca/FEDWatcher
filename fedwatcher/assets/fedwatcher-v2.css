@@ -709,8 +709,9 @@ a.why:hover { color: var(--c-accent); }
 :root {
   --c-divergence: oklch(0.52 0.20 305);
   --c-divergence-soft: oklch(0.52 0.20 305 / 0.18);
-  --c-div-pos: oklch(0.45 0.22 300);
-  --c-div-neg: oklch(0.66 0.20 310);
+  /* Divergence fill: visually distinct, semantically neutral. */
+  --c-div-pos: oklch(0.62 0.14 200);  /* teal:  tone > market */
+  --c-div-neg: oklch(0.72 0.16  65);  /* amber: tone < market */
 }
 
 /* ===== § DATA — pill selector ===== */

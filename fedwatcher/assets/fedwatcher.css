@@ -934,6 +934,12 @@ section.ds {
   text-align: center;
 }
 
+/* §05 Feed — "Show all" / "Show only the latest" toggle button. */
+.feed-show-all {
+  align-self: center;
+  margin-top: var(--s-3);
+}
+
 /* Document modal — bigger panel for prose */
 .modal-panel.modal-doc { max-width: 820px; max-height: 86vh; }
 .doc-actions {
