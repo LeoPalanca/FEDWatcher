@@ -21,13 +21,25 @@
   // Only these tables surface in the v2 explorer
   const ALLOWED_TABLES = ["macro_data"];
   const TABLE_OVERRIDES = {
-    macro_data:  { label: "Macro",   numeric: ["us2y_yield", "core_cpi_yoy", "unemployment_rate"], xField: "observation_month", title: "2Y Yield · Core CPI · Unemployment", sub: "Monthly observations · FRED", displayColumns: ["observation_month", "us2y_yield", "core_cpi_yoy", "unemployment_rate", "interpolated_fields"], highlight: "us2y_yield", highlightTable: true },
+    macro_data:  { label: "Macro",   numeric: ["us2y_yield", "core_cpi_yoy", "unemployment_rate"], xField: "observation_month", title: "2Y Yield · Core CPI · Unemployment", sub: "Monthly observations · FRED", displayColumns: ["observation_month", "us2y_yield", "core_cpi_yoy", "unemployment_rate"], highlight: "us2y_yield", highlightTable: true },
     market_data: { label: "Markets", numeric: ["us2y_yield", "sofr_rate", "ois_1m", "ois_3m", "ois_6m", "ois_1y", "ois_2y"], xField: "timestamp", title: "2Y Yield · SOFR · OIS curve", sub: "Market implied rates", displayColumns: ["timestamp", "us2y_yield", "sofr_rate", "ois_1m", "ois_3m", "ois_6m", "ois_1y", "ois_2y"], highlight: "us2y_yield", highlightTable: false },
   };
   const PALETTE = [
     "oklch(0.45 0.08 230)", "oklch(0.52 0.13 25)", "oklch(0.50 0.09 155)",
     "oklch(0.62 0.10 75)",  "oklch(0.42 0.012 80)", "oklch(0.55 0.10 290)", "oklch(0.55 0.10 200)",
   ];
+  // Human-readable names for raw DB column keys (used in legend chips, table headers, notes)
+  const COLUMN_LABELS = {
+    observation_month: "Month",
+    us2y_yield: "2Y Treasury yield",
+    core_cpi_yoy: "Core CPI (YoY)",
+    core_cpi_index: "Core CPI index",
+    core_cpi_mom: "Core CPI (MoM)",
+    unemployment_rate: "Unemployment rate",
+    policy_rate: "Policy rate",
+    id: "ID",
+  };
+  const colLabel = (c) => COLUMN_LABELS[c] || c;
   const RANGES = [
     { key: "1Y", label: "1Y", months: 12 },
     { key: "5Y", label: "5Y", months: 60 },
@@ -62,6 +74,7 @@
   let activeRange = "10Y";
   let divRange = "10Y";
   let scaleMode = "multi";
+  let chartView = "macro";
   let chart = null;
   let divChart = null;
   let hiddenSeries = new Set();
@@ -141,6 +154,11 @@
   }
 
   async function fetchJson(url, fallbackValue) {
+    // Static-mode shim: serve from window.__FW_* preloaded by assets/mock-data.js.
+    // Falls back to network so the same file still works against a live backend.
+    if (url === URL_SNAPSHOT  && window.__FW_SNAPSHOT)  return window.__FW_SNAPSHOT;
+    if (url === URL_DOCUMENTS && window.__FW_DOCUMENTS) return window.__FW_DOCUMENTS;
+    if (url === URL_FAKEFED   && window.__FW_FAKEFED)   return window.__FW_FAKEFED;
     try {
       const response = await fetch(url, { cache: "no-store" });
       if (response.ok) return await response.json();
@@ -519,13 +537,22 @@
 
     const monthShort = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
     const formatLabel = (p) => {
-      if (p.type === "projected") return p.date === "t+1" ? "t+1" : "E";
+      if (p.type === "projected") return p.date === "t+1" ? "T+1" : "E";
       const d = new Date(p.date + "T12:00:00");
       if (isNaN(d)) return p.date;
       return `${monthShort[d.getMonth()]} '${String(d.getFullYear()).slice(-2)}`;
     };
 
     const labels = points.map(formatLabel);
+    // Mark the last historical statement as 't' (current meeting) so it aligns
+    // with the footer caption "t = current meeting · E = next meeting horizon".
+    {
+      let lastHistIdx = -1;
+      for (let i = points.length - 1; i >= 0; i--) {
+        if (points[i].type !== "projected") { lastHistIdx = i; break; }
+      }
+      if (lastHistIdx >= 0) labels[lastHistIdx] = "T";
+    }
     const tone   = points.map(p => p.tone);
     const market = points.map(p => p.market);
     const policy = points.map(p => (p.policy === null || p.policy === undefined || !isFinite(p.policy)) ? null : p.policy);
@@ -606,7 +633,7 @@
               title: (items) => {
                 if (!items?.length) return "";
                 const p = points[items[0].dataIndex];
-                if (p.type === "projected") return p.date === "t+1" ? "Projected · next meeting (t+1)" : "Projected · horizon (E)";
+                if (p.type === "projected") return p.date === "t+1" ? "Projected · next meeting (T+1)" : "Projected · horizon (E)";
                 const d = new Date(p.date + "T12:00:00");
                 return `■ FOMC Statement · ${monthShort[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
               },
@@ -820,6 +847,9 @@
   function renderTablePicker() {
     const root = $("table-picker");
     root.innerHTML = "";
+    // With a single table the picker is redundant — hide it entirely.
+    if (TABLES.length <= 1) { root.style.display = "none"; return; }
+    root.style.display = "";
     for (const t of TABLES) {
       const b = document.createElement("button");
       b.type = "button";
@@ -856,6 +886,14 @@
         renderActive();
       });
     });
+    const vp = $("view-picker");
+    if (vp) vp.querySelectorAll("button").forEach(b => {
+      b.addEventListener("click", () => {
+        chartView = b.dataset.view;
+        vp.querySelectorAll("button").forEach(x => x.classList.toggle("active", x === b));
+        renderActive();
+      });
+    });
   }
 
   function wireV2ChartToggles() {
@@ -885,8 +923,11 @@
     const def = TABLES.find(t => t.key === activeKey);
     if (!def) return;
     const tbl = DATA[activeKey] ?? { columns: [], rows: [] };
-    $("chart-title").textContent = def.title;
-    $("chart-sub").textContent = def.sub;
+    const ratesView = (chartView === "rates" && activeKey === "macro_data");
+    $("chart-title").textContent = ratesView ? "Policy rate · 2Y yield · Tone-implied" : def.title;
+    $("chart-sub").textContent = ratesView ? "Rates · % · tone-implied shown on FOMC dates" : def.sub;
+    const sp = $("scale-picker"); if (sp) sp.style.display = ratesView ? "none" : "";
+    document.querySelectorAll("#view-picker button").forEach(b => b.classList.toggle("active", b.dataset.view === chartView));
     const sortedRows = tbl.rows.slice().sort((a, b) => String(a[def.xField]).localeCompare(String(b[def.xField])));
     const rangedRows = applyRange(sortedRows, def);
     renderChart(def, tbl, rangedRows);
@@ -933,38 +974,24 @@
     // Build a per-label map of release types for the "Releases" toggle
     const releaseMap = showReleases ? buildReleaseMap(labels) : null;
 
-    const allDatasets = cols.map((col, i) => {
+    const ratesView = (chartView === "rates" && activeKey === "macro_data");
+
+    const allDatasets = ratesView ? buildRatesDatasets(rows) : cols.map((col, i) => {
       const color = PALETTE[i % PALETTE.length];
       const raw = rows.map(r => isNumLike(r[col]) ? Number(r[col]) : null);
       const data = transformSeries(raw, scaleMode);
-      const ds = {
-        label: col, column: col, data, rawData: raw,
+      return {
+        label: colLabel(col), column: col, data, rawData: raw,
         borderColor: color, backgroundColor: color,
         borderWidth: 1.75, pointRadius: 0, pointHoverRadius: 4,
         spanGaps: true, tension: 0.25,
         hidden: hiddenSeries.has(col),
         yAxisID: yAxisIdFor(scaleMode, i),
       };
-      // Only the first (highlighted) series gets release markers
-      if (releaseMap && i === 0) {
-        ds.pointStyle = labels.map((_, j) => {
-          const types = releaseMap.get(j);
-          if (!types) return "circle";
-          if (types.has("statement")) return "rect";
-          return "circle";
-        });
-        ds.pointRadius = labels.map((_, j) => releaseMap.has(j) ? 5 : 0);
-        ds.pointHoverRadius = labels.map((_, j) => releaseMap.has(j) ? 8 : 4);
-        ds.pointBackgroundColor = labels.map((_, j) => {
-          const types = releaseMap.get(j);
-          if (!types) return color;
-          return types.has("statement") ? color : "white";
-        });
-        ds.pointBorderColor = color;
-        ds.pointBorderWidth = 1.5;
-      }
-      return ds;
     });
+
+    // Decorate the first series with FOMC statement markers when enabled
+    if (releaseMap && allDatasets[0]) decorateReleaseMarkers(allDatasets[0], labels, releaseMap);
 
     renderLegend(allDatasets, def);
 
@@ -976,7 +1003,7 @@
     ctx.style.display = "";
     $("chart-card").classList.remove("is-empty");
 
-    const scales = buildScales(scaleMode, allDatasets);
+    const scales = buildScales(ratesView ? "shared" : scaleMode, allDatasets);
 
     chart = new Chart(ctx, {
       type: "line",
@@ -1005,7 +1032,7 @@
                 const ds = allDatasets[item.datasetIndex];
                 const raw = ds.rawData[item.dataIndex];
                 const shown = item.parsed.y;
-                if (scaleMode === "indexed" && raw !== null) return `${ds.label}: ${fmt(shown)} (raw ${fmt(raw)})`;
+                if (scaleMode === "indexed" && !ratesView && raw !== null) return `${ds.label}: ${fmt(shown)} (raw ${fmt(raw)})`;
                 return `${ds.label}: ${fmt(shown)}`;
               },
             },
@@ -1014,6 +1041,57 @@
         scales,
       },
     });
+  }
+
+  // Decorate a dataset's points with FOMC statement markers (shared by macro + rates views)
+  function decorateReleaseMarkers(ds, labels, releaseMap) {
+    const color = ds.borderColor;
+    ds.pointStyle = labels.map((_, j) => {
+      const types = releaseMap.get(j);
+      return types && types.has("statement") ? "rect" : "circle";
+    });
+    ds.pointRadius = labels.map((_, j) => releaseMap.has(j) ? 5 : 0);
+    ds.pointHoverRadius = labels.map((_, j) => releaseMap.has(j) ? 8 : 4);
+    ds.pointBackgroundColor = labels.map((_, j) => {
+      const types = releaseMap.get(j);
+      if (!types) return color;
+      return types.has("statement") ? color : "white";
+    });
+    ds.pointBorderColor = color;
+    ds.pointBorderWidth = 1.5;
+  }
+
+  // "Rates" view: policy rate + 2Y yield (monthly) + tone-implied (on FOMC dates), all in %
+  function buildRatesDatasets(rows) {
+    const signalsByDoc = {};
+    (DATA?.signals?.rows || []).forEach(s => { signalsByDoc[s.document_id] = s; });
+    const toneByMonth = new Map();
+    (DOCS || []).filter(d => d.doc_type === "statement").forEach(d => {
+      const sig = signalsByDoc[d.id];
+      if (sig && isNumLike(sig.tone_implied_next_rate)) {
+        toneByMonth.set(String(d.release_date).slice(0, 7), Number(sig.tone_implied_next_rate));
+      }
+    });
+    const pick = (r, col) => isNumLike(r[col]) ? Number(r[col]) : null;
+    const policyRaw = rows.map(r => pick(r, "policy_rate"));
+    const yieldRaw  = rows.map(r => pick(r, "us2y_yield"));
+    const toneRaw   = rows.map(r => {
+      const k = String(r.observation_month || "").slice(0, 7);
+      return toneByMonth.has(k) ? toneByMonth.get(k) : null;
+    });
+    const base = (label, column, raw, color, extra = {}) => ({
+      label, column, data: raw, rawData: raw,
+      borderColor: color, backgroundColor: color,
+      borderWidth: 1.75, pointRadius: 0, pointHoverRadius: 4,
+      spanGaps: true, tension: 0.25,
+      hidden: hiddenSeries.has(column), yAxisID: "y",
+      ...extra,
+    });
+    return [
+      base("Policy rate", "policy_rate", policyRaw, "oklch(0.55 0.12 75)"),
+      base("2Y Treasury yield", "us2y_yield", yieldRaw, "oklch(0.42 0.012 80)"),
+      base("Tone-implied", "tone_implied", toneRaw, "oklch(0.45 0.08 230)", { borderDash: [5, 3], pointRadius: 3, pointHoverRadius: 5 }),
+    ];
   }
 
   // Map each chart label (YYYY-MM-... etc.) to the set of release types in that month
@@ -1081,7 +1159,7 @@
         note.hidden = false;
         note.innerHTML = `
           <span class="ico">i</span>
-          <span><strong>${def.highlight}</strong> — the 2-year Treasury yield, used as FedWatcher's market-implied policy signal. The Signal Divergence in §02 compares this rate against the tone-implied path extracted from FOMC language.</span>
+          <span><strong>2Y Treasury yield</strong> — a market proxy for the expected path of policy. The Signal Divergence chart sets this against the tone read from the Fed's own language.</span>
         `;
       } else {
         note.hidden = true;
@@ -1099,7 +1177,7 @@
       chip.className = "series-chip" + (ds.hidden ? " muted" : "") + (isHighlight ? " highlight" : "");
       chip.innerHTML = `<span class="swatch" style="background:${ds.borderColor}"></span>${ds.label}<span class="v">${last === null ? "—" : fmt(last)}</span>`;
       chip.addEventListener("click", () => {
-        if (hiddenSeries.has(ds.label)) hiddenSeries.delete(ds.label); else hiddenSeries.add(ds.label);
+        if (hiddenSeries.has(ds.column)) hiddenSeries.delete(ds.column); else hiddenSeries.add(ds.column);
         renderActive();
       });
       root.appendChild(chip);
@@ -1122,7 +1200,7 @@
     const displayCols = (def.displayColumns || tbl.columns).filter(c => tbl.columns.includes(c));
     for (const c of displayCols) {
       const th = document.createElement("th");
-      th.textContent = c;
+      th.textContent = colLabel(c);
       if (def.numeric.includes(c) || c === "id") th.classList.add("num");
       if (def.highlightTable && def.highlight === c) th.classList.add("col-highlight");
       head.appendChild(th);
@@ -1219,8 +1297,12 @@
       fakeBtn.classList.add("loading"); fakeBtn.textContent = "Loading...";
       try {
         if (!fakeFedLoaded) {
-          const response = await fetch(URL_FAKEFED, { cache: "no-store" });
-          FAKEFED_DOCS = response.ok ? await response.json() : [];
+          if (window.__FW_FAKEFED) {
+            FAKEFED_DOCS = window.__FW_FAKEFED;
+          } else {
+            const response = await fetch(URL_FAKEFED, { cache: "no-store" });
+            FAKEFED_DOCS = response.ok ? await response.json() : [];
+          }
           fakeFedLoaded = true;
         }
         fakeFedEnabled = true;
