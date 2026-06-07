@@ -1,8 +1,65 @@
+c27c04b | 2026-04-18 | LeoPalanca | Adding Readme
+    
+    ---
+42c7de0 | 2026-04-18 | LeoPalanca | Updated readme
+    
+    ---
+19eae12 | 2026-04-18 | Sebastian Pasz | first push Sebastian
+    
+    ---
+c436af6 | 2026-04-18 | johnnymagon | first push johnny
+    
+    ---
+3466eb8 | 2026-04-18 | Sebastian Pasz | folder push
+    
+    ---
+1dacea2 | 2026-04-18 | Sebastian Pasz | requirements and environment
+    
+    ---
+9999da4 | 2026-04-18 | Sebastian Pasz | test_db push
+    
+    ---
+80dbfb0 | 2026-04-18 | Sebastian Pasz | database URL (hidden)
+    
+    ---
+9a9def8 | 2026-04-18 | Sebastian Pasz | dont look here scrapers
+    
+    ---
+8646a55 | 2026-04-18 | Sebastian Pasz | env change
+    
+    ---
+128816b | 2026-04-18 | LeoPalanca | Added simplified architecture, X implementation mds. Adding HTML dashboard mockup
+    
+    ---
+39d344f | 2026-04-18 | Sebastian Pasz | testing code + monitor agent
+    
+    ---
+b22552c | 2026-04-18 | LeoPalanca | Merge branch 'main' of https://github.com/LeoPalanca/FEDWatcher
+    
+    ---
+7db68ac | 2026-04-18 | Sebastian Pasz | gitignore
+    
+    ---
+547bea2 | 2026-04-18 | Sebastian Pasz | Merge branch 'main' of https://github.com/LeoPalanca/FEDWatcher
+    
+    ---
+0a8731e | 2026-04-18 | Sebastian Pasz | monitor improved
+    
+    ---
+8989d1a | 2026-04-18 | Sebastian Pasz | fetch_doc_text
+    
+    ---
+0abc90c | 2026-04-30 | LeoPalanca | Add agent workflow instructions
+    
+    ---
+299a76a | 2026-04-30 | LeoPalanca | Consolidate architecture into README
+    
+    ---
 b738e84 | 2026-04-30 | LeoPalanca | Add FakeFed test site deployment
     
     ---
 1779a51 | 2026-04-30 | LeoPalanca | Add FedWatcher homepage dashboard
-    Create the first static homepage/dashboard for fedwatcher.ellep.it, inclu...
+    Create the first static homepage/dashboard for fedwatcher.ellep.it, including the Nginx deployment template and README notes. Also update AGENTS.md so future commits include a summary plus a descriptive body with verification details.
     
     Verified with unittest discovery and HTTPS smoke testing during deployment.
     
@@ -13,7 +70,7 @@ d1935b0 | 2026-04-30 | Sebastian Pasz | deleting stuff
 73c51ce | 2026-04-30 | Sebastian Pasz | deleted files upload
     
     ---
-b8370d2 | 2026-05-05 | johnnymagon | created analyst agent with doc segmentat...
+b8370d2 | 2026-05-05 | johnnymagon | created analyst agent with doc segmentation + updated the readme
     
     ---
 a48a688 | 2026-05-06 | mottinellilorenzo | Update README (Analyst agent)
@@ -26,7 +83,7 @@ a48a688 | 2026-05-06 | mottinellilorenzo | Update README (Analyst agent)
     - scoring engine
     
     ---
-18d4920 | 2026-05-06 | mottinellilorenzo | Revert "Update Analyst agent + REA...
+18d4920 | 2026-05-06 | mottinellilorenzo | Revert "Update Analyst agent + README"
     This reverts commit 8f8fb7593513e7e5040c994eac997c3333ce51d7.
     
     ---
@@ -38,13 +95,738 @@ a48a688 | 2026-05-06 | mottinellilorenzo | Update README (Analyst agent)
     
     ---
 6ff8127 | 2026-05-06 | LeoPalanca | Document OpenRouter AI key support
-    Add OPENROUTER_API_KEY to the example environment and README so the proje...
+    Add OPENROUTER_API_KEY to the example environment and README so the project can use OpenRouter-hosted AI models such as openai/gpt-oss-120b:free for AnalystAgent calls.
     
-    Verified that the tracked repo does not contain the provided secret. The ...
+    Verified that the tracked repo does not contain the provided secret. The current unittest suite is blocked because tests/test_monitor_fakefed.py imports agents.monitor, but the latest pulled tree no longer contains that module.
     
     ---
 4a1014e | 2026-05-06 | mottinellilorenzo | Update README
     
     ---
 98ffb05 | 2026-05-06 | LeoPalanca | Add FRED macro data ingestion
-    Create a monthly macro_data table and a FRED backfill command for CPILFES...
+    Create a monthly macro_data table and a FRED backfill command for CPILFESL, UNRATE, and monthly-average DGS2. Document the implemented monthly storage in the README and add a unittest for series alignment and CPI change calculations.
+    
+    Verified with python -m unittest tests.test_fred_source -v. Full test discovery still has the existing agents.monitor import gap outside this change.
+    
+    ---
+bc5f9e2 | 2026-05-06 | mottinellilorenzo | Update README.md + creation of literature.md
+    - Defined value of h for EWMA tone scoring smoothing over time (README.md)
+    - Wrote down literature review for time smoothing EWMA, used to define h
+    
+    ---
+6d829ef | 2026-05-06 | mottinellilorenzo | Merge branch 'main' of https://github.com/LeoPalanca/FEDWatcher
+    
+    ---
+2e8d00f | 2026-05-06 | LeoPalanca | Remove dashboard mockup
+    Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+    
+    ---
+0ed0a43 | 2026-05-07 | LeoPalanca | Apply design system to FedWatcher dashboard
+    Add docs/design-system.html as canonical reference and rewrite
+    fedwatcher dashboard CSS to use the design-system tokens (oklch
+    neutrals, Source Serif/Inter/JetBrains Mono, restrained semantic
+    colors, mono caption labels). HTML markup unchanged; loads Google
+    Fonts directly.
+    
+    Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+    
+    ---
+fb82b21 | 2026-05-07 | LeoPalanca | Add data explorer section to FedWatcher dashboard
+    Static FRED/pipeline table browser using the design system:
+    table picker (Macro/Documents/Markets/Sentiment/Signals), live
+    search filter, scrollable sticky-header table, Chart.js line
+    chart with toggleable legend, click-row modal showing full
+    key/value detail. Disabled tabs reflect empty pipeline tables.
+    
+    Data shipped as fedwatcher/assets/data.json snapshot exported
+    from fedwatcher.db (317 macro rows, others empty for now).
+    
+    Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+    
+    ---
+0d18728 | 2026-05-07 | LeoPalanca | Redesign FedWatcher dashboard around design system
+    Full rewrite of the dashboard to match docs/design-system.html:
+    warm-paper neutrals, single teal-blue accent, Source Serif 4 +
+    Inter + JetBrains Mono. Restructured into editorial sections
+    (Hero · §01 Signal · §02 Scenarios · §03 Data · §04 Feed ·
+    §05 Brief) with sec-num/sec-title pattern, hero-meta dl,
+    metric-grid cards, scenario probability bars, and stripe alerts
+    for the document feed.
+    
+    Data Explorer now spans full width with a tall chart card
+    (per-axis / indexed / shared y-scale modes, 1Y/5Y/10Y/MAX range
+    pills, chip-style series legend with last value) and a
+    filterable scrollable table below. Hero KPIs and §01 metric
+    cards are hydrated from the latest macro_data row.
+    
+    Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+    
+    ---
+8bf18c0 | 2026-05-07 | LeoPalanca | Wire Document & Release Log to live FED documents
+    Replace placeholder feed with 235 real FOMC documents
+    (193 statements + 42 minutes) exported from the server
+    database. Adds:
+    
+    - /assets/documents.json snapshot (FedTools-ingested raw text
+      with computed federalreserve.gov URLs)
+    - Filter pills (All / Statements / Minutes) and full-text search
+    - Scrollable list with date column, two-line preview, raw size
+    - Click row to open enlarged modal with metadata, full raw_text,
+      Copy-text action, and "Open on federalreserve.gov" link
+    
+    Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+    
+    ---
+2e78f7e | 2026-05-09 | johnnymagon | LLM integration
+    
+    ---
+2d4b3ea | 2026-05-13 | mottinellilorenzo | Update analyst agent
+    Improved system prompt & user template
+    
+    ---
+a98e9af | 2026-05-13 | mottinellilorenzo | Update README.md
+    
+    ---
+05929dd | 2026-05-13 | mottinellilorenzo | Add StrategistAgent with EWMA tone smoothing
+    Introduce agents/strategist.py implementing the time-aware exponentially
+    weighted moving average from README.md:
+        S_t = alpha_t * tone_score_t + (1 - alpha_t) * S_{t-1}
+        alpha_t = 1 - exp(-lambda * Delta t),  lambda = ln(2) / h,  h = 21
+    
+    Delta t is the calendar-day gap between releases so irregular FOMC
+    cadence is handled per AGENTS.md guardrails. The first observation
+    seeds the series with alpha = 1.0 to avoid dragging the smoother toward
+    zero for months. Returns a SmoothedTone dataclass per observation
+    (date, raw tone, smoothed tone, alpha, days_since_prev) for downstream
+    use by the signals table and dashboard.
+    
+    Scope is intentionally limited to smoothing; multinomial nowcast,
+    tone-implied rate, and market divergence are deferred until macro and
+    market features are wired through pipeline.py.
+    
+    ---
+b209be1 | 2026-05-13 | LeoPalanca | Restore source-aware monitor agent
+    Add a SQLite-native MonitorAgent for official Fed and FakeFed calendar fetching, including helper functions required by the existing FakeFed tests. Update the README to remove stale deleted-file references and document the current static dashboard plus FakeFed fetch plan. Verified with rtk python -m pytest -q.
+    
+    ---
+c18a7d9 | 2026-05-13 | mottinellilorenzo | Merge branch 'strategist-ewma-smoothing'
+    
+    ---
+f8bf297 | 2026-05-13 | LeoPalanca | Extend monitor macro refresh
+    Add optional FRED macro refresh to MonitorAgent, make macro ingestion start at the 1994 statement history with a hidden CPI lookback, and expose dry-run auditing for historical macro rows. Update the static FedWatcher frontend with FakeFed toggling, source/type labels, macro missing-data handling, and refreshed data. Verified with rtk python -m pytest -q and rtk node --check fedwatcher/assets/explorer.js.
+    
+    ---
+72ec4d9 | 2026-05-19 | mottinellilorenzo | Extend StrategistAgent with probit nowcast, tone-implied rate, divergence
+    Build out the rest of the StrategistAgent model on top of the existing
+    EWMA smoother (PR #1):
+    
+      - Ordered-probit nowcast over rate-move buckets {-50, -25, 0, +25, +50}
+        bps. Latent index: eta = beta_S * S + beta_pi * (CPI_yoy - 2)
+                             + beta_u * (U - U_baseline).
+        Default beta and cut points are sign-coherent placeholders; calibration
+        on historical FOMC outcomes is queued as the next strategist task.
+      - tone_implied_rate(): current_rate + sum_k P(Y = j_k) * j_k / 100.
+      - Divergence signal vs the market proxy (DGS2 2y yield) with an
+        'aligned' band of +/- 10 bps; outside that, classified hawkish/dovish.
+      - PolicySignal dataclass + to_db_row() helper mapping to the existing
+        signals table columns (tone_implied_next_rate, market_implied_next_rate,
+        divergence, signal_direction, narrative).
+      - run(sentiment, macro, market, prior_smoothed_tone, prior_release_date)
+        composes one EWMA step + probit + divergence into one call, matching
+        the AGENTS.md StrategistAgent contract.
+    
+    Verified with a smoke test: probabilities sum to 1.0 across neutral /
+    hawkish / dovish inputs; modal bucket sits at 0 / +50 / -50 bps
+    respectively; a 21-day EWMA gap produces alpha = 0.5 exactly (half-life
+    math); run() output keys match the signals-table schema.
+    
+    README updated to mark StrategistAgent as implemented and add probit
+    calibration to the planned-next list.
+    
+    ---
+b1ff363 | 2026-05-19 | mottinellilorenzo | Update literature.md
+    
+    ---
+2f84c16 | 2026-05-19 | mottinellilorenzo | Revert "Update literature.md"
+    This reverts commit b1ff363f1e0a384bbea0c480bd39ce5d5e086882.
+    
+    ---
+3b93a26 | 2026-05-19 | Sebastian Pasz | new and better analyst
+    
+    ---
+8cf1472 | 2026-05-19 | Sebastian Pasz | Merge branch 'main' of https://github.com/LeoPalanca/FEDWatcher
+    
+    ---
+34c1243 | 2026-05-19 | Sebastian Pasz | better analyst2
+    
+    ---
+bcaf99b | 2026-05-19 | johnnymagon | Add dual-model AnalystAgent with improved neutral tone detection
+    Introduces dual_model_analyst.py: calls OpenAI OSS and DeepSeek in
+    parallel, averages tone_sco1re and confidence, and writes results to
+    sentiment2. Expanded scoring conventions improve neutral state recognition
+    with an explicit -0.25 to +0.25 range and data-dependent language cues.
+    
+    Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+    
+    ---
+d30824d | 2026-05-22 | mottinellilorenzo | Merge branch 'main' of https://github.com/LeoPalanca/FEDWatcher
+    
+    ---
+c1e1b49 | 2026-05-22 | Sebastian Pasz | dual_model_analyst db connection update
+    
+    ---
+370ee1b | 2026-05-22 | mottinellilorenzo | Merge branch 'main' of https://github.com/LeoPalanca/FEDWatcher
+    
+    ---
+f327b1f | 2026-05-22 | mottinellilorenzo | Flip divergence sign and relabel as market over/underestimate
+    Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+    
+    ---
+8ccbc66 | 2026-05-22 | Sebastian Pasz | bash automatic stuff
+    
+    ---
+e10e03f | 2026-05-22 | Sebastian Pasz | another bash automatic stuff update
+    
+    ---
+904f796 | 2026-05-22 | Sebastian Pasz | fed documents 90day update
+    
+    ---
+32c0c38 | 2026-05-22 | LeoPalanca | Add dashboard data explorer legend
+    Extend the static FedWatcher dashboard with a full SQLite snapshot explorer, AnalystAgent weight legend, and export script for refreshing data.json. Add the May 19 FakeFed fixture linked from the synthetic FOMC calendar. Document the dashboard behavior and note future section-weight calibration against 2Y Treasury reactions. Verified JSON assets parse and targeted pytest files pass.
+    
+    ---
+661c73b | 2026-05-22 | Sebastian Pasz | test_db push
+    
+    ---
+42011cc | 2026-05-22 | johnnymagon | new analyst for testing
+    
+    ---
+076b3b7 | 2026-05-22 | johnnymagon | Merge branch 'main' of https://github.com/LeoPalanca/FEDWatcher
+    
+    ---
+e1e0afd | 2026-05-22 | johnnymagon | readme updated with new agents
+    
+    ---
+39f75bd | 2026-05-22 | mottinellilorenzo | Replace literature.md with report directory
+    Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+    
+    ---
+7a3c04c | 2026-05-22 | mottinellilorenzo | Backfill FEDFUNDS policy rate from FRED into macro_data
+    Fetch the FEDFUNDS series alongside CPILFESL, UNRATE, and DGS2 and
+    align it on the monthly grid, with single-month-gap interpolation
+    matching the other inputs. Writes into macro_data.policy_rate.
+    
+    Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+    
+    ---
+bc8cd76 | 2026-05-22 | LeoPalanca | Add live SQLite API for FedWatcher
+    Implement a read-only FastAPI backend over the SQLite database, proxy it through the FedWatcher Nginx config, and point the static frontend at the live API instead of generated JSON snapshots. Remove stale database/document JSON assets and the old snapshot exporter. Add a direct Federal Reserve historical-page backfill for missing 2015-2020 FOMC statements and minutes, plus API tests. Verified with python -m pytest -q and live API smoke checks.
+    
+    ---
+278e98c | 2026-05-22 | mottinellilorenzo | Move Fed historical-page backfill into agents as monitor-fed-historical-pages
+    Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+    
+    ---
+e62cdfe | 2026-05-22 | johnnymagon | hopefully last agent
+    
+    ---
+f53ecbf | 2026-05-22 | johnnymagon | db scheme updated for the new agent (multi-weights agent)
+    
+    ---
+87d500a | 2026-05-22 | johnnymagon | updated db for multi weight agent
+    
+    ---
+b70b358 | 2026-05-23 | johnnymagon | fix weighted score: exclude zero-scored sections from weighted average to avoid neutral bias on short/old documents
+    
+    ---
+e924681 | 2026-05-27 | johnnymagon | add logging, flock and limit 5 to run_w_agent.sh
+    Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+    
+    ---
+e0601ea | 2026-05-27 | LeoPalanca | Add database schema contract to AGENTS.md
+    Require agents to follow db/schema.sql strictly and to explicitly flag any
+    missing table or column instead of silently introducing one. Motivated by the
+    recent drift between the prod and dev SQLite copies, where ad-hoc extra
+    columns and tables had appeared without a schema update.
+    
+    Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+    
+    ---
+389d2ab | 2026-05-27 | LeoPalanca | Remove stale fomc_policy_moves from dashboard table priority
+    The fomc_policy_moves table was dropped from the production database along
+    with the other /opt-only orphans. Its name lingered in the dashboard's
+    table-sort priority list and is no longer meaningful.
+    
+    Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+    
+    ---
+76d456e | 2026-05-27 | mottinellilorenzo | Add market verdict anchored on effective fed funds rate
+    Strategist now judges whether market expectations agree with the
+    tone-implied path by checking if both fall on the same side of ER
+    (the latest FEDFUNDS observation). Verdict is surfaced in the
+    narrative alongside the existing divergence direction. Top-of-file
+    docstring is updated to reflect the market_implied - tone_implied
+    sign convention introduced earlier.
+    
+    Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+    
+    ---
+a0c6ed6 | 2026-05-27 | mottinellilorenzo | Wire strategist to fedwatcher.db and persist signals
+    Add a database runner inside agents/strategist.py that reads tone
+    history from sentiment_w joined with documents, joins macro_data
+    by observation_month for ER (policy_rate), CPI gap, unemployment
+    gap, and us2y_yield, runs StrategistAgent, and writes results to
+    the signals table. The EWMA chain is replayed over the full
+    history so prior_smoothed_tone is consistent across runs, and
+    documents already present in signals are skipped, making the
+    runner idempotent.
+    
+    Extend signals with smoothed_tone REAL and market_verdict TEXT
+    so the EWMA state and right/wrong judgment are queryable instead
+    of being recomputed or buried in the narrative.
+    
+    Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+    
+    ---
+4efb07f | 2026-05-27 | johnnymagon | fix minutes segmentation: classify at sentence level to distribute scores across sections
+    Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+    
+    ---
+842d74b | 2026-05-27 | LeoPalanca | Raise dual_model_analyst max_tokens 700→1200
+    Sebastian's server-side edit. Larger LLM output budget for dual-model
+    sentiment comparison; matches what production has been running.
+    
+    Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+    
+    ---
+cfe18a4 | 2026-05-27 | LeoPalanca | Add macro_data to clean_db truncation list
+    Server-side edit. clean_db now resets macro_data alongside the other
+    core tables so a full reset wipes the FRED backfill too. sqlite_sequence
+    counter list updated to match.
+    
+    Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+    
+    ---
+23b4034 | 2026-05-27 | LeoPalanca | Add pairwise tone-score diff columns to compare_sentiments
+    Server-side edit. Adds three ROUND(diff…) columns so the comparison
+    output shows sentiment vs sentiment2 vs sentiment3 deltas inline rather
+    than requiring manual computation.
+    
+    Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+    
+    ---
+6dfe610 | 2026-05-27 | LeoPalanca | Fix run_fakefed recursion bug, add flock single-instance guard
+    Server-side edit. Old repo version tail-called itself on line 12 which
+    would have caused infinite cron recursion. Replaced with a flock-based
+    single-instance wrapper that logs to logs/fakefed_documents_update.log.
+    
+    Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+    
+    ---
+c40e2bf | 2026-05-27 | LeoPalanca | Raise w_agent batch limit 5→20
+    Server-side edit. Lets the weighted-sentiment agent process more
+    backlog per cron tick so we don't fall behind on minutes scoring.
+    
+    Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+    
+    ---
+ebfef56 | 2026-05-27 | LeoPalanca | Store FakeFed release_date as date only (YYYY-MM-DD)
+    Server-side edit. Matches the convention now used by other Fed-doc
+    writers and the AnalystAgent's date-only joins.
+    
+    Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+    
+    ---
+3b2322a | 2026-05-27 | LeoPalanca | Use COALESCE in macro_data upsert to preserve non-null DB values
+    Server-side fix. Previously, an upsert with a NULL incoming value would
+    overwrite an existing non-null DB value (e.g. when DGS2 has a stale
+    trailing month). With COALESCE, new values only fill blanks; once a row
+    has been backfilled, transient FRED gaps no longer destroy it.
+    
+    Keeps repo's 1994 start date, 1993 CPI lookback for Jan-1994 YoY,
+    FEDFUNDS policy_rate ingestion, and interpolated_fields tracking.
+    
+    Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+    
+    ---
+ef636c7 | 2026-05-27 | LeoPalanca | Pull server-only debug/admin scripts into repo
+    read_one_document.py: prints the most recent document with a 1000-char
+    raw_text preview. Quick QA for new fetches.
+    
+    show_db_structure.py: lists every table with column metadata and row
+    count. Live equivalent of schema.sql for verifying drift.
+    
+    update_weights.py: manages the weights table that drives the multi-
+    weights w_agent (paired with johnnymagon's f53ecbf schema update).
+    Supports reset-defaults and show commands.
+    
+    All three previously lived only on the server and were edited in place.
+    Committing so the repo is the single source of truth going forward.
+    
+    Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+    
+    ---
+8790d54 | 2026-05-27 | LeoPalanca | Add agents/monitor_fred.py — FRED macro/rate ingestion agent
+    First of three consolidated monitor files (FRED, Fed, FakeFed). Wraps
+    the existing sources/fred.py client and upsert logic in a MonitorFredAgent
+    class plus python -m agents.monitor_fred CLI.
+    
+    Functionally equivalent to scripts/backfill_fred.py — same flags, same
+    audit output. That script will be deleted once cron switches over.
+    
+    Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+    
+    ---
+c8744cb | 2026-05-27 | LeoPalanca | Add agents/monitor_fed.py — Federal Reserve document monitor (3 modes)
+    Second of three consolidated monitor files. Replaces:
+    
+    - scripts/update_fed_documents.py (FedTools 90d, now --mode recent)
+    - agents/monitor.py FOMC-calendar path (now --mode calendar)
+    - agents/monitor-fed-historical-pages.py (now part of --mode historical)
+    - scripts/initial_data_download.py server-side (now part of --mode historical)
+    
+    recent (default for cron): FedTools 90-day lookback for statements +
+    minutes. Matches prior cron behavior exactly.
+    
+    calendar: scrapes the live fomccalendars.htm page for current-cycle
+    documents and fetches their HTML text.
+    
+    historical: combined backfill that scrapes fomchistorical{year}.htm for
+    1994-2014 AND pulls full-history statements + minutes (from 2015) via
+    FedTools. URL-deduplicated.
+    
+    Shared helpers (clean_fed_text, clean_html_text, extract_release_date_*,
+    save_documents) consolidate the previously-duplicated cleaners and
+    upsert logic across the 4 source files.
+    
+    Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+    
+    ---
+45411d7 | 2026-05-27 | LeoPalanca | Add agents/monitor_fakefed.py — FakeFed statement monitor
+    Third of three consolidated monitor files. Wraps the existing
+    scripts/update_fakefed_documents.py logic in a MonitorFakeFedAgent class
+    with the same --db / --dry-run CLI surface.
+    
+    Preserves the 2026-05-21 cutoff guard and the date-only release_date
+    format. That script will be deleted once cron switches over.
+    
+    Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+    
+    ---
+f007802 | 2026-05-27 | LeoPalanca | Switch cron wrappers to new monitor_* entrypoints
+    run_fred_backfill.sh   -> python -m agents.monitor_fred
+    run_fed_documents_update.sh   -> python -m agents.monitor_fed --mode recent
+    run_fakefed_documents_update.sh -> python -m agents.monitor_fakefed
+    
+    Behavior identical to prior scripts/* invocations; the underlying
+    scripts will be removed in a follow-up commit once this has cycled
+    through cron at least once.
+    
+    Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+    
+    ---
+d6087d9 | 2026-05-27 | LeoPalanca | Expose monitor_fed helpers; retarget test_monitor_fakefed at new modules
+    Split fetch_from_calendar into testable helpers:
+    - discover_calendar_candidates: returns candidate rows without body fetch
+    - deduplicate_documents: pure dedupe by (bank, doc_type, release_date)
+    - fetch_calendar_body_text: fetches HTML body and cleans
+    
+    Update test_monitor_fakefed.py to import from agents.monitor_fed and
+    agents.monitor_fred instead of the about-to-be-removed agents.monitor.
+    extract_release_date_from_url now returns str (YYYY-MM-DD) instead of
+    datetime; test assertions adjusted.
+    
+    All 12 tests pass.
+    
+    Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+    
+    ---
+685d775 | 2026-05-27 | LeoPalanca | Remove monitor-related files now absorbed into agents/monitor_*.py
+    Deleted:
+    - agents/monitor.py            (split into monitor_fred + monitor_fed)
+    - agents/monitor-fed-historical-pages.py  (monitor_fed --mode historical)
+    - scripts/update_fed_documents.py    (monitor_fed --mode recent)
+    - scripts/update_fakefed_documents.py  (monitor_fakefed)
+    - scripts/backfill_fred.py         (monitor_fred)
+    - scripts/inital_data_download.py    (monitor_fed --mode historical)
+    
+    Cron wrappers already point to the new entrypoints. Tests still
+    green (12 passing).
+    
+    Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+    
+    ---
+5ba3b15 | 2026-05-27 | LeoPalanca | Drop market_data table from schema (no writers, never populated)
+    Per AGENTS.md schema contract, every declared table must be reachable by
+    code. market_data has no writer in the repo, never had FRED/OIS/SOFR
+    ingestion implemented, and was dropped from the live DB on 2026-05-27.
+    
+    Changes:
+    - db/schema.sql: remove market_data CREATE TABLE
+    - db/schema.sql: drop signals.market_snapshot_id column and its FK
+    - scripts/clean_db.py: remove market_data from truncation list and
+      sqlite_sequence reset list
+    - fedwatcher/assets/explorer.js: remove market_data from TABLE_OVERRIDES
+      and dashboard priority order (matches what the v2 deploy already does)
+    
+    Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+    
+    ---
+c4671ce | 2026-05-27 | mottinellilorenzo | Make effective fed funds rate explicitly sourced from macro_data.policy_rate
+    Rename the in-code anchor variable current_rate -> policy_rate so the
+    chain from FRED FEDFUNDS through macro_data.policy_rate into the
+    strategist's tone-implied calculation and market verdict is
+    unambiguous. market['policy_rate'] is the canonical input; the legacy
+    key market['current_rate'] is still accepted as an alias so older
+    callers keep working. Missing both keys now raises a KeyError that
+    points back at macro_data.policy_rate.
+    
+    Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+    
+    ---
+11744fb | 2026-05-27 | johnnymagon | Remove minutes support from analyst.py
+    Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+    
+    ---
+f4f6e1f | 2026-05-27 | johnnymagon | Remove minutes support from analyst_ds.py
+    Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+    
+    ---
+f7b4d12 | 2026-05-27 | johnnymagon | Remove minutes support from dual_model_analyst.py
+    Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+    
+    ---
+a07c517 | 2026-05-27 | johnnymagon | Remove minutes support from w_agent.py
+    Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+    
+    ---
+ea17bd8 | 2026-05-27 | johnnymagon | Remove minutes fetching and detection from monitor_fed.py
+    Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+    
+    ---
+8684b4d | 2026-05-27 | johnnymagon | Remove minutes weights from update_weights.py
+    Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+    
+    ---
+18f959c | 2026-05-27 | johnnymagon | More coherent readme
+    
+    ---
+5d084d3 | 2026-05-27 | mottinellilorenzo | Persist the five ordered-probit bucket probabilities into signals
+    Add prob_cut_50, prob_cut_25, prob_hold, prob_hike_25, prob_hike_50
+    columns to the signals table so the full next-meeting move
+    distribution from the probit nowcast is queryable, not just the
+    modal move buried in the narrative. PolicySignal.to_db_row() now
+    surfaces the five probabilities by bps key, the runner's INSERT
+    writes them, and _ensure_signals_columns defensively ALTERs older
+    databases so re-runs against existing data pick the columns up
+    without a re-init.
+    
+    Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+    
+    ---
+e48b615 | 2026-05-27 | LeoPalanca | Drop trailing all-null months from FRED ingest
+    Prevents partial-month FRED placeholders (where every base series
+    is still unpublished for the current month) from landing in
+    macro_data and breaking downstream sparklines/charts on the
+    latest observation. Internal-gap months are preserved.
+    
+    Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+    
+    ---
+8fa75f3 | 2026-05-27 | LeoPalanca | Replace v1 frontend with live v2 dashboard
+    Brings the production frontend served at fedwatcher.ellep.it
+    into the repo as the single source of truth. Highlights:
+    
+    - Signal divergence chart: range selector (1Y/5Y/10Y/Max),
+      green/red fill split by tone vs market, FEDFUNDS policy-rate
+      step-line overlay, clickable legend pills, canonical
+      market - tone sign convention
+    - Tone tile: needle from signals.smoothed_tone, value shows
+      signals.divergence in pp, popover lists tone/market/divergence
+    - Next-move bucket: probabilities pulled from the new
+      signals.prob_cut_50..prob_hike_50 columns, modal = argmax
+    - Macro tiles: sparklines now show observation-month range
+    - Frontend defensively filters trailing all-null macro rows
+    - Minutes UI removed (statements-only project)
+    - Topbar z-index hardened so bar badges can't bleed through
+    - Footer: drop course-prototype/v2 wording, add author credits
+    
+    Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+    
+    ---
+7ef13cc | 2026-05-28 | mottinellilorenzo | Automation strategist agent
+    Add scripts/run_strategist.sh cron wrapper mirroring the other
+    agent wrappers (cd to project root, activate venv, flock to
+    prevent overlapping runs, timestamped banners to logs/strategist.log).
+    Wire into cron with:
+      */5 * * * * /home/programming/FEDWatcher/scripts/run_strategist.sh
+    
+    Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+    
+    ---
+fb273a0 | 2026-05-28 | johnnymagon | accountability measure system
+    Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+    
+    ---
+731ae07 | 2026-05-28 | johnnymagon | Register accountability router in main
+    Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+    
+    ---
+77d4dec | 2026-05-28 | johnnymagon | fixed math + mitigated errors from emergency statements
+    
+    ---
+cefd7be | 2026-05-29 | LeoPalanca | Add academic report draft and footer links
+    Add the public academic documentation sources and generated PDF, ignore LaTeX scratch files, remove the old raw report stub, and link the FedWatcher footer surnames to LinkedIn in alphabetical order. Verified the staged file list and live deployment smoke checks before committing.
+    
+    ---
+ea4d918 | 2026-05-29 | johnnymagon | new website implementations
+    
+    ---
+0b2f8fb | 2026-06-02 | mottinellilorenzo | Report Review of the math + typo fix on front page
+    Review of the 02_methods part of the report, with full revision of the formulas and methodology.
+    Put the names in the front page of the report in alphabetical order.
+    
+    ---
+339229c | 2026-06-03 | mottinellilorenzo | Fix academic_doc build: lmodern + math-mode delta in methods section
+    main.tex now loads lmodern before microtype so the scalable Type 1
+    fonts are available for microtype's expansion feature (default
+    Computer Modern bitmaps in MiKTeX broke shipout with "auto expansion
+    is only possible with scalable fonts"). sections/02_methods.tex had
+    a bare \Delta outside math mode next to a $CPI_t$ group; merged into
+    one $\Delta CPI_t$ inline-math group so pdfTeX no longer needs to
+    insert a missing $.
+    
+    Also includes a small parallel edit in 00_project_plan and 04_lessons.
+    
+    Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+    
+    ---
+3b31ea5 | 2026-06-07 | mottinellilorenzo | Add built academic_doc PDF and synctex artifact
+    Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+    
+    ---
+7cb7240 | 2026-06-07 | mottinellilorenzo | Consolidate fedwatcher frontend into a single assets bundle
+    Drop the duplicate proposal/ tree and the legacy root index.html.
+    The canonical entry point now lives at fedwatcher/assets/index.html
+    alongside its CSS/JS, with the explorer and v2 stylesheet updated
+    to match.
+    
+    Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+    
+    ---
+9bda88c | 2026-06-07 | mottinellilorenzo | Revert "Consolidate fedwatcher frontend into a single assets bundle"
+    This reverts commit 7cb72405afe2f3b4b06526242394c38a21cb4127.
+    
+    ---
+598396f | 2026-06-07 | mottinellilorenzo | Bring proposal design live: Method, Accountability, modals, back-to-top
+    Merge the proposal/ design refresh into the live site:
+    - §04 Method and §05 Accountability are new top-level sections;
+      Feed becomes §06.
+    - Method and architecture modals add an under-the-hood explanation
+      of the pipeline; inline script wires them up with Escape-to-close.
+    - Floating back-to-top button after 600 px of scroll.
+    - Updated copy and divergence chart legend layout across §01-§03.
+    
+    Adjustments vs a raw copy of proposal/:
+    - Asset paths rewritten from relative assets/ to absolute /assets/
+      to match how the live site is served (root, not subdir).
+    - mock-data.js dropped: it's a static-preview shim only, neither
+      explorer.js references it, both still fetch /api/snapshot,
+      /api/documents and /assets/fakefed-documents.json.
+    - Feed filter toggle (#feed-filter) kept: explorer.js still wires
+      it on lines 1275/1313, so dropping it would silently break the
+      All/Statements filter.
+    - LinkedIn footer anchors kept: regressing the four author links
+      to plain text was the cause of the previous revert (9bda88c).
+    
+    The proposal/ folder is now removed; no further iteration planned.
+    
+    Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+    
+    ---
+f2c7cca | 2026-06-07 | LeoPalanca | Add deploy script with restricted programming user and SSH multiplexing
+    - Add scripts/deploy.sh: VPS deployer for frontend, backend, and FakeFed with
+      --source (local/github), --local, --dry-run, and per-target rsync.
+    - Default SSH user changed to 'programming' (restricted, no access to debian home).
+    - Add SSH ControlMaster multiplexing so password is only asked once per session.
+    - Add scripts/setup_deploy_user.sh: one-time VPS provisioning for the restricted
+      programming user with locked-down sudoers (rsync, systemctl, nginx only).
+    - Update README.md with deployment section and common commands.
+    - Verified: dry-run for all targets, SSH connection as programming, sudo isolation
+      (cannot read /home/debian or radice_key), password auth works.
+    
+    ---
+f5730bf | 2026-06-07 | LeoPalanca | Use purple shades instead of green/red for signal divergence
+    Update the signal divergence chart fills, swatches, and legend descriptions to use two shades of purple (deep purple for tone > market and soft purple for tone < market) instead of green and red. Verified the style changes in JS, CSS, and index.html.
+    
+    ---
+e269501 | 2026-06-07 | mottinellilorenzo | Wire §05 Accountability to /api/accountability, drop placeholders
+    Replace the hardcoded 71% / 13 bps / 0.18 / 100% KPI values and the
+    eight hand-written meeting rows in fedwatcher/index.html with id-
+    tagged placeholders that render em-dashes until the dashboard's
+    fetch resolves. explorer.js now fetches /api/accountability in
+    parallel with the existing snapshot and documents endpoints, stores
+    the response in an ACCOUNTABILITY closure variable, and binds it
+    into the §05 tiles and the recent-predictions table via the new
+    renderAccountability function.
+    
+    Bucket codes from the API (cut_50 / cut_25 / hold / hike_25 /
+    hike_50) are mapped to human labels for the table; predicted
+    probabilities render with a "· NN%" confidence chip; hits/misses
+    use the existing .acc-pip.ok / .acc-pip.bad classes; emergency
+    statements and pending next meetings get explicit dimmed labels
+    in the Actual column. When the backend is unreachable or signals
+    is empty, all tiles fall back to em-dashes and the page still
+    renders cleanly.
+    
+    Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+    
+    ---
+4927ecd | 2026-06-07 | johnnymagon | divergence color change in Signal Divergence
+    
+    ---
+ebec299 | 2026-06-07 | mottinellilorenzo | Moved accountability.py
+    
+    ---
+7bfa6b2 | 2026-06-07 | mottinellilorenzo | Moved accountability
+    
+    ---
+55f8c4e | 2026-06-07 | johnnymagon | Restore accountability.py to app/ to fix broken import
+    Two prior commits (ebec299, 7bfa6b2) moved accountability.py out of
+    app/ — first to fedwatcher/, then to a new top-level accountability/
+    directory — while app/main.py kept importing it as a relative module
+    (`from .accountability import router`). That broke the backend at
+    startup (ModuleNotFoundError) and silently dropped /api/accountability,
+    which is why §05 Accountability rendered only em-dash placeholders
+    after deploy. Also neither stray location was ever picked up by
+    scripts/deploy.sh (it only syncs app/ for the backend).
+    
+    Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+    
+    ---
+31de3df | 2026-06-07 | mottinellilorenzo | Moved acc
+    
+    ---
+866d1da | 2026-06-07 | mottinellilorenzo | Merge branch 'main' of https://github.com/LeoPalanca/FEDWatcher
+    
+    ---
+4e2573e | 2026-06-07 | LeoPalanca | Align backend deploy path with live service
+    Deploy backend code into the /home/programming/FEDWatcher runtime tree used by systemd instead of the unused /opt/FEDWatcher path. Update the service template, deploy-user setup notes, and README to match. Verified deploy shell syntax, dry-run output, and the live accountability API endpoint after syncing the running server.
+    
+    ---
+9126318 | 2026-06-07 | johnnymagon | remove accountability from main
+    
+    ---
+97c20d9 | 2026-06-07 | johnnymagon | Merge branch 'main' of https://github.com/LeoPalanca/FEDWatcher
+    
+    ---
+8af5f52 | 2026-06-07 | johnnymagon | Remove accountability section from frontend
+    Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>
+    
+    ---
+0acc19d | 2026-06-07 | Sebastian Pasz | academic document update
+    
+    ---
+d29276b | 2026-06-07 | Sebastian Pasz | Merge branch 'main' of https://github.com/LeoPalanca/FEDWatcher
+    
+    ---
