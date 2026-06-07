@@ -1025,6 +1025,21 @@ a.why:hover { color: var(--c-accent); }
   width: 7px;
 }
 
+/* Push the Method and Architecture modals below the sticky topbar.
+   Without this the centred .modal-doc panel (max-height 86vh) tucks
+   behind the topbar (z-index 1000 > modal 100) and the title row gets
+   cropped. flex-start + top padding pins the panel under the topbar;
+   the height cap keeps it from clipping at the bottom. */
+#method-modal,
+#arch-modal {
+  align-items: flex-start;
+  padding-top: 88px;
+}
+#method-modal .modal-panel.modal-doc,
+#arch-modal  .modal-panel.modal-doc {
+  max-height: calc(100vh - 128px);
+}
+
 /* Steps inside the popup */
 .method-steps {
   display: grid;
