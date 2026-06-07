@@ -24,7 +24,6 @@
       <a href="#breakdown">Breakdown</a>
       <a href="#data">Data</a>
       <a href="#method">Method</a>
-      <a href="#accountability">Accountability</a>
       <a href="#feed">Feed</a>
     </nav>
     <div class="source-switch" id="source-switch" aria-label="Document source">
@@ -337,58 +336,10 @@
     </div>
   </section>
 
-  <!-- §05 ACCOUNTABILITY — track record -->
-  <section class="ds" id="accountability">
-    <div class="sec-head">
-      <h2 class="sec-title"><span class="sec-num-pretty">05</span><span class="sec-name">Accountability</span></h2>
-      <p class="sec-desc">A live track record across <strong id="acc-meetings-total">—</strong> FOMC statements between 2016 and the last completed meeting. Recomputed on every release.</p>
-    </div>
-
-    <!-- Block 1 · KPI strip -->
-    <div class="acc-grid">
-      <div class="tile acc-tile">
-        <div class="tile-head"><span class="tile-label">Hit rate · directional</span></div>
-        <div class="tile-value pos" id="acc-hit-rate">—</div>
-        <div class="tile-foot"><span class="source">Modal bucket = realized move</span><span id="acc-hit-rate-n">—</span></div>
-      </div>
-      <div class="tile acc-tile">
-        <div class="tile-head"><span class="tile-label">Mean abs. error</span></div>
-        <div class="tile-value" id="acc-mae">—</div>
-        <div class="tile-foot"><span class="source">Tone-implied vs realized FEDFUNDS</span><span>1-month horizon</span></div>
-      </div>
-      <div class="tile acc-tile">
-        <div class="tile-head"><span class="tile-label">Brier score</span></div>
-        <div class="tile-value pos" id="acc-brier">—</div>
-        <div class="tile-foot"><span class="source">Lower is better</span><span id="acc-brier-n">—</span></div>
-      </div>
-      <div class="tile acc-tile">
-        <div class="tile-head"><span class="tile-label">Meetings scored</span></div>
-        <div class="tile-value" id="acc-coverage">—</div>
-        <div class="tile-foot"><span class="source">Prediction + realized outcome</span><span id="acc-coverage-foot">—</span></div>
-      </div>
-    </div>
-
-    <!-- Block 2 · Recent predictions -->
-    <div class="sub-head"><span>Recent predictions</span><span>last 8 meetings</span></div>
-    <div class="table-card">
-      <div class="table-scroll">
-        <table class="data-table acc-data-table">
-          <thead>
-            <tr><th>Date</th><th>Predicted</th><th>Actual outcome</th><th class="r">Hit</th></tr>
-          </thead>
-          <tbody id="acc-tbody">
-            <tr><td colspan="4" style="opacity:.6">Loading…</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-  </section>
-
-  <!-- §06 FEED -->
+  <!-- §05 FEED -->
   <section class="ds" id="feed">
     <div class="sec-head">
-      <h2 class="sec-title"><span class="sec-num-pretty">06</span><span class="sec-name">Feed</span></h2>
+      <h2 class="sec-title"><span class="sec-num-pretty">05</span><span class="sec-name">Feed</span></h2>
       <p class="sec-desc">Live ingestion target. FOMC statements and synthetic FakeFed fixtures flow through the analyst agent and accumulate here.</p>
     </div>
     <div class="feed-toolbar">

@@ -6,7 +6,6 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
 from .db import connect, database_path, row_to_dict
-from .accountability import router as accountability_router
 
 
 MAX_LIMIT = 1_000
@@ -25,8 +24,6 @@ app.add_middleware(
     allow_methods=["GET"],
     allow_headers=["*"],
 )
-
-app.include_router(accountability_router)
 
 
 def quote_identifier(identifier: str) -> str:
@@ -56,12 +53,14 @@ def ensure_table(table: str) -> None:
 
 
 def get_columns(conn, table: str) -> list[str]:
-    rows = conn.execute(f"PRAGMA table_info({quote_identifier(table)})").fetchall()
+    rows = conn.execute(
+        f"PRAGMA table_info({quote_identifier(table)})").fetchall()
     return [row["name"] for row in rows]
 
 
 def get_row_count(conn, table: str) -> int:
-    row = conn.execute(f"SELECT COUNT(*) AS n FROM {quote_identifier(table)}").fetchone()
+    row = conn.execute(
+        f"SELECT COUNT(*) AS n FROM {quote_identifier(table)}").fetchone()
     return int(row["n"])
 
 
@@ -89,7 +88,8 @@ def fetch_rows(
     where = ""
 
     if search:
-        searchable = [f"CAST({quote_identifier(column)} AS TEXT) LIKE ?" for column in columns]
+        searchable = [
+            f"CAST({quote_identifier(column)} AS TEXT) LIKE ?" for column in columns]
         where = "WHERE " + " OR ".join(searchable)
         params.extend([f"%{search}%"] * len(columns))
 
@@ -158,7 +158,8 @@ def documents(
     ensure_table("documents")
     with connect() as conn:
         columns = get_columns(conn, "documents")
-        rows = fetch_rows(conn, "documents", columns, limit=limit, offset=offset, search=search)
+        rows = fetch_rows(conn, "documents", columns,
+                          limit=limit, offset=offset, search=search)
         return {
             "table": "documents",
             "columns": columns,
