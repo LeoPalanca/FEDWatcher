@@ -12,7 +12,7 @@
   </div>
   <div class="top-links">
     <a href="/monetarypolicy/fomccalendars.htm">FOMC Calendar</a>
-    <a href="/newsevents/pressreleases/monetary20260607a.htm">Latest Statement</a>
+    <a href="/newsevents/pressreleases/monetary20260604a.htm">Latest Statement</a>
   </div>
   <header class="masthead">
     <div class="masthead__inner">
@@ -37,12 +37,39 @@
         <div class="notice">This site is synthetic test content for FedWatcher. It is not affiliated with the Federal Reserve and must not be used as a source of real policy information.</div>
         <p>FakeFed provides a Fed-like page structure for testing document discovery, statement ingestion, and dashboard source selection.</p>
         <p><a href="/monetarypolicy/fomccalendars.htm">Open the fake FOMC calendar</a></p>
+
+        <section class="statement-maker" aria-labelledby="statement-maker-title">
+          <h2 id="statement-maker-title">Statement Maker</h2>
+          <label class="maker-date">
+            Release date
+            <input id="statement-date" type="date" value="2026-06-04">
+          </label>
+          <label>
+            Statement text
+            <textarea id="statement-text" rows="11">Recent indicators point to demand that is far too strong and labor-market conditions that remain exceptionally tight.
+
+Inflation is severely elevated, broad-based, and inconsistent with price stability.
+
+The Committee decided to raise the target range for the federal funds rate by 100 basis points to 5.50 to 5.75 percent.
+
+The Committee expects that further large increases in the target range will likely be appropriate at upcoming meetings. Policy will need to remain highly restrictive for an extended period.</textarea>
+          </label>
+          <div class="maker-actions">
+            <button type="button" id="preview-statement">Preview</button>
+            <button type="button" id="publish-statement">Publish to server</button>
+            <button type="button" id="copy-statement">Copy HTML</button>
+            <button type="button" id="download-statement">Download HTML</button>
+          </div>
+          <p class="maker-file" id="statement-file">Output file: monetary20260604a.htm</p>
+          <p class="maker-status" id="statement-status" role="status"></p>
+          <article class="maker-preview press-release" id="statement-preview" aria-live="polite"></article>
+        </section>
       </section>
       <aside class="sidebox">
         <h2>Test Pages</h2>
         <ul>
           <li><a href="/monetarypolicy/fomccalendars.htm">Meeting calendars and information</a></li>
-          <li><a href="/newsevents/pressreleases/monetary20260607a.htm">Federal Reserve issues FOMC statement</a></li>
+          <li><a href="/newsevents/pressreleases/monetary20260604a.htm">Federal Reserve issues FOMC statement</a></li>
         </ul>
       </aside>
     </div>
@@ -59,5 +86,193 @@
       </div>
     </div>
   </footer>
+  <script>
+    (function () {
+      var dateInput = document.getElementById("statement-date");
+      var textInput = document.getElementById("statement-text");
+      var fileLabel = document.getElementById("statement-file");
+      var preview = document.getElementById("statement-preview");
+      var previewButton = document.getElementById("preview-statement");
+      var publishButton = document.getElementById("publish-statement");
+      var copyButton = document.getElementById("copy-statement");
+      var downloadButton = document.getElementById("download-statement");
+      var status = document.getElementById("statement-status");
+      var storageKey = "fakefed.statementMaker";
+      var passwordKey = "fakefed.publishPassword";
+
+      function escapeHtml(value) {
+        return value.replace(/[&<>"']/g, function (char) {
+          return {
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            "\"": "&quot;",
+            "'": "&#39;"
+          }[char];
+        });
+      }
+
+      function formatDate(value) {
+        var parts = value.split("-");
+        if (parts.length !== 3) return "June 4, 2026";
+        var date = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+        return date.toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "long",
+          day: "numeric"
+        });
+      }
+
+      function fileName() {
+        var compactDate = dateInput.value.replace(/-/g, "");
+        return "monetary" + compactDate + "a.htm";
+      }
+
+      function paragraphs() {
+        return textInput.value
+          .split(/\n\s*\n/)
+          .map(function (paragraph) { return paragraph.trim(); })
+          .filter(Boolean);
+      }
+
+      function statementBody() {
+        return paragraphs()
+          .map(function (paragraph) { return "        <p>" + escapeHtml(paragraph) + "</p>"; })
+          .join("\n");
+      }
+
+      function generatedHtml() {
+        var releaseDate = escapeHtml(formatDate(dateInput.value));
+        return "<!doctype html>\n" +
+          "<html lang=\"en\">\n" +
+          "<head>\n" +
+          "  <meta charset=\"utf-8\">\n" +
+          "  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n" +
+          "  <title>Federal Reserve Board - Federal Reserve issues FOMC statement</title>\n" +
+          "  <link rel=\"stylesheet\" href=\"/assets/fakefed.css\">\n" +
+          "</head>\n" +
+          "<body>\n" +
+          "  <main class=\"page\">\n" +
+          "    <article class=\"content press-release\">\n" +
+          "      <h1>Federal Reserve issues FOMC statement</h1>\n" +
+          "      <div class=\"press-meta\">Press Release - " + releaseDate + "</div>\n" +
+          "      <div class=\"notice\">Synthetic FakeFed fixture. This is fake test content for FedWatcher and is not a real Federal Reserve communication.</div>\n\n" +
+          statementBody() + "\n" +
+          "      <p>Voting for the monetary policy action were synthetic committee members created only for this educational fixture.</p>\n" +
+          "      <div class=\"release-tools\"><a href=\"/monetarypolicy/fomccalendars.htm\">FOMC calendar</a></div>\n" +
+          "    </article>\n" +
+          "  </main>\n" +
+          "</body>\n" +
+          "</html>\n";
+      }
+
+      function saveDraft() {
+        localStorage.setItem(storageKey, JSON.stringify({
+          date: dateInput.value,
+          text: textInput.value
+        }));
+      }
+
+      function renderPreview() {
+        var body = statementBody();
+        fileLabel.textContent = "Output file: " + fileName();
+        preview.innerHTML =
+          "<h1>Federal Reserve issues FOMC statement</h1>" +
+          "<div class=\"press-meta\">Press Release - " + escapeHtml(formatDate(dateInput.value)) + "</div>" +
+          "<div class=\"notice\">Synthetic FakeFed fixture. This is fake test content for FedWatcher and is not a real Federal Reserve communication.</div>" +
+          body +
+          "<p>Voting for the monetary policy action were synthetic committee members created only for this educational fixture.</p>";
+        saveDraft();
+      }
+
+      function latestStatementLinks() {
+        return Array.prototype.slice.call(
+          document.querySelectorAll('a[href^="/newsevents/pressreleases/monetary"]')
+        );
+      }
+
+      function setStatus(message, mode) {
+        status.textContent = message;
+        status.className = "maker-status" + (mode ? " " + mode : "");
+      }
+
+      async function publishStatement() {
+        var password = localStorage.getItem(passwordKey) || "";
+        if (!password) {
+          password = window.prompt("FakeFed publish password");
+          if (!password) return;
+          localStorage.setItem(passwordKey, password);
+        }
+
+        publishButton.disabled = true;
+        setStatus("Publishing...", "");
+        try {
+          var response = await fetch("/api/fakefed/statements", {
+            method: "POST",
+            headers: {
+              "X-FakeFed-Password": password,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              release_date: dateInput.value,
+              statement_text: textInput.value
+            })
+          });
+          var payload = await response.json().catch(function () { return {}; });
+          if (!response.ok) {
+            if (response.status === 401 || response.status === 403) {
+              localStorage.removeItem(passwordKey);
+            }
+            throw new Error(payload.detail || "Publish failed.");
+          }
+
+          latestStatementLinks().forEach(function (link) {
+            link.href = payload.url.replace("https://fakefed.ellep.it", "");
+          });
+          setStatus("Published: " + payload.url, "success");
+        } catch (error) {
+          setStatus(error.message || "Publish failed.", "error");
+        } finally {
+          publishButton.disabled = false;
+        }
+      }
+
+      function copyHtml() {
+        navigator.clipboard.writeText(generatedHtml()).then(function () {
+          copyButton.textContent = "Copied";
+          setTimeout(function () { copyButton.textContent = "Copy HTML"; }, 1400);
+        });
+      }
+
+      function downloadHtml() {
+        var blob = new Blob([generatedHtml()], { type: "text/html" });
+        var url = URL.createObjectURL(blob);
+        var link = document.createElement("a");
+        link.href = url;
+        link.download = fileName();
+        link.click();
+        URL.revokeObjectURL(url);
+      }
+
+      try {
+        var draft = JSON.parse(localStorage.getItem(storageKey) || "null");
+        if (draft) {
+          dateInput.value = draft.date || dateInput.value;
+          textInput.value = draft.text || textInput.value;
+        }
+      } catch (error) {
+        localStorage.removeItem(storageKey);
+      }
+
+      [dateInput, textInput].forEach(function (field) {
+        field.addEventListener("input", renderPreview);
+      });
+      previewButton.addEventListener("click", renderPreview);
+      publishButton.addEventListener("click", publishStatement);
+      copyButton.addEventListener("click", copyHtml);
+      downloadButton.addEventListener("click", downloadHtml);
+      renderPreview();
+    }());
+  </script>
 </body>
 </html>

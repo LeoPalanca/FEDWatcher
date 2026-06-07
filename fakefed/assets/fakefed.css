@@ -269,6 +269,26 @@ a:hover {
   margin: 0 3px;
 }
 
+.remove-statement {
+  background: #ffffff;
+  border: 1px solid #b31b1b;
+  color: #b31b1b;
+  cursor: pointer;
+  font-size: 12px;
+  margin-left: 8px;
+  padding: 3px 8px;
+}
+
+.remove-statement:hover {
+  background: #fff1f1;
+}
+
+.remove-statement:disabled {
+  border-color: #b8c4d0;
+  color: var(--fed-muted);
+  cursor: wait;
+}
+
 .sidebox {
   border-top: 4px solid var(--fed-blue);
   box-shadow: 0 0 0 1px var(--fed-border) inset;
@@ -315,6 +335,100 @@ a:hover {
   font-size: 14px;
   margin-top: 30px;
   padding-top: 18px;
+}
+
+.statement-maker {
+  border-top: 1px solid var(--fed-border);
+  margin-top: 36px;
+  padding-top: 4px;
+}
+
+.statement-maker label {
+  color: var(--fed-dark-blue);
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+  margin: 16px 0 0;
+}
+
+.statement-maker input,
+.statement-maker textarea {
+  border: 1px solid #b8c4d0;
+  color: var(--fed-text);
+  display: block;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 15px;
+  line-height: 1.45;
+  margin-top: 6px;
+  padding: 10px 12px;
+  width: 100%;
+}
+
+.statement-maker textarea {
+  min-height: 230px;
+  resize: vertical;
+}
+
+.maker-date {
+  max-width: 220px;
+}
+
+.maker-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.maker-actions button {
+  background: var(--fed-blue);
+  border: 1px solid var(--fed-dark-blue);
+  color: #ffffff;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 9px 13px;
+}
+
+.maker-actions button:hover {
+  background: var(--fed-dark-blue);
+}
+
+.maker-actions button:disabled {
+  background: #8ca2b5;
+  cursor: wait;
+}
+
+.maker-file {
+  color: var(--fed-muted);
+  font-size: 13px;
+  margin: 12px 0 0;
+}
+
+.maker-status {
+  color: var(--fed-muted);
+  font-size: 13px;
+  margin: 8px 0 0;
+  min-height: 20px;
+  overflow-wrap: anywhere;
+}
+
+.maker-status.success {
+  color: #236f3e;
+}
+
+.maker-status.error {
+  color: #b31b1b;
+}
+
+.maker-preview {
+  border: 1px solid var(--fed-border);
+  margin-top: 20px;
+  max-width: none;
+  padding: 18px;
+}
+
+.maker-preview h1 {
+  font-size: 26px;
 }
 
 .footer {
@@ -377,5 +491,9 @@ a:hover {
   .fomc-table tr {
     border-bottom: 1px solid var(--fed-border);
     padding: 12px 0;
+  }
+
+  .maker-date {
+    max-width: none;
   }
 }

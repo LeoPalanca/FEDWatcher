@@ -6,7 +6,9 @@ After=network.target
 Type=simple
 User=programming
 WorkingDirectory=/home/programming/FEDWatcher
+EnvironmentFile=-/home/programming/FEDWatcher/.env
 Environment=DATABASE_URL=sqlite:////home/programming/FEDWatcher/fedwatcher.db
+Environment=FAKEFED_ROOT=/var/www/fakefed
 ExecStart=/home/programming/FEDWatcher/venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8018
 Restart=always
 RestartSec=5

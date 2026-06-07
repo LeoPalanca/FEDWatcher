@@ -90,11 +90,12 @@
                 Educational FakeFed upload for scraper and dashboard testing.
               </td>
             </tr>
-            <tr>
+            <tr data-statement-href="/newsevents/pressreleases/monetary20260604a.htm">
               <td class="month">June</td>
-              <td class="date">7</td>
+              <td class="date">4</td>
               <td class="doc-links">
-                Synthetic test statement: <a href="/newsevents/pressreleases/monetary20260607a.htm">HTML</a><br>
+                Synthetic test statement: <a href="/newsevents/pressreleases/monetary20260604a.htm">HTML</a>
+                <button type="button" class="remove-statement" data-statement-href="/newsevents/pressreleases/monetary20260604a.htm">Remove</button><br>
                 Educational FakeFed upload for scraper and dashboard testing.
               </td>
             </tr>
@@ -134,5 +135,59 @@
       </div>
     </div>
   </footer>
+  <script>
+    (function () {
+      var passwordKey = "fakefed.publishPassword";
+
+      function filenameFromHref(href) {
+        var parts = href.split("/");
+        return parts[parts.length - 1];
+      }
+
+      function setButtonState(button, text, disabled) {
+        button.textContent = text;
+        button.disabled = disabled;
+      }
+
+      async function removeStatement(button) {
+        var href = button.getAttribute("data-statement-href");
+        var filename = filenameFromHref(href);
+        if (!window.confirm("Remove " + filename + " from FakeFed?")) return;
+
+        var password = localStorage.getItem(passwordKey) || "";
+        if (!password) {
+          password = window.prompt("FakeFed publish password");
+          if (!password) return;
+          localStorage.setItem(passwordKey, password);
+        }
+
+        setButtonState(button, "Removing", true);
+        try {
+          var response = await fetch("/api/fakefed/statements/" + encodeURIComponent(filename), {
+            method: "DELETE",
+            headers: { "X-FakeFed-Password": password }
+          });
+          var payload = await response.json().catch(function () { return {}; });
+          if (!response.ok) {
+            if (response.status === 401 || response.status === 403) {
+              localStorage.removeItem(passwordKey);
+            }
+            throw new Error(payload.detail || "Remove failed.");
+          }
+          var row = button.closest("tr");
+          if (row) row.remove();
+        } catch (error) {
+          window.alert(error.message || "Remove failed.");
+          setButtonState(button, "Remove", false);
+        }
+      }
+
+      document.querySelectorAll(".remove-statement").forEach(function (button) {
+        button.addEventListener("click", function () {
+          removeStatement(button);
+        });
+      });
+    }());
+  </script>
 </body>
 </html>
