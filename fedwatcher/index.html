@@ -34,18 +34,17 @@
 
 <main class="page">
 
-  <!-- HERO — agent's main takeaway, first thing -->
+  <!-- HERO — agent's main takeaway, first thing. Filled by /api/narrative. -->
   <section class="hero hero-takeaway">
     <div class="takeaway-line">
       <span class="dot"></span>
-      <span>FOMC · May 7 · 2026 · latest read</span>
+      <span id="hero-takeaway-line">FOMC · latest read</span>
     </div>
-    <div class="takeaway-pills">
-      <span class="pill hawkish">Moderately hawkish · tone +0.31</span>
-      <span class="pill">Hold · 55% probability</span>
+    <div class="takeaway-pills" id="hero-pills">
+      <!-- chips rendered by renderNarrative() -->
     </div>
-    <h1 class="takeaway-headline">A cautious hold, with <em>hawkish</em> inflation language.</h1>
-    <p class="takeaway-body">FedWatcher reads the Federal Reserve's communication, joins it with FRED macro series, and projects probabilities over rate-move outcomes. Numbers, sources, no narrative theatre.</p>
+    <h1 class="takeaway-headline" id="hero-headline">…</h1>
+    <p class="takeaway-body" id="hero-body">…</p>
   </section>
 
   <!-- §01 OVERVIEW -->
@@ -197,20 +196,19 @@
         <div class="head"><span>Bucket</span><span>Probability</span></div>
         <!-- rendered by JS -->
       </div>
-      <!-- Right: SINGLE distribution explanation -->
+      <!-- Right: SINGLE distribution explanation. Filled by /api/narrative. -->
       <aside class="breakdown-summary" id="breakdown-summary">
         <div class="breakdown-summary-head">
           <span class="eyebrow">Distribution · read</span>
-          <span class="shape-tag">Right-skewed</span>
+          <span class="shape-tag" id="breakdown-shape-tag">—</span>
         </div>
-        <h4>Mass concentrated on a hold, with a hawkish skew.</h4>
-        <p>The modal outcome is a hold at <strong>55%</strong>, but the distribution leans right: cumulative hike probability (+25 and +50 bps) sits at <strong>27%</strong> versus a cumulative cut probability of <strong>18%</strong>. The May statement's new “inflation has been somewhat elevated” line is the largest single contributor to that skew.</p>
-        <p>Two consecutive softer CPI prints would flip the distribution back to symmetric within one meeting cycle; a third hawkish surprise would compress mass at +25 bps and make a hike the modal outcome.</p>
+        <h4 id="breakdown-headline">…</h4>
+        <div id="breakdown-paragraphs"></div>
         <dl class="breakdown-stats">
-          <div><dt>Modal</dt><dd>0 bps · 55%</dd></div>
-          <div><dt>Cumulative cut</dt><dd>18%</dd></div>
-          <div><dt>Cumulative hike</dt><dd>27%</dd></div>
-          <div><dt>Skew</dt><dd>+0.21 (hawkish)</dd></div>
+          <div><dt>Modal</dt><dd id="breakdown-stat-modal">—</dd></div>
+          <div><dt>Cumulative cut</dt><dd id="breakdown-stat-cum-cut">—</dd></div>
+          <div><dt>Cumulative hike</dt><dd id="breakdown-stat-cum-hike">—</dd></div>
+          <div><dt>Skew</dt><dd id="breakdown-stat-skew">—</dd></div>
         </dl>
       </aside>
     </div>
@@ -236,10 +234,6 @@
           </div>
         </div>
       </div>
-      <p class="divergence-explain">
-        The tone-implied path reflects FedWatcher's reading of the Committee's language; the market path is the 2-year Treasury yield (DGS2), used as a market proxy. The shaded gap is <strong style="color: var(--c-div-pos);">teal</strong> when tone runs above market and <strong style="color: var(--c-div-neg);">amber</strong> when tone runs below.
-        The strategist judges the market's expectation against the current effective fed funds rate (ER, latest FEDFUNDS observation): when tone and market fall on the <strong>same side of ER</strong> — both pricing a hike or both pricing a cut — the market is <em>right</em>; when they fall on <strong>opposite sides</strong>, the market is <em>wrong</em>.
-      </p>
       <div class="divergence-gap-legend">
         <span class="ent"><span class="swatch area area-pos"></span>Tone &gt; Market</span>
         <span class="ent"><span class="swatch area area-neg"></span>Tone &lt; Market</span>

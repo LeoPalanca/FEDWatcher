@@ -16,6 +16,16 @@
   const URL_SNAPSHOT       = "/api/snapshot";
   const URL_DOCUMENTS      = "/api/documents?limit=1000";
   const URL_FAKEFED        = "/assets/fakefed-documents.json";
+  // AI-generated dashboard prose (hero + §02 Breakdown summary).
+  const URL_NARRATIVE      = "/api/narrative";
+
+  // Empty narrative shape used as a safe default while the fetch is in
+  // flight or if /api/narrative is unreachable.
+  let NARRATIVE = {
+    hero: { takeaway_line: "FOMC · latest read", pills: [], headline: "", body: "" },
+    breakdown: { shape_tag: "—", headline: "", paragraphs: [],
+                 stats: { modal: "—", cumulative_cut: "—", cumulative_hike: "—", skew: "—" } },
+  };
 
   /* ===== explorer config (carried from v1) ===== */
   // Only these tables surface in the v2 explorer
@@ -117,14 +127,16 @@
 
   async function load() {
     try {
-      const [d, docs] = await Promise.all([
+      const [d, docs, narr] = await Promise.all([
         fetchJson(URL_SNAPSHOT, {}),
         fetchJson(URL_DOCUMENTS, []),
+        fetchJson(URL_NARRATIVE, NARRATIVE),
       ]);
       DATA = d;
       stripTrailingEmptyRows(DATA);
       OFFICIAL_DOCS = normalizeDocumentsPayload(docs);
       DOCS = OFFICIAL_DOCS.slice();
+      if (narr && typeof narr === "object") NARRATIVE = narr;
     } catch (e) {
       DATA = {}; OFFICIAL_DOCS = []; DOCS = [];
       console.error("data load failed", e);
@@ -154,6 +166,7 @@
     renderFeed();
     wireFeed();
     wireSourceSwitch();
+    renderNarrative(NARRATIVE);
   }
 
   async function fetchJson(url, fallbackValue) {
@@ -578,12 +591,33 @@
     const toneHidden   = hiddenDivSeries.has("Tone-implied");
     const policyHidden = hiddenDivSeries.has("Policy rate (FEDFUNDS)");
 
+    // The fill is split off into its own carrier dataset at index 0 so it
+    // renders before (i.e. behind) all three visible line datasets. Chart.js
+    // draws datasets in array order; the carrier's invisible stroke + the
+    // tone data lets us fill { target: 1 (market), above, below } and still
+    // have the actual tone line drawn last, on top of the colored zones.
+    const fillHidden = toneHidden || marketHidden;
     divChart = new Chart(ctx, {
       type: "line",
       data: {
         labels,
         datasets: [
-          // Index 0 — Market-implied (target for fill)
+          // Index 0 — Tone-fill carrier: invisible line, fills toward market.
+          //          Drawn first → sits behind every line dataset.
+          {
+            hidden: fillHidden,
+            // Label kept underscored so the chart-level tooltip label callback
+            // (which only matches the three real series names) returns null
+            // and skips it.
+            label: "_tone_fill", data: tone,
+            borderColor: "transparent",
+            backgroundColor: "transparent",
+            borderWidth: 0,
+            pointRadius: 0, pointHoverRadius: 0,
+            tension: 0.32,
+            fill: { target: 1, above: POS_FILL, below: NEG_FILL },
+          },
+          // Index 1 — Market-implied (line, dashed)
           {
             hidden: marketHidden,
             label: "Market-implied (OIS)", data: market,
@@ -593,7 +627,9 @@
             pointRadius: 0, pointHoverRadius: 4,
             tension: 0.32, fill: false,
           },
-          // Index 1 — Tone-implied; fill toward dataset 0 with green/red split
+          // Index 2 — Tone-implied (line, points). No fill on this dataset
+          //          anymore — that's handled by index 0 — so the line stays
+          //          fully visible above the colored zones.
           {
             hidden: toneHidden,
             label: "Tone-implied", data: tone,
@@ -607,9 +643,9 @@
             pointHoverBackgroundColor: pointBg,
             pointHoverBorderColor: pointBg,
             tension: 0.32,
-            fill: marketHidden ? false : { target: 0, above: POS_FILL, below: NEG_FILL },
+            fill: false,
           },
-          // Index 2 — Policy rate (FEDFUNDS, monthly average) as step line
+          // Index 3 — Policy rate (FEDFUNDS, monthly average) as step line
           {
             hidden: policyHidden,
             label: "Policy rate (FEDFUNDS)", data: policy,
@@ -1485,6 +1521,58 @@
     const bank = String(d.central_bank || "").toLowerCase();
     if (url.includes("fakefed") || bank.includes("fakefed")) return "FakeFed";
     return d.central_bank || "FED";
+  }
+
+  // Render the AI-generated hero + §02 Breakdown summary. The numeric chips
+  // (pills, stats) come pre-computed from the backend; the prose (headline,
+  // body, breakdown headline, paragraphs) is what /api/narrative asks the LLM
+  // to write. Falls back to em-dashes when the payload is empty.
+  function renderNarrative(payload) {
+    if (!payload || typeof payload !== "object") return;
+    const hero = payload.hero || {};
+    const breakdown = payload.breakdown || {};
+
+    const setText = (id, text) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = text;
+    };
+
+    // Hero: takeaway line, pills, headline, body.
+    setText("hero-takeaway-line", hero.takeaway_line || "FOMC · latest read");
+
+    const pillsEl = document.getElementById("hero-pills");
+    if (pillsEl) {
+      pillsEl.innerHTML = "";
+      (hero.pills || []).forEach((p) => {
+        const span = document.createElement("span");
+        span.className = "pill" + (p.kind && p.kind !== "neutral" ? ` ${p.kind}` : "");
+        span.textContent = p.label || "";
+        pillsEl.appendChild(span);
+      });
+    }
+
+    setText("hero-headline", hero.headline || "");
+    setText("hero-body",     hero.body     || "");
+
+    // §02 Breakdown summary: shape tag, headline, paragraphs, stats.
+    setText("breakdown-shape-tag", breakdown.shape_tag || "—");
+    setText("breakdown-headline",  breakdown.headline  || "");
+
+    const parasEl = document.getElementById("breakdown-paragraphs");
+    if (parasEl) {
+      parasEl.innerHTML = "";
+      (breakdown.paragraphs || []).forEach((text) => {
+        const p = document.createElement("p");
+        p.textContent = String(text || "");
+        parasEl.appendChild(p);
+      });
+    }
+
+    const stats = breakdown.stats || {};
+    setText("breakdown-stat-modal",    stats.modal           || "—");
+    setText("breakdown-stat-cum-cut",  stats.cumulative_cut  || "—");
+    setText("breakdown-stat-cum-hike", stats.cumulative_hike || "—");
+    setText("breakdown-stat-skew",     stats.skew            || "—");
   }
 
   load();

@@ -6,6 +6,7 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
 from .db import connect, database_path, row_to_dict
+from .narrative import router as narrative_router
 
 
 MAX_LIMIT = 1_000
@@ -25,6 +26,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# AI-generated dashboard copy (hero + §02 Breakdown summary).
+app.include_router(narrative_router)
+
 
 @app.get("/")
 def root() -> dict[str, Any]:
@@ -36,6 +40,7 @@ def root() -> dict[str, Any]:
         "snapshot": "/api/snapshot",
         "documents": "/api/documents",
         "accountability": "/api/accountability",
+        "narrative": "/api/narrative",
     }
 
 
