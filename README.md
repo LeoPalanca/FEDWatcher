@@ -390,12 +390,33 @@ cd FEDWatcher
 python -m venv venv
 source venv/bin/activate
 
-pip install -r requirements.txt
-cp .env.example .env
+python run.py setup --install
+```
+
+`python run.py setup` creates `.env`, asks for `OPENROUTER_API_KEY` and `FRED_API_KEY`,
+can install Python requirements, initializes `fedwatcher.db` from `db/schema.sql`, and lets
+you choose the statement-focused AnalystAgent section-weight preset or enter custom
+statement weights that sum to 1.0. It then offers to download FRED macro data and start
+the 24-hour MonitorAgent -> AnalystAgent -> StrategistAgent refresh loop. When the loop is
+enabled, setup first asks for the maximum number of statements AnalystAgent may process in
+each run and how many days back MonitorAgent should fetch, so LLM calls and document
+lookback are capped before any pipeline starts. It can also start the localhost dashboard
+while the loop runs in the background. If you skip the loop, it can still run one capped LLM
+analysis batch and start the local dashboard. For unattended setup, use:
+
+```bash
+python run.py setup --non-interactive --no-install --weights default
+```
+
+To inspect the active section weights later:
+
+```bash
+python run.py weights
 ```
 
 The `.env.example` contains the target SQLite/API/FRED variables plus legacy MySQL fields
-kept for old prototype compatibility.
+kept for old prototype compatibility. The setup helper writes the local `.env` from those
+defaults and your answers.
 
 For AI calls:
 
@@ -420,6 +441,37 @@ python agents/analyst.py --limit 5
 python agents/dual_model_analyst.py --limit 5   # two-model average, testing
 python agents/analyst_ds.py --limit 5            # DeepSeek only, testing
 ```
+
+Local dashboard launcher:
+
+```bash
+python run.py dev
+```
+
+This starts FastAPI on `127.0.0.1:8000` and a local static dashboard proxy on
+`http://127.0.0.1:8080`, so the frontend can call `/api/...` exactly as it does in
+production. Open `http://127.0.0.1:8080` for the dashboard; `127.0.0.1:8000` is only the
+API service.
+
+Statement LLM analysis can also be launched directly:
+
+```bash
+python run.py analyze --limit 5
+```
+
+FRED macro ingestion and the agent refresh pipeline can also be launched directly:
+
+```bash
+python run.py macro
+python run.py pipeline --once
+python run.py pipeline --lookback-days 365
+```
+
+`python run.py pipeline` runs one cycle immediately in this order:
+MonitorAgent fetches recent Fed documents, AnalystAgent scores unprocessed statements with
+the LLM, and StrategistAgent updates policy signals. It then repeats every 24 hours. The
+default AnalystAgent cap is 2 statements per cycle and the default MonitorAgent lookback is
+90 days; override them with `--limit` and `--lookback-days`.
 
 FakeFed test target:
 

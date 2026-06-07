@@ -26,6 +26,19 @@ app.add_middleware(
 )
 
 
+@app.get("/")
+def root() -> dict[str, Any]:
+    return {
+        "service": "FedWatcher API",
+        "message": "The local dashboard is served by run.py on http://127.0.0.1:8080. API endpoints live under /api/.",
+        "local_dashboard": "http://127.0.0.1:8080",
+        "health": "/api/health",
+        "snapshot": "/api/snapshot",
+        "documents": "/api/documents",
+        "accountability": "/api/accountability",
+    }
+
+
 def quote_identifier(identifier: str) -> str:
     return '"' + identifier.replace('"', '""') + '"'
 
