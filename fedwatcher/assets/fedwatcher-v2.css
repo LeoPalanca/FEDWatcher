@@ -631,8 +631,8 @@ a.why:hover { color: var(--c-accent); }
 }
 .divergence-legend .ent .swatch { border-radius: 2px; height: 3px; width: 18px; }
 .divergence-legend .ent .swatch.area { height: 10px; opacity: 0.5; }
-.divergence-legend .ent .swatch.area-pos { background: var(--c-pos); }
-.divergence-legend .ent .swatch.area-neg { background: var(--c-neg); }
+.divergence-legend .ent .swatch.area-pos { background: var(--c-div-pos); }
+.divergence-legend .ent .swatch.area-neg { background: var(--c-div-neg); }
 .divergence-legend .ent .swatch.tone   { background: var(--c-accent); }
 .divergence-legend .ent .swatch.market { background: var(--dv-2); border-top: 1.5px dashed var(--dv-2); height: 0; border-bottom: 0; }
 .divergence-legend .ent .swatch.policy { background: oklch(0.55 0.12 75); }
@@ -655,8 +655,8 @@ a.why:hover { color: var(--c-accent); }
   text-transform: uppercase;
 }
 .divergence-gap-legend .ent .swatch.area { border-radius: 2px; height: 10px; opacity: 0.5; width: 18px; }
-.divergence-gap-legend .ent .swatch.area-pos { background: var(--c-pos); }
-.divergence-gap-legend .ent .swatch.area-neg { background: var(--c-neg); }
+.divergence-gap-legend .ent .swatch.area-pos { background: var(--c-div-pos); }
+.divergence-gap-legend .ent .swatch.area-neg { background: var(--c-div-neg); }
 .divergence-legend .ent-toggle {
   background: transparent;
   border: 0;
@@ -706,8 +706,12 @@ a.why:hover { color: var(--c-accent); }
   text-transform: uppercase;
 }
 
-:root { --c-divergence: oklch(0.55 0.13 305); }
-:root { --c-divergence-soft: oklch(0.55 0.13 305 / 0.18); }
+:root {
+  --c-divergence: oklch(0.55 0.13 305);
+  --c-divergence-soft: oklch(0.55 0.13 305 / 0.18);
+  --c-div-pos: oklch(0.48 0.14 295);
+  --c-div-neg: oklch(0.70 0.12 305);
+}
 
 /* ===== § DATA — pill selector ===== */
 .pill-selector {
