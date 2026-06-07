@@ -707,10 +707,10 @@ a.why:hover { color: var(--c-accent); }
 }
 
 :root {
-  --c-divergence: oklch(0.55 0.13 305);
-  --c-divergence-soft: oklch(0.55 0.13 305 / 0.18);
-  --c-div-pos: oklch(0.48 0.14 295);
-  --c-div-neg: oklch(0.70 0.12 305);
+  --c-divergence: oklch(0.52 0.20 305);
+  --c-divergence-soft: oklch(0.52 0.20 305 / 0.18);
+  --c-div-pos: oklch(0.45 0.22 300);
+  --c-div-neg: oklch(0.66 0.20 310);
 }
 
 /* ===== § DATA — pill selector ===== */

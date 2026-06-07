@@ -581,8 +581,8 @@
     const grid  = { color: "oklch(0.910 0.005 80)", drawTicks: false };
     const ticks = { color: "oklch(0.460 0.010 80)", font: { family: "JetBrains Mono", size: 10 } };
 
-    const POS_FILL = "oklch(0.48 0.14 295 / 0.28)"; // deep purple: tone > market
-    const NEG_FILL = "oklch(0.70 0.12 305 / 0.28)"; // soft purple: tone < market
+    const POS_FILL = "oklch(0.45 0.22 300 / 0.28)"; // deep purple: tone > market
+    const NEG_FILL = "oklch(0.66 0.20 310 / 0.28)"; // soft purple: tone < market
 
     const marketHidden = hiddenDivSeries.has("Market-implied (OIS)");
     const toneHidden   = hiddenDivSeries.has("Tone-implied");
