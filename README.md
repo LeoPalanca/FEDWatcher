@@ -49,11 +49,11 @@ Implemented:
   FedTools.
 - Direct Federal Reserve historical-page backfill in
   `agents/monitor-fed-historical-pages.py` for ranges FedTools misses, including
-  2015-2020 statements and minutes.
+  the 2015-2020 statements.
 - FRED monthly macro/rate ingestion in `sources/fred.py` and `scripts/backfill_fred.py`:
   stores `CPILFESL`, `UNRATE`, and monthly-average `DGS2` in `macro_data`.
 - `AnalystAgent` in `agents/analyst.py`:
-  - document segmentation: splits FOMC statements and minutes into weighted sections (`forward_guidance`, `inflation`, `labor_market`, `general` / `policy_discussion`) for downstream tone scoring.
+  - document segmentation: splits FOMC statements into weighted sections (`forward_guidance`, `inflation`, `labor_market`, `general`) for downstream tone scoring.
   - LLM tone scoring calls the OpenRouter API (`OPENROUTER_API_KEY`) with the segmented sections and extracts a numeric `tone_score` in `[-1.0, +1.0]` (dovish → hawkish), plus `overall_tone`, `inflation_assessment`, `labor_market_assessment`, `forward_guidance`, `key_phrases`, and `confidence`.
   - Returns a typed `ToneResult` with a `to_db_row()` helper ready for the `sentiment` table.
 - `Dual-model AnalystAgent` in `agents/dual_model_analyst.py` *(testing)*: calls two OpenRouter models and averages their results; writes to `sentiment2`.
@@ -120,7 +120,7 @@ Finds new Fed documents and stores their metadata/raw text.
 Responsibilities:
 
 - Scrape official Federal Reserve or FakeFed FOMC pages.
-- Detect statements, minutes, and related documents.
+- Detect FOMC statements (minutes and speeches are filtered out).
 - Deduplicate documents by date/type.
 - Fetch HTML text and store document records in SQLite.
 
@@ -211,10 +211,7 @@ Core document types:
 
 | Document | Use |
 |---|---|
-| FOMC statements | Direct policy action and forward guidance |
-| FOMC minutes | Rich detail on committee reasoning |
-| Chair press conferences | Optional extension for additional tone |
-| Speeches | Optional extension; lower signal strength than statements/minutes |
+| FOMC statements | Direct policy action and forward guidance (the only document type ingested) |
 
 ### FRED Macro and Rates Data
 

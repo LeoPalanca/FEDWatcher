@@ -18,17 +18,8 @@
 #       labor_market     = 0.15
 #       general          = 0.15
 #
-#   minutes:
-#       forward_guidance  = 0.40
-#       policy_discussion = 0.25
-#       inflation         = 0.20
-#       labor_market      = 0.15
-#
-#   speech:
-#       forward_guidance = 0.35
-#       inflation        = 0.25
-#       labor_market     = 0.20
-#       general          = 0.20
+# (Minutes and speech weights were removed — the pipeline only ingests and
+# scores FOMC statements.)
 #
 # Main commands:
 #
@@ -88,12 +79,6 @@ DEFAULT_WEIGHTS = {
         "labor_market": 0.15,
         "general": 0.15,
     },
-    "speech": {
-        "forward_guidance": 0.35,
-        "inflation": 0.25,
-        "labor_market": 0.20,
-        "general": 0.20,
-    },
 }
 
 
@@ -147,8 +132,7 @@ def print_weights(conn: sqlite3.Connection) -> None:
         ORDER BY
             CASE doc_type
                 WHEN 'statement' THEN 1
-                WHEN 'speech' THEN 2
-                ELSE 3
+                ELSE 2
             END,
             dimension;
     """).fetchall()
@@ -259,7 +243,7 @@ def main() -> None:
     subparsers.add_parser("reset-defaults", help="Insert/update default weights.")
 
     set_parser = subparsers.add_parser("set", help="Set one weight.")
-    set_parser.add_argument("--doc-type", required=True, choices=["statement", "speech"])
+    set_parser.add_argument("--doc-type", required=True, choices=["statement"])
     set_parser.add_argument("--dimension", required=True)
     set_parser.add_argument("--weight", required=True, type=float)
 

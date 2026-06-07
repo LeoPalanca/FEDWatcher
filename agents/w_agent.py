@@ -55,18 +55,12 @@ _DEFAULT_WEIGHTS: dict[str, dict[str, float]] = {
         "labor_market": 0.15,
         "general": 0.15,
     },
-    "speech": {
-        "forward_guidance": 0.35,
-        "inflation": 0.25,
-        "labor_market": 0.20,
-        "general": 0.20,
-    },
 }
 
 
 _SYSTEM_PROMPT = """\
 You are a monetary-policy analyst specialised in Federal Reserve communications.
-You read FOMC statements and speeches and return a structured JSON object.
+You read FOMC statements and return a structured JSON object.
 
 Rules:
 - Be precise and evidence-based.
@@ -369,30 +363,23 @@ def validate_schema(conn: sqlite3.Connection) -> None:
 def fetch_unprocessed_w_documents(
     conn: sqlite3.Connection,
     limit: int,
-    include_speeches: bool = True,
 ) -> list[dict[str, Any]]:
-    doc_types = (
-        ("statement", "speech") if include_speeches
-        else ("statement",)
-    )
-    placeholders = ",".join("?" for _ in doc_types)
-
     rows = conn.execute(
-        f"""
+        """
         SELECT id, central_bank, doc_type, release_date, url, raw_text, processed_w
         FROM documents
         WHERE COALESCE(processed_w, 0) = 0
           AND raw_text IS NOT NULL
           AND TRIM(raw_text) != ''
           AND LOWER(COALESCE(central_bank, 'FED')) = 'fed'
-          AND LOWER(COALESCE(doc_type, 'statement')) IN ({placeholders})
+          AND LOWER(COALESCE(doc_type, 'statement')) = 'statement'
           AND NOT EXISTS (
               SELECT 1 FROM sentiment_w s WHERE s.document_id = documents.id
           )
         ORDER BY release_date ASC, id ASC
         LIMIT ?;
         """,
-        (*doc_types, limit),
+        (limit,),
     ).fetchall()
 
     return [dict(row) for row in rows]
@@ -523,9 +510,8 @@ def _classify_sentence(sentence: str, sections: list[str]) -> str:
 
 
 def _normalise_doc_type(raw: str) -> str:
-    value = (raw or "").lower()
-    if "speech" in value:
-        return "speech"
+    # All ingested documents are FOMC statements; speech/minutes ingestion was
+    # removed. Normalise everything to "statement".
     return "statement"
 
 

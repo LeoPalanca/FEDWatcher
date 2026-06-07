@@ -1,7 +1,7 @@
 \section{Sample Results and Reflection}
 
 \subsection{Database Coverage}
-At submission the production database contains 335 FOMC documents spanning 1994-02-04 to 2026-04-29, with approximately 16 documents per year from 2015 onward (one statement + one minutes per scheduled meeting) and sparser coverage before 2000 due to gaps in the public Fed archive. Macro coverage is monthly, $\sim$317 observations per series, from 2000 onward. The dashboard at \url{https://fedwatcher.ellep.it} renders all of this live from the FastAPI service.
+At submission the production database contains FOMC statements spanning 1994-02-04 to 2026-04-29, with approximately 8 statements per year (one per scheduled meeting) and sparser coverage before 2000 due to gaps in the public Fed archive. Minutes and speeches are deliberately excluded from ingestion --- the pipeline only operates on statements. Macro coverage is monthly, $\sim$317 observations per series, from 2000 onward. The dashboard at \url{https://fedwatcher.ellep.it} renders all of this live from the FastAPI service.
 
 \subsection{Tone Time Series -- Qualitative Read}
 %% TODO: replace this paragraph with a figure of the tone time series and a one-paragraph read.

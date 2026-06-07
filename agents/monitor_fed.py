@@ -3,13 +3,16 @@
 Three fetch modes (one entrypoint, --mode flag selects path):
 
 - ``recent`` (default, used by cron): FedTools 90-day lookback for FOMC
-  statements and minutes. Replaces the old scripts/update_fed_documents.py.
+  statements. Replaces the old scripts/update_fed_documents.py.
 - ``calendar``: live FOMC calendar HTML scraping
   (fomccalendars.htm). Replaces the old agents/monitor.py path.
-- ``historical``: combined backfill — FedTools all-time statements + minutes
-  from 2015 onward, plus HTML scraping of the legacy fomchistorical{year}.htm
-  pages (1994-2014 by default). Replaces the old
+- ``historical``: combined backfill — FedTools all-time statements from 2015
+  onward, plus HTML scraping of the legacy fomchistorical{year}.htm pages
+  (1994-2014 by default). Replaces the old
   agents/monitor-fed-historical-pages.py and scripts/initial_data_download.py.
+
+Only FOMC statements are ingested — minutes and speeches are filtered out
+upstream and never reach the documents table.
 
 Run as: python -m agents.monitor_fed [--db ...] [--mode recent|calendar|historical]
 """
@@ -428,8 +431,6 @@ def _discover_documents_for_year(
                 if label == "Statement":
                     discovered.append(("statement", full_url))
                     continue
-                if "Minutes" in paragraph_text and label == "HTML":
-                    pass  # minutes removed
 
     deduped = []
     seen: set[tuple[str, str]] = set()
@@ -457,7 +458,7 @@ def fetch_historical_html_pages(
         except Exception as exc:
             print(f"[skip] {year}: failed to load history page: {exc}")
             continue
-        print(f"{year}: discovered {len(links)} statement/minutes HTML links")
+        print(f"{year}: discovered {len(links)} statement HTML link(s)")
 
         for doc_type, url in links:
             release_date_str = extract_release_date_from_url(url)

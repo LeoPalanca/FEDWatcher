@@ -21,7 +21,7 @@ The project answers:
 
 The implementation is intentionally lean:
 
-- Federal Reserve documents (statements and minutes), ECB as a stretch goal only.
+- Federal Reserve FOMC statements only; ECB as a stretch goal only.
 - Three runtime agents: `MonitorAgent`, `AnalystAgent` (weight-aware), `StrategistAgent`.
 - FastAPI backend for dashboard/API access.
 - SQLite database for reproducible local development.
@@ -35,12 +35,12 @@ The implementation is intentionally lean:
 - SQL schema and database init in `scripts/init_db.py`.
 - Agent/contributor workflow in `AGENTS.md`.
 - `MonitorAgent` in `agents/monitor.py`: scrapes the official Fed FOMC calendar, classifies and deduplicates documents, fetches HTML text, stores records in SQLite. Runs automatically via cron every 5 minutes on the server.
-- Historical Fed document backfill in `agents/monitor-fed-historical-pages.py` for ranges FedTools misses (2015–2020 statements and minutes).
+- Historical Fed document backfill in `agents/monitor-fed-historical-pages.py` for ranges FedTools misses (2015–2020 statements).
 - Historical backfill via FedTools in `scripts/inital_data_download.py`.
 - FRED monthly macro ingestion in `sources/fred.py` and `scripts/backfill_fred.py`: stores `CPILFESL`, `UNRATE`, monthly-average `DGS2`, and `policy_rate` in `macro_data`.
 - **Weight-aware `AnalystAgent`** in `agents/w_agent.py` (production pipeline):
   - Loads per-`doc_type` section weights dynamically from the `weights` table.
-  - Segments FOMC statements and minutes into weighted sections (`forward_guidance`, `inflation`, `labor_market`, `general` / `policy_discussion`).
+  - Segments FOMC statements into weighted sections (`forward_guidance`, `inflation`, `labor_market`, `general`).
   - Calls DeepSeek via OpenRouter (`OPENROUTER_API_KEY`) for per-section tone scores in `[-1.0, +1.0]`.
   - Computes `tone_score` as a weighted average in Python — weights can be updated in the DB without re-running the LLM.
   - Writes to `sentiment_w` and marks `documents.processed_w = 1`.
@@ -98,7 +98,7 @@ FastAPI is not the agent orchestrator. It is a read-only boundary that exposes s
 ### MonitorAgent (`agents/monitor.py`)
 
 - Scrapes the official Fed FOMC calendar page.
-- Classifies links as `statement` or `minutes`, skips press conferences and implementation notes.
+- Classifies links as `statement` (minutes, press conferences, and implementation notes are skipped).
 - Deduplicates by date/type, preferring HTML over PDF.
 - Fetches HTML text and upserts records into `documents`.
 - Optionally refreshes FRED macro data with `--refresh-macro`.
@@ -203,7 +203,7 @@ SQLite database: `fedwatcher.db`.
 ### Federal Reserve Documents
 
 - Source: https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
-- Types ingested: FOMC statements, FOMC minutes.
+- Types ingested: FOMC statements only.
 - Press conferences and implementation notes are excluded.
 
 ### FRED Macro Data

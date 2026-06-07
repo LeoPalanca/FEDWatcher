@@ -50,7 +50,7 @@ DEFAULT_DB_PATH = "fedwatcher.db"
 
 _SYSTEM_PROMPT = """\
 You are a monetary-policy analyst specialised in Federal Reserve communications.
-You read FOMC statements and speeches and return a structured JSON object.
+You read FOMC statements and return a structured JSON object.
 
 Rules:
 - Be precise and evidence-based.
@@ -112,12 +112,6 @@ WEIGHTS: dict[str, dict[str, float]] = {
         "inflation": 0.25,
         "labor_market": 0.15,
         "general": 0.15,
-    },
-    "speech": {
-        "forward_guidance": 0.35,
-        "inflation": 0.25,
-        "labor_market": 0.20,
-        "general": 0.20,
     },
 }
 
@@ -258,9 +252,9 @@ class AnalystAgent:
 
     def segment_document(self, text: str, doc_type: str) -> dict[str, str]:
         normalized_type = _normalise_doc_type(doc_type)
-        return self._segment_statement_or_speech(text, normalized_type)
+        return self._segment_statement(text, normalized_type)
 
-    def _segment_statement_or_speech(
+    def _segment_statement(
         self,
         text: str,
         normalized_type: str,
@@ -340,14 +334,8 @@ def validate_schema(conn: sqlite3.Connection) -> None:
 def fetch_unprocessed3_documents(
     conn: sqlite3.Connection,
     limit: int,
-    include_speeches: bool = True,
 ) -> list[dict[str, Any]]:
-    doc_types = (
-        "statement",
-        "speech",
-    ) if include_speeches else (
-        "statement",
-    )
+    doc_types = ("statement",)
 
     placeholders = ",".join("?" for _ in doc_types)
 
@@ -539,11 +527,8 @@ def _classify_sentence(sentence: str, sections: list[str]) -> str:
 
 
 def _normalise_doc_type(raw: str) -> str:
-    value = (raw or "").lower()
-
-    if "speech" in value:
-        return "speech"
-
+    # All ingested documents are FOMC statements; speech/minutes ingestion was
+    # removed. Normalise everything to "statement".
     return "statement"
 
 

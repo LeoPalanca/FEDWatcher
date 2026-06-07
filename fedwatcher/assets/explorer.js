@@ -1322,7 +1322,9 @@
     if (!root) return;
     root.innerHTML = "";
     const filtered = DOCS.filter(d => {
-      if (d.doc_type === "minutes") return false;
+      // Pipeline only ingests statements now; defensively hide any legacy
+      // minutes/speech rows still sitting in the documents table.
+      if (d.doc_type === "minutes" || d.doc_type === "speech") return false;
       if (docFilter !== "all" && d.doc_type !== docFilter) return false;
       if (!docQuery) return true;
       const hay = `${d.release_date} ${d.doc_type} ${d.central_bank} ${d.raw_text || ""}`.toLowerCase();

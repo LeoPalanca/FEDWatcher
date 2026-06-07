@@ -53,7 +53,7 @@ where $r^{\text{mkt}}_{t+1}$ is the market-implied next-meeting rate from Fed-fu
 \section{Data Science}
 
 \subsection{Data Sources}
-All macro series come from FRED via the public REST API: \texttt{DFEDTARU}, \texttt{DFEDTARL}, \texttt{DFF}, \texttt{FEDFUNDS}, \texttt{CPIAUCSL}, \texttt{CPILFESL}, \texttt{UNRATE}, \texttt{NROU}, \texttt{DGS2}, \texttt{SOFR}. FOMC documents are scraped from \url{federalreserve.gov} (statements and minutes) and from the synthetic \texttt{fakefed.ellep.it} used for parser tests. The historical backfill covers 1994--present and yields 335 documents at the time of writing.
+All macro series come from FRED via the public REST API: \texttt{DFEDTARU}, \texttt{DFEDTARL}, \texttt{DFF}, \texttt{FEDFUNDS}, \texttt{CPIAUCSL}, \texttt{CPILFESL}, \texttt{UNRATE}, \texttt{NROU}, \texttt{DGS2}, \texttt{SOFR}. FOMC statements are scraped from \url{federalreserve.gov} and from the synthetic \texttt{fakefed.ellep.it} used for parser tests; minutes and speeches are excluded from ingestion. The historical statement backfill covers 1994--present.
 
 \subsection{Why SQLite}
 The schema (\texttt{db/schema.sql}) deliberately favors clarity over performance: every \texttt{sentiment*} table uses \texttt{document\_id} as a foreign key to \texttt{documents}, and signals are reconstructable joins rather than materialized views. SQLite was chosen over Postgres because the entire dataset fits in $\sim$4\,MB, the read pattern is dashboard-style (few writers, many readers), and a single file is trivially backupable and reproducible.

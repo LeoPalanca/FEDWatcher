@@ -6,7 +6,7 @@ The U.S. Federal Reserve communicates monetary-policy intent through periodic FO
 \subsection{Solution at a Glance}
 FedWatcher is an \emph{agentic} pipeline made of three named agents that read from and write to a single SQLite database:
 \begin{description}[leftmargin=1.2em,style=nextline,itemsep=0pt]
-  \item[MonitorAgent] Scrapes new FOMC statements and minutes from the Federal Reserve website (and a synthetic \texttt{FakeFed} mirror used for scraper tests) and inserts them into the \texttt{documents} table. Although this component does not use an LLM, we still refer to it as an agent to maintain consistency across the FedWatcher architecture.
+  \item[MonitorAgent] Scrapes new FOMC statements from the Federal Reserve website (and a synthetic \texttt{FakeFed} mirror used for scraper tests) and inserts them into the \texttt{documents} table. Minutes and speeches are filtered out upstream so the pipeline only operates on statements. Although this component does not use an LLM, we still refer to it as an agent to maintain consistency across the FedWatcher architecture.
   \item[AnalystAgent] Splits each document into rhetorical sections, asks an LLM to score the tone of each section on a structured rubric (overall tone, inflation assessment, labor-market assessment, forward guidance), and writes the result into \texttt{sentiment} and its variants (\texttt{sentiment2}, \texttt{sentiment3}, \texttt{sentiment\_w}) used for ablations.
   \item[StrategistAgent] Applies a time smoothing on all the stored sentiments and joins the final sentiment row with macro features (CPI, core CPI, unemployment, 2y yield, policy rate) from FRED and produces a probability vector over the next-meeting outcome plus a short natural-language explanation.
 \end{description}
