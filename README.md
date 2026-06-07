@@ -444,7 +444,8 @@ Expected VPS layout:
 ```text
 /var/www/fedwatcher   static public dashboard
 /var/www/fakefed      synthetic FakeFed fixture site
-/opt/FEDWatcher       FastAPI/backend working tree
+/home/programming/FEDWatcher
+                      FastAPI/backend working tree
 ```
 
 Common commands:
@@ -459,7 +460,7 @@ bash scripts/deploy.sh --all --dry-run
 
 Backend deploys preserve local runtime state by excluding `.env`, SQLite databases,
 virtual environments, logs, caches, `fedwatcher/`, and `fakefed/`. The production FastAPI
-service template expects `/opt/FEDWatcher/.venv` and is defined in
+service template expects `/home/programming/FEDWatcher/venv` and is defined in
 `deploy/fedwatcher-api.service`.
 
 ## Development Workflow

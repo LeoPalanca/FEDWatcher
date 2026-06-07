@@ -33,7 +33,7 @@ SUDOERS_FILE="/etc/sudoers.d/$DEPLOY_USER"
 DEPLOY_DIRS=(
     "/var/www/fedwatcher"
     "/var/www/fakefed"
-    "/opt/FEDWatcher"
+    "/home/programming/FEDWatcher"
 )
 
 if [[ "$(id -u)" -ne 0 ]]; then
@@ -75,7 +75,6 @@ cat > "$SUDOERS_FILE" <<'SUDOERS'
 programming ALL=(root) NOPASSWD: /usr/bin/rsync
 programming ALL=(root) NOPASSWD: /usr/bin/mkdir -p /var/www/fedwatcher/*
 programming ALL=(root) NOPASSWD: /usr/bin/mkdir -p /var/www/fakefed/*
-programming ALL=(root) NOPASSWD: /usr/bin/mkdir -p /opt/FEDWatcher/*
 programming ALL=(root) NOPASSWD: /usr/bin/systemctl restart fedwatcher-api.service
 programming ALL=(root) NOPASSWD: /usr/bin/systemctl status fedwatcher-api.service *
 programming ALL=(root) NOPASSWD: /usr/bin/systemctl reload nginx
@@ -114,7 +113,7 @@ echo -e "Sudoers:          $SUDOERS_FILE"
 echo -e "Deploy dirs:      ${DEPLOY_DIRS[*]}"
 echo ""
 echo -e "${YELLOW}What '$DEPLOY_USER' CAN do:${NC}"
-echo "  - rsync files into /var/www/fedwatcher, /var/www/fakefed, /opt/FEDWatcher"
+echo "  - rsync files into /var/www/fedwatcher, /var/www/fakefed, /home/programming/FEDWatcher"
 echo "  - restart/status fedwatcher-api.service"
 echo "  - reload nginx and test config"
 echo ""
