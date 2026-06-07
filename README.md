@@ -433,6 +433,35 @@ FED_BASE_URL=https://fakefed.ellep.it python agents/monitor.py
 The FastAPI backend is read-only for now, so it does not change agent execution. Agents keep
 writing to SQLite; the API exposes those stored rows to the dashboard.
 
+## Deployment
+
+The VPS deployment helper is `scripts/deploy.sh`. It can sync the static dashboard,
+FastAPI backend code, and FakeFed static fixture site either over SSH or directly from the
+VM with `--local`.
+
+Expected VPS layout:
+
+```text
+/var/www/fedwatcher   static public dashboard
+/var/www/fakefed      synthetic FakeFed fixture site
+/opt/FEDWatcher       FastAPI/backend working tree
+```
+
+Common commands:
+
+```bash
+bash scripts/deploy.sh --frontend --reload-nginx
+bash scripts/deploy.sh --backend --restart
+bash scripts/deploy.sh --all --restart --reload-nginx
+bash scripts/deploy.sh --all --local --restart --reload-nginx
+bash scripts/deploy.sh --all --dry-run
+```
+
+Backend deploys preserve local runtime state by excluding `.env`, SQLite databases,
+virtual environments, logs, caches, `fedwatcher/`, and `fakefed/`. The production FastAPI
+service template expects `/opt/FEDWatcher/.venv` and is defined in
+`deploy/fedwatcher-api.service`.
+
 ## Development Workflow
 
 Use [AGENTS.md](AGENTS.md) as the contributor and coding-agent rulebook.
