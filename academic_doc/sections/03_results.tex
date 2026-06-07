@@ -9,7 +9,7 @@ The aggregated tone series $\tau_t$ tracks the well-known qualitative arc of rec
 
 \subsection{Nowcast Performance}
 %% TODO: fill in once the walk-forward backtest is finalized.
-On the walk-forward backtest restricted to 2015--2025 (the dense-coverage era), the ordered-logit nowcast reaches approximately \textbf{XX\%} top-1 accuracy and \textbf{0.YY} Brier score on six classes. A naive baseline that always predicts ``hold'' (the modal outcome in the sample) reaches \textbf{ZZ\%}. The single LLM-tone feature contributes \textbf{$\Delta$accuracy = ??\,pp} when added on top of the macro-only model. These numbers should be read with caution: the sample is small (typically eight FOMC meetings per year) and the model is fit on a regime that includes both ZLB and aggressive tightening, so it has not yet been stress-tested out of sample.
+On the walk-forward backtest restricted to 2015--2025 (the dense-coverage era), the ordered-probit nowcast reaches approximately \textbf{XX\%} top-1 accuracy and \textbf{0.YY} Brier score on six classes. A naive baseline that always predicts ``hold'' (the modal outcome in the sample) reaches \textbf{ZZ\%}. The single LLM-tone feature contributes \textbf{$\Delta$accuracy = ??\,pp} when added on top of the macro-only model. These numbers should be read with caution: the sample is small (typically eight FOMC meetings per year) and the model is fit on a regime that includes both ZLB and aggressive tightening, so it has not yet been stress-tested out of sample.
 
 \subsection{Divergence Signal -- Case Study}
 %% TODO: pick one or two meetings and discuss.
