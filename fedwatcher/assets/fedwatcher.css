@@ -1014,18 +1014,6 @@ footer.page-foot {
   text-transform: uppercase;
 }
 
-.page-foot a {
-  color: inherit;
-  text-decoration: none;
-}
-
-.page-foot a:hover,
-.page-foot a:focus-visible {
-  color: var(--c-ink-strong);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
 /* === MODAL === */
 .modal {
   align-items: center;

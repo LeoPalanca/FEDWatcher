@@ -23,6 +23,8 @@
       <a href="#overview">Overview</a>
       <a href="#breakdown">Breakdown</a>
       <a href="#data">Data</a>
+      <a href="#method">Method</a>
+      <a href="#accountability">Accountability</a>
       <a href="#feed">Feed</a>
     </nav>
     <div class="source-switch" id="source-switch" aria-label="Document source">
@@ -37,7 +39,7 @@
   <section class="hero hero-takeaway">
     <div class="takeaway-line">
       <span class="dot"></span>
-      <span style="font-size: 15px">FOMC · May 7 · 2026 · latest read</span>
+      <span>FOMC · May 7 · 2026 · latest read</span>
     </div>
     <div class="takeaway-pills">
       <span class="pill hawkish">Moderately hawkish · tone +0.31</span>
@@ -51,7 +53,7 @@
   <section class="ds" id="overview">
     <div class="sec-head">
       <h2 class="sec-title"><span class="sec-num-pretty">01</span><span class="sec-name">Overview</span></h2>
-      <p class="sec-desc">Tap the <span style="font-family: var(--f-serif); font-style: italic;">i</span> on any tile to see how it was computed and what it cites.</p>
+      <p class="sec-desc">The latest statement, scored four ways &mdash; every figure traced to its source.</p>
     </div>
 
     <div class="overview-grid">
@@ -167,10 +169,9 @@
     <!-- WEIGHTS v2 — with explanation column -->
     <div class="weights-v2">
       <div class="weights-explain">
-        <h4>Why these weights?</h4>
-        <p>The analyst agent splits each release into sections, scores each section's tone independently, then weights them by how predictive they have historically been of the next FOMC decision.</p>
-        <p>Forward-guidance sentences move the most; the inflation paragraph is second. The general-context block carries almost no signal on its own — it is included for completeness.</p>
-        <a class="why" href="#breakdown">For transparency · open § Breakdown for the math</a>
+        <h4>Section weights</h4>
+        <p>How much each part of a release moves the composite tone score. Loaded from the database, recalibrated against past FOMC moves.</p>
+        <a class="why" href="#method">See the full method →</a>
       </div>
       <div class="weights-bars">
         <div class="weight-group">
@@ -188,7 +189,7 @@
   <section class="ds" id="breakdown">
     <div class="sec-head">
       <h2 class="sec-title"><span class="sec-num-pretty">02</span><span class="sec-name">Breakdown</span></h2>
-      <p class="sec-desc">Each plausible Committee outcome with the probability the agent assigns. The right column explains the overall shape of the distribution — not every bucket on its own.</p>
+      <p class="sec-desc">The Committee&rsquo;s next move, as a full distribution of probabilities.</p>
     </div>
 
     <div class="breakdown-grid">
@@ -220,15 +221,13 @@
       <div class="divergence-head">
         <div>
           <h3>Signal Divergence</h3>
-          <div class="sub">Tone-implied path vs market-implied path · basis points</div>
+          <div class="sub">Tone-implied path vs market proxy · basis points</div>
         </div>
         <div class="divergence-controls">
           <div class="divergence-legend">
             <button type="button" class="ent ent-toggle" data-divseries="Tone-implied"><span class="swatch tone"></span>Tone-implied</button>
-            <button type="button" class="ent ent-toggle" data-divseries="Market-implied (OIS)"><span class="swatch market"></span>Market-implied (OIS)</button>
-            <button type="button" class="ent ent-toggle" data-divseries="Policy rate (FEDFUNDS)"><span class="swatch policy"></span>Policy rate (FEDFUNDS)</button>
-            <span class="ent"><span class="swatch area area-pos"></span>Tone &gt; Market</span>
-            <span class="ent"><span class="swatch area area-neg"></span>Tone &lt; Market</span>
+            <button type="button" class="ent ent-toggle" data-divseries="Market-implied (OIS)"><span class="swatch market"></span>2Y Treasury (DGS2)</button>
+            <button type="button" class="ent ent-toggle" data-divseries="Policy rate (FEDFUNDS)"><span class="swatch policy"></span>Policy rate (DFF)</button>
           </div>
           <div class="toggle" id="divergence-range" role="tablist" aria-label="Divergence time range">
             <button type="button" data-divrange="1Y">1Y</button>
@@ -239,12 +238,16 @@
         </div>
       </div>
       <p class="divergence-explain">
-        FedWatcher's read of the Committee's language (in blue) versus what the OIS market is pricing (in gray, dashed). Divergence is reported as <code>market − tone</code> (in pp): the shaded gap is <strong style="color: var(--c-pos);">green</strong> when tone runs above the market (market underestimates, tone is more hawkish; divergence &lt; 0) and <strong style="color: var(--c-neg);">red</strong> when tone runs below (market overestimates, tone is more dovish; divergence &gt; 0). Historically, market expectations have moved toward the tone-implied path within two meetings.
+        The tone-implied policy path reflects FedWatcher's reading of the Committee's language; the market path is the 2-year Treasury yield, used as a market proxy. The shaded area between them, measured in percentage points, shows the prevailing gap: <strong style="color: var(--c-pos);">green</strong> indicates a hawkish stance, with tone above market, while <strong style="color: var(--c-neg);">red</strong> indicates a dovish one. Historically, market expectations have converged toward the tone-implied path within two meetings.
       </p>
+      <div class="divergence-gap-legend">
+        <span class="ent"><span class="swatch area area-pos"></span>Tone &gt; Market</span>
+        <span class="ent"><span class="swatch area area-neg"></span>Tone &lt; Market</span>
+      </div>
       <div class="divergence-chart-wrap"><canvas id="divergence-chart" aria-label="Signal divergence chart"></canvas></div>
       <div class="divergence-foot">
         <span id="divergence-meta">—</span>
-        <span>t = current meeting · E = next meeting horizon</span>
+        <span>T = current meeting · E = next meeting horizon</span>
       </div>
     </div>
   </section>
@@ -305,10 +308,94 @@
     </div>
   </section>
 
-  <!-- §04 FEED -->
+  <!-- §04 METHOD — how the pipeline works -->
+  <section class="ds" id="method">
+    <div class="sec-head">
+      <h2 class="sec-title"><span class="sec-num-pretty">04</span><span class="sec-name">Method</span></h2>
+      <p class="sec-desc">How a Fed release becomes a forecast — four stages, every figure traceable back to the underlying data.</p>
+    </div>
+
+    <div class="method-cta">
+      <div class="method-cta-text">
+        <p>From the publication of a Fed statement to the projection on this page — the four stages that translate the Committee's language into a rate-move forecast.</p>
+      </div>
+      <button type="button" class="method-open-btn" id="method-open">
+        <span>View the pipeline</span>
+        <span class="method-open-arrow" aria-hidden="true"></span>
+      </button>
+    </div>
+
+    <div class="method-cta method-cta-alt">
+      <div class="method-cta-text">
+        <p class="method-cta-eyebrow">For the curious</p>
+        <p>The three agents, how each release is scored section by section, why the weights live in the database, and the statistical model behind the forecast.</p>
+      </div>
+      <button type="button" class="method-open-btn method-open-btn-ghost" id="arch-open">
+        <span>Under the hood</span>
+        <span class="method-open-arrow" aria-hidden="true"></span>
+      </button>
+    </div>
+  </section>
+
+  <!-- §05 ACCOUNTABILITY — track record -->
+  <section class="ds" id="accountability">
+    <div class="sec-head">
+      <h2 class="sec-title"><span class="sec-num-pretty">05</span><span class="sec-name">Accountability</span></h2>
+      <p class="sec-desc">A live track record across <strong>82</strong> FOMC statements between 2016 and the last completed meeting. Recomputed on every release.</p>
+    </div>
+
+    <!-- Block 1 · KPI strip -->
+    <div class="acc-grid">
+      <div class="tile acc-tile">
+        <div class="tile-head"><span class="tile-label">Hit rate · directional</span></div>
+        <div class="tile-value pos">71<span class="unit">%</span></div>
+        <div class="tile-foot"><span class="source">Modal bucket = realized move</span><span>n = 82</span></div>
+      </div>
+      <div class="tile acc-tile">
+        <div class="tile-head"><span class="tile-label">Mean abs. error</span></div>
+        <div class="tile-value">13<span class="unit">bps</span></div>
+        <div class="tile-foot"><span class="source">Tone-implied vs realized FEDFUNDS</span><span>1-month horizon</span></div>
+      </div>
+      <div class="tile acc-tile">
+        <div class="tile-head"><span class="tile-label">Brier score</span></div>
+        <div class="tile-value pos">0.18</div>
+        <div class="tile-foot"><span class="source">Lower is better</span><span>n = 82</span></div>
+      </div>
+      <div class="tile acc-tile">
+        <div class="tile-head"><span class="tile-label">Meetings scored</span></div>
+        <div class="tile-value">100<span class="unit">%</span></div>
+        <div class="tile-foot"><span class="source">Prediction + realized outcome</span><span>since 2016-03</span></div>
+      </div>
+    </div>
+
+    <!-- Block 2 · Recent predictions -->
+    <div class="sub-head"><span>Recent predictions</span><span>last 8 meetings</span></div>
+    <div class="table-card">
+      <div class="table-scroll">
+        <table class="data-table acc-data-table">
+          <thead>
+            <tr><th>Date</th><th>Predicted</th><th>Actual outcome</th><th class="r">Hit</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>2025-05-07</td><td>Hold <span class="acc-conf">· 60%</span></td><td>Hold</td><td class="r"><span class="acc-pip ok">✓</span></td></tr>
+            <tr><td>2025-06-17</td><td>Hold <span class="acc-conf">· 60%</span></td><td>Hold</td><td class="r"><span class="acc-pip ok">✓</span></td></tr>
+            <tr><td>2025-07-30</td><td>Hold <span class="acc-conf">· 60%</span></td><td>Hold</td><td class="r"><span class="acc-pip ok">✓</span></td></tr>
+            <tr><td>2025-09-18</td><td>Hold <span class="acc-conf">· 60%</span></td><td>Hold</td><td class="r"><span class="acc-pip ok">✓</span></td></tr>
+            <tr><td>2025-11-06</td><td>Hold <span class="acc-conf">· 60%</span></td><td>Hold</td><td class="r"><span class="acc-pip ok">✓</span></td></tr>
+            <tr><td>2025-12-17</td><td>Hold <span class="acc-conf">· 60%</span></td><td>Hold</td><td class="r"><span class="acc-pip ok">✓</span></td></tr>
+            <tr><td>2026-01-31</td><td>Hold <span class="acc-conf">· 50%</span></td><td>Hold</td><td class="r"><span class="acc-pip ok">✓</span></td></tr>
+            <tr><td>2026-03-20</td><td>Hold <span class="acc-conf">· 50%</span></td><td>Hold</td><td class="r"><span class="acc-pip ok">✓</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- §06 FEED -->
   <section class="ds" id="feed">
     <div class="sec-head">
-      <h2 class="sec-title"><span class="sec-num-pretty">04</span><span class="sec-name">Feed</span></h2>
+      <h2 class="sec-title"><span class="sec-num-pretty">06</span><span class="sec-name">Feed</span></h2>
       <p class="sec-desc">Live ingestion target. FOMC statements and synthetic FakeFed fixtures flow through the analyst agent and accumulate here.</p>
     </div>
     <div class="feed-toolbar">
@@ -334,6 +421,114 @@
     </span>
   </footer>
 </main>
+
+<button type="button" class="to-top" id="to-top" aria-label="Back to top" title="Back to top">
+  <span class="to-top-arrow" aria-hidden="true"></span>
+</button>
+
+<!-- METHOD MODAL (§04 pipeline detail) -->
+<div class="modal" id="method-modal" hidden role="dialog" aria-modal="true" aria-labelledby="method-modal-title">
+  <div class="modal-backdrop" data-method-close></div>
+  <div class="modal-panel modal-doc" role="document">
+    <header class="modal-head">
+      <div>
+        <div class="modal-eyebrow">Method</div>
+        <h2 class="modal-title" id="method-modal-title">How a release becomes a distribution</h2>
+      </div>
+      <button class="modal-close" type="button" data-method-close aria-label="Close">×</button>
+    </header>
+    <div class="modal-body">
+      <ol class="method-steps">
+        <li class="method-step">
+          <div class="method-num">01</div>
+          <div class="method-body-step">
+            <h4>Monitor</h4>
+            <p>FedWatcher tracks the Federal Reserve's official communications continuously. Each new statement is captured the moment it is released, classified, and time-stamped, then joined to the latest macroeconomic data from FRED — so every analysis reflects the current state of both Fed language and the economy, without manual intervention.</p>
+            <div class="method-meta"><span>Source · Federal Reserve · FRED</span><span>Always on</span></div>
+          </div>
+        </li>
+        <li class="method-step">
+          <div class="method-num">02</div>
+          <div class="method-body-step">
+            <h4>Analyze</h4>
+            <p>Each release is decomposed into its functional parts — forward guidance, inflation, the labor market, and the broader economic assessment — and the tone of each is measured on a hawkish-to-dovish scale. These are combined into a single tone score, weighted by how much each section has historically shaped the Committee's subsequent decisions, so the measure tracks the language that actually moves policy rather than treating every sentence alike.</p>
+            <div class="method-meta"><span>Reads · four sections per release</span><span>Output · one tone score</span></div>
+          </div>
+        </li>
+        <li class="method-step">
+          <div class="method-num">03</div>
+          <div class="method-body-step">
+            <h4>Nowcast</h4>
+            <p>The current tone is set against recent inflation and unemployment dynamics to project the Committee's next move. The output is a probability distribution over the plausible outcomes — from a cut, through a hold, to a hike — and the policy rate those probabilities imply.</p>
+            <div class="method-meta"><span>Looks ahead · next meeting</span><span>Output · move probabilities</span></div>
+          </div>
+        </li>
+        <li class="method-step">
+          <div class="method-num">04</div>
+          <div class="method-body-step">
+            <h4>Serve</h4>
+            <p>Every result the pipeline produces is stored and surfaced here directly. The dashboard only ever reads finished outputs, never alters them — so each figure on the page is traceable to a specific document and a specific data point.</p>
+            <div class="method-meta"><span>Live from the database</span><span>Read-only</span></div>
+          </div>
+        </li>
+      </ol>
+    </div>
+  </div>
+</div>
+
+<!-- ARCHITECTURE MODAL (under-the-hood detail) -->
+<div class="modal" id="arch-modal" hidden role="dialog" aria-modal="true" aria-labelledby="arch-modal-title">
+  <div class="modal-backdrop" data-arch-close></div>
+  <div class="modal-panel modal-doc" role="document">
+    <header class="modal-head">
+      <div>
+        <div class="modal-eyebrow">Under the hood</div>
+        <h2 class="modal-title" id="arch-modal-title">Agents, scoring &amp; weights</h2>
+      </div>
+      <button class="modal-close" type="button" data-arch-close aria-label="Close">×</button>
+    </header>
+    <div class="modal-body">
+      <div class="arch-block">
+        <h4 class="arch-h">Three cooperating agents</h4>
+        <p>The pipeline is built from three cooperating agents rather than a single prompt. The <strong>Monitor Agent</strong> continuously tracks and stores Fed documents; the <strong>Analyst Agent</strong> reads each release and extracts its tone, section by section; the <strong>Strategist Agent</strong> turns the smoothed tone, together with macro data, into a rate-move forecast. A read-only layer then exposes the finished results to this dashboard.</p>
+        <div class="arch-tags"><span>Monitor · Analyst · Strategist</span><span>Runs on a fixed schedule</span></div>
+      </div>
+
+      <div class="arch-block">
+        <h4 class="arch-h">Sectioned tone scoring</h4>
+        <p>Rather than scoring a release as a whole, the pipeline first splits it into its functional sections — forward guidance, inflation, labor market, and the general assessment — and asks a large language model for a tone from −1 (dovish) to +1 (hawkish) on each. Sections carrying no signal are excluded so that short documents are not pulled toward neutral, and every model response is cached, so re-running the analysis costs nothing.</p>
+        <div class="arch-tags"><span>Scale · −1 dovish · +1 hawkish</span><span>Responses cached</span></div>
+      </div>
+
+      <div class="arch-block">
+        <h4 class="arch-h">Weights live in the database</h4>
+        <p>The document's composite tone is a weighted average of its section tones, and those weights are stored as data rather than hard-coded into the model. Because they sit outside the language model, they can be recalibrated against historical FOMC outcomes at any time — without re-running any of the text analysis. Forward guidance carries the most weight; the general section is retained for completeness but contributes almost no signal.</p>
+        <div class="arch-weights">
+          <div class="arch-w"><span class="arch-w-name">Forward guidance</span><span class="arch-w-bar"><i style="width:45%"></i></span><span class="arch-w-val">45%</span></div>
+          <div class="arch-w"><span class="arch-w-name">Inflation</span><span class="arch-w-bar"><i style="width:25%"></i></span><span class="arch-w-val">25%</span></div>
+          <div class="arch-w"><span class="arch-w-name">Labor market</span><span class="arch-w-bar"><i style="width:15%"></i></span><span class="arch-w-val">15%</span></div>
+          <div class="arch-w"><span class="arch-w-name">General</span><span class="arch-w-bar"><i style="width:15%"></i></span><span class="arch-w-val">15%</span></div>
+        </div>
+      </div>
+
+      <div class="arch-block">
+        <h4 class="arch-h">The finance model</h4>
+        <p>Tone is smoothed with a half-life EWMA (21-day half-life over the calendar gap between releases), then fed to an ordered-probit nowcast whose latent index blends tone with the core-CPI gap and the unemployment gap. The bucket probabilities give a tone-implied next rate; its divergence from the 2-year Treasury proxy is the headline signal.</p>
+        <div class="arch-formula">
+          <code>S_t = α_t·tone_t + (1 − α_t)·S_{t−1},&nbsp;&nbsp; α_t = 1 − exp(−ln2/21 · Δt)</code>
+          <code>η_t = β_S·S_t + β_π·(CPI_yoy − 2) + β_u·(U − U_baseline)</code>
+          <code>P(Y_t = j_k) = Φ(c_k − η_t) − Φ(c_{k−1} − η_t),&nbsp;&nbsp; j ∈ {−50, −25, 0, +25, +50}</code>
+        </div>
+      </div>
+
+      <div class="arch-block">
+        <h4 class="arch-h">Data &amp; infrastructure</h4>
+        <p>Macroeconomic inputs come from FRED — core CPI, unemployment, the 2-year Treasury yield, and the policy rate — joined on observation month. Everything the pipeline produces is persisted in a single database spanning documents, tone scores, weights, and calibration history. A synthetic test environment mirrors the Fed's public structure, so the monitoring can be validated end to end before it ever touches live data.</p>
+        <div class="arch-tags"><span>Inputs · FRED macro series</span><span>Single store · fully reproducible</span></div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- ROW / DOC MODAL (kept from v1) -->
 <div class="modal" id="row-modal" hidden role="dialog" aria-modal="true" aria-labelledby="modal-title">
@@ -366,5 +561,53 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script src="/assets/explorer.js" defer></script>
+<script>
+  // Method popup: open the pipeline detail in a modal.
+  (function () {
+    var modal = document.getElementById("method-modal");
+    var openBtn = document.getElementById("method-open");
+    if (!modal || !openBtn) return;
+    function open() { modal.hidden = false; document.body.style.overflow = "hidden"; }
+    function close() { modal.hidden = true; document.body.style.overflow = ""; }
+    openBtn.addEventListener("click", open);
+    modal.querySelectorAll("[data-method-close]").forEach(function (el) {
+      el.addEventListener("click", close);
+    });
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && !modal.hidden) close();
+    });
+  })();
+
+  // Architecture popup: under-the-hood detail.
+  (function () {
+    var modal = document.getElementById("arch-modal");
+    var openBtn = document.getElementById("arch-open");
+    if (!modal || !openBtn) return;
+    function open() { modal.hidden = false; document.body.style.overflow = "hidden"; }
+    function close() { modal.hidden = true; document.body.style.overflow = ""; }
+    openBtn.addEventListener("click", open);
+    modal.querySelectorAll("[data-arch-close]").forEach(function (el) {
+      el.addEventListener("click", close);
+    });
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && !modal.hidden) close();
+    });
+  })();
+
+  // Back-to-top floating button: appears after scrolling, smooth-scrolls up.
+  (function () {
+    var btn = document.getElementById("to-top");
+    if (!btn) return;
+    function update() {
+      if (window.scrollY > 600) btn.classList.add("show");
+      else btn.classList.remove("show");
+    }
+    window.addEventListener("scroll", update, { passive: true });
+    btn.addEventListener("click", function () {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+    update();
+  })();
+</script>
 </body>
 </html>
