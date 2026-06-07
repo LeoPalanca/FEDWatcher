@@ -33,7 +33,7 @@ router = APIRouter()
 # Configuration
 # ---------------------------------------------------------------------------
 
-_MODEL = "openai/gpt-oss-120b:free"
+_MODEL = "deepseek/deepseek-v4-flash"
 _OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 
 BUCKETS: list[str] = ["cut_50", "cut_25", "hold", "hike_25", "hike_50"]
@@ -59,6 +59,10 @@ Style rules:
 - No theatre, no hedging filler ("it is important to note"), no questions.
 - Plain English; if you use a term of art (forward guidance, ordered probit,
   etc.) it must be self-explanatory in context.
+- Use a maximum of ten/twelve words for the title.
+- For the description, use one or two short sentences.
+- When mentioning the numbers, approximate to the second decimal and include the units (bps, %).
+- Always explixitly mention the case: hawkish, dovish, or neutral.
 
 Output STRICT JSON with exactly these keys and no others:
 {

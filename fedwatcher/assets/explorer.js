@@ -1542,6 +1542,19 @@
       if (el) el.textContent = text;
     };
 
+    // Wrap "hawkish" / "dovish" / "neutral" in <em> so they pick up the
+    // accent-blue italic styling from .takeaway-headline em. Escapes
+    // everything else as HTML to keep the call site XSS-safe even though
+    // the source is our own /api/narrative.
+    const highlightStance = (text) => {
+      const escaped = escapeHtml(text || "");
+      return escaped.replace(/\b(hawkish|dovish|neutral)\b/gi, "<em>$&</em>");
+    };
+    const setStanceHTML = (id, text) => {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = highlightStance(text);
+    };
+
     // Hero: takeaway line, pills, headline, body.
     setText("hero-takeaway-line", hero.takeaway_line || "FOMC · latest read");
 
@@ -1556,8 +1569,8 @@
       });
     }
 
-    setText("hero-headline", hero.headline || "");
-    setText("hero-body",     hero.body     || "");
+    setStanceHTML("hero-headline", hero.headline || "");
+    setText("hero-body",           hero.body     || "");
 
     // §02 Breakdown summary: shape tag, headline, paragraphs, stats.
     setText("breakdown-shape-tag", breakdown.shape_tag || "—");
