@@ -603,7 +603,8 @@
         labels,
         datasets: [
           // Index 0 — Tone-fill carrier: invisible line, fills toward market.
-          //          Drawn first → sits behind every line dataset.
+          //          Lowest `order` so Chart.js draws it FIRST, i.e. behind
+          //          every line dataset, regardless of array position.
           {
             hidden: fillHidden,
             // Label kept underscored so the chart-level tooltip label callback
@@ -616,6 +617,7 @@
             pointRadius: 0, pointHoverRadius: 0,
             tension: 0.32,
             fill: { target: 1, above: POS_FILL, below: NEG_FILL },
+            order: 0,
           },
           // Index 1 — Market-implied (line, dashed)
           {
@@ -623,9 +625,10 @@
             label: "Market-implied (OIS)", data: market,
             borderColor: "oklch(0.42 0.012 80)",
             backgroundColor: "oklch(0.42 0.012 80)",
-            borderWidth: 1.75, borderDash: [4, 3],
+            borderWidth: 2, borderDash: [4, 3],
             pointRadius: 0, pointHoverRadius: 4,
             tension: 0.32, fill: false,
+            order: 2,
           },
           // Index 2 — Tone-implied (line, points). No fill on this dataset
           //          anymore — that's handled by index 0 — so the line stays
@@ -635,7 +638,7 @@
             label: "Tone-implied", data: tone,
             borderColor: "oklch(0.45 0.08 230)",
             backgroundColor: pointBg,
-            borderWidth: 1.75,
+            borderWidth: 2,
             pointStyle, pointRadius, pointHoverRadius: pointHover,
             pointBackgroundColor: pointBg,
             pointBorderColor: pointBg,
@@ -644,6 +647,7 @@
             pointHoverBorderColor: pointBg,
             tension: 0.32,
             fill: false,
+            order: 3,
           },
           // Index 3 — Policy rate (FEDFUNDS, monthly average) as step line
           {
@@ -651,11 +655,12 @@
             label: "Policy rate (FEDFUNDS)", data: policy,
             borderColor: "oklch(0.55 0.12 75)",
             backgroundColor: "oklch(0.55 0.12 75)",
-            borderWidth: 1.5,
+            borderWidth: 1.75,
             pointRadius: 0, pointHoverRadius: 4,
             stepped: "before",
             spanGaps: true,
             tension: 0, fill: false,
+            order: 2,
           },
         ],
       },
