@@ -341,30 +341,30 @@
   <section class="ds" id="accountability">
     <div class="sec-head">
       <h2 class="sec-title"><span class="sec-num-pretty">05</span><span class="sec-name">Accountability</span></h2>
-      <p class="sec-desc">A live track record across <strong>82</strong> FOMC statements between 2016 and the last completed meeting. Recomputed on every release.</p>
+      <p class="sec-desc">A live track record across <strong id="acc-meetings-total">—</strong> FOMC statements between 2016 and the last completed meeting. Recomputed on every release.</p>
     </div>
 
     <!-- Block 1 · KPI strip -->
     <div class="acc-grid">
       <div class="tile acc-tile">
         <div class="tile-head"><span class="tile-label">Hit rate · directional</span></div>
-        <div class="tile-value pos">71<span class="unit">%</span></div>
-        <div class="tile-foot"><span class="source">Modal bucket = realized move</span><span>n = 82</span></div>
+        <div class="tile-value pos" id="acc-hit-rate">—</div>
+        <div class="tile-foot"><span class="source">Modal bucket = realized move</span><span id="acc-hit-rate-n">—</span></div>
       </div>
       <div class="tile acc-tile">
         <div class="tile-head"><span class="tile-label">Mean abs. error</span></div>
-        <div class="tile-value">13<span class="unit">bps</span></div>
+        <div class="tile-value" id="acc-mae">—</div>
         <div class="tile-foot"><span class="source">Tone-implied vs realized FEDFUNDS</span><span>1-month horizon</span></div>
       </div>
       <div class="tile acc-tile">
         <div class="tile-head"><span class="tile-label">Brier score</span></div>
-        <div class="tile-value pos">0.18</div>
-        <div class="tile-foot"><span class="source">Lower is better</span><span>n = 82</span></div>
+        <div class="tile-value pos" id="acc-brier">—</div>
+        <div class="tile-foot"><span class="source">Lower is better</span><span id="acc-brier-n">—</span></div>
       </div>
       <div class="tile acc-tile">
         <div class="tile-head"><span class="tile-label">Meetings scored</span></div>
-        <div class="tile-value">100<span class="unit">%</span></div>
-        <div class="tile-foot"><span class="source">Prediction + realized outcome</span><span>since 2016-03</span></div>
+        <div class="tile-value" id="acc-coverage">—</div>
+        <div class="tile-foot"><span class="source">Prediction + realized outcome</span><span id="acc-coverage-foot">—</span></div>
       </div>
     </div>
 
@@ -376,15 +376,8 @@
           <thead>
             <tr><th>Date</th><th>Predicted</th><th>Actual outcome</th><th class="r">Hit</th></tr>
           </thead>
-          <tbody>
-            <tr><td>2025-05-07</td><td>Hold <span class="acc-conf">· 60%</span></td><td>Hold</td><td class="r"><span class="acc-pip ok">✓</span></td></tr>
-            <tr><td>2025-06-17</td><td>Hold <span class="acc-conf">· 60%</span></td><td>Hold</td><td class="r"><span class="acc-pip ok">✓</span></td></tr>
-            <tr><td>2025-07-30</td><td>Hold <span class="acc-conf">· 60%</span></td><td>Hold</td><td class="r"><span class="acc-pip ok">✓</span></td></tr>
-            <tr><td>2025-09-18</td><td>Hold <span class="acc-conf">· 60%</span></td><td>Hold</td><td class="r"><span class="acc-pip ok">✓</span></td></tr>
-            <tr><td>2025-11-06</td><td>Hold <span class="acc-conf">· 60%</span></td><td>Hold</td><td class="r"><span class="acc-pip ok">✓</span></td></tr>
-            <tr><td>2025-12-17</td><td>Hold <span class="acc-conf">· 60%</span></td><td>Hold</td><td class="r"><span class="acc-pip ok">✓</span></td></tr>
-            <tr><td>2026-01-31</td><td>Hold <span class="acc-conf">· 50%</span></td><td>Hold</td><td class="r"><span class="acc-pip ok">✓</span></td></tr>
-            <tr><td>2026-03-20</td><td>Hold <span class="acc-conf">· 50%</span></td><td>Hold</td><td class="r"><span class="acc-pip ok">✓</span></td></tr>
+          <tbody id="acc-tbody">
+            <tr><td colspan="4" style="opacity:.6">Loading…</td></tr>
           </tbody>
         </table>
       </div>

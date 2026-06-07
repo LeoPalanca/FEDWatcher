@@ -13,9 +13,20 @@
   "use strict";
 
   /* ===== mock data URLs (static preview) ===== */
-  const URL_SNAPSHOT  = "/api/snapshot";
-  const URL_DOCUMENTS = "/api/documents?limit=1000";
-  const URL_FAKEFED   = "/assets/fakefed-documents.json";
+  const URL_SNAPSHOT       = "/api/snapshot";
+  const URL_DOCUMENTS      = "/api/documents?limit=1000";
+  const URL_FAKEFED        = "/assets/fakefed-documents.json";
+  const URL_ACCOUNTABILITY = "/api/accountability";
+
+  const ACC_BUCKET_LABEL = {
+    cut_50:  "Cut 50 bps",
+    cut_25:  "Cut 25 bps",
+    hold:    "Hold",
+    hike_25: "Hike 25 bps",
+    hike_50: "Hike 50 bps",
+  };
+
+  let ACCOUNTABILITY = { kpi: {}, recent: [], all: [] };
 
   /* ===== explorer config (carried from v1) ===== */
   // Only these tables surface in the v2 explorer
@@ -114,16 +125,19 @@
 
   async function load() {
     try {
-      const [d, docs] = await Promise.all([
+      const [d, docs, acc] = await Promise.all([
         fetchJson(URL_SNAPSHOT, {}),
         fetchJson(URL_DOCUMENTS, []),
+        fetchJson(URL_ACCOUNTABILITY, { kpi: {}, recent: [], all: [] }),
       ]);
       DATA = d;
       stripTrailingEmptyRows(DATA);
       OFFICIAL_DOCS = normalizeDocumentsPayload(docs);
       DOCS = OFFICIAL_DOCS.slice();
+      ACCOUNTABILITY = acc || ACCOUNTABILITY;
     } catch (e) {
       DATA = {}; OFFICIAL_DOCS = []; DOCS = [];
+      ACCOUNTABILITY = { kpi: {}, recent: [], all: [] };
       console.error("data load failed", e);
     }
     TABLES = buildTableDefinitions(DATA);
@@ -151,6 +165,7 @@
     renderFeed();
     wireFeed();
     wireSourceSwitch();
+    renderAccountability(ACCOUNTABILITY);
   }
 
   async function fetchJson(url, fallbackValue) {
@@ -1435,6 +1450,100 @@
     const bank = String(d.central_bank || "").toLowerCase();
     if (url.includes("fakefed") || bank.includes("fakefed")) return "FakeFed";
     return d.central_bank || "FED";
+  }
+
+  // §05 Accountability — bind /api/accountability payload into the KPI tiles
+  // and the recent-predictions table. Falls back to em-dashes when the server
+  // has no signals yet so the page never renders the old hardcoded numbers.
+  function renderAccountability(payload) {
+    const kpi    = (payload && payload.kpi)    || {};
+    const recent = (payload && payload.recent) || [];
+    const all    = (payload && payload.all)    || [];
+
+    const setText = (id, text) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = text;
+    };
+    const setHTML = (id, html) => {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = html;
+    };
+
+    // KPI tiles
+    setHTML(
+      "acc-hit-rate",
+      kpi.hit_rate != null
+        ? `${Math.round(kpi.hit_rate * 100)}<span class="unit">%</span>`
+        : "—"
+    );
+    setHTML(
+      "acc-mae",
+      kpi.mae_bps != null
+        ? `${Math.round(kpi.mae_bps)}<span class="unit">bps</span>`
+        : "—"
+    );
+    setText(
+      "acc-brier",
+      kpi.brier_score != null ? kpi.brier_score.toFixed(2) : "—"
+    );
+    setHTML(
+      "acc-coverage",
+      kpi.coverage != null
+        ? `${Math.round(kpi.coverage * 100)}<span class="unit">%</span>`
+        : "—"
+    );
+
+    // KPI footers
+    const nScored = kpi.meetings_scored ?? 0;
+    const nTotal  = kpi.meetings_total  ?? 0;
+    setText("acc-hit-rate-n", nScored ? `n = ${nScored}` : "—");
+    setText("acc-brier-n",    nScored ? `n = ${nScored}` : "—");
+    setText(
+      "acc-coverage-foot",
+      nTotal ? `${nScored} / ${nTotal} meetings` : "—"
+    );
+
+    // Section description meeting count
+    setText("acc-meetings-total", nTotal ? String(nTotal) : "—");
+
+    // Recent-predictions table
+    const tbody = document.getElementById("acc-tbody");
+    if (!tbody) return;
+
+    if (!recent.length) {
+      tbody.innerHTML =
+        '<tr><td colspan="4" style="opacity:.6">No predictions available yet.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = recent
+      .map((m) => {
+        const date = m.release_date || "—";
+        const predLabel = ACC_BUCKET_LABEL[m.predicted_bucket] || m.predicted_bucket || "—";
+        const probHTML =
+          m.predicted_prob != null
+            ? ` <span class="acc-conf">· ${Math.round(m.predicted_prob * 100)}%</span>`
+            : "";
+
+        let actualHTML;
+        if (m.actual_bucket) {
+          actualHTML = ACC_BUCKET_LABEL[m.actual_bucket] || m.actual_bucket;
+        } else if (m.is_emergency) {
+          actualHTML = '<span style="opacity:.55">Intermeeting · skipped</span>';
+        } else if (m.skip_reason === "no_next_statement") {
+          actualHTML = '<span style="opacity:.55">Pending next meeting</span>';
+        } else {
+          actualHTML = '<span style="opacity:.55">—</span>';
+        }
+
+        let hitHTML;
+        if (m.hit === true)       hitHTML = '<span class="acc-pip ok">✓</span>';
+        else if (m.hit === false) hitHTML = '<span class="acc-pip bad">✗</span>';
+        else                      hitHTML = '<span style="opacity:.35">—</span>';
+
+        return `<tr><td>${date}</td><td>${predLabel}${probHTML}</td><td>${actualHTML}</td><td class="r">${hitHTML}</td></tr>`;
+      })
+      .join("");
   }
 
   load();
