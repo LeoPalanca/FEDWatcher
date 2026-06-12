@@ -118,7 +118,10 @@ class MonitorFakeFedTests(unittest.TestCase):
                 {
                     **rows[0],
                     "observation_month": "1994-02",
-                    "interpolated_fields": "proxy_month_from_previous_month:1994-01",
+                    "interpolated_fields": (
+                        "Data for this month were unavailable, "
+                        "computed values are taken from the previous one"
+                    ),
                 }
             ]
             self.assertEqual(written_rows, expected_rows)

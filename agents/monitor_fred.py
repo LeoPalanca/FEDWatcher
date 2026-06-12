@@ -224,7 +224,10 @@ def fill_latest_partial_and_add_next_month_proxy(
         proxy_row["observation_month"] = next_month
 
         existing_note = proxy_row.get("interpolated_fields")
-        proxy_note = f"proxy_month_from_previous_month:{latest_month}"
+        proxy_note = (
+            "Data for this month were unavailable, "
+            "computed values are taken from the previous one"
+        )
         proxy_row["interpolated_fields"] = (
             f"{existing_note}; {proxy_note}" if existing_note else proxy_note
         )
