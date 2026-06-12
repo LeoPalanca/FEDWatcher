@@ -65,7 +65,7 @@ FRED_API_KEY=your-fred-key
 
 ### Step 3 (optional) — Let the guided setup do it for you
 
-Instead of editing files by hand, you can run the guided installer. It writes `.env`, creates the database from `db/schema.sql`, configures the analyst's section weights, and can kick off the local Monitor → Analyst → Strategist loop and dashboard:
+Instead of editing files by hand, you can run the guided installer. It writes `.env`, creates the database from `db/schema.sql`, configures the analyst's section weights, and can kick off the full pipeline loop and dashboard:
 
 ```bash
 python run.py setup
@@ -79,7 +79,22 @@ This is the fastest path to a working install and is recommended for first-time 
 
 Once installed, here is the shortest path to seeing FedWatcher produce data.
 
-### Step 1 — Create the database
+### The one-command path
+
+If you ran `python run.py setup` (Step 3 above), the database and weights are already configured. Run one full pipeline cycle and start the dashboard:
+
+```bash
+python run.py pipeline --once
+python run.py dev
+```
+
+`pipeline --once` runs the complete chain — FRED macro download, Fed document ingestion, LLM tone scoring, and signal generation — in a single pass. The `dev` command starts the FastAPI backend and a local dashboard proxy on `http://127.0.0.1:8080`.
+
+### The step-by-step path
+
+If you prefer to run each agent individually:
+
+**Step 1 — Create the database**
 
 ```bash
 python scripts/init_db.py
@@ -87,15 +102,15 @@ python scripts/init_db.py
 
 This builds `fedwatcher.db` with all the tables defined in `db/schema.sql`. (If you ran `python run.py setup` above, this has already happened.)
 
-### Step 2 — Pull in macro data
+**Step 2 — Pull in macro data**
 
 ```bash
 python -m agents.monitor_fred
 ```
 
-`MonitorFredAgent` downloads the FRED series and fills the `macro_data` table.
+`MonitorFredAgent` downloads CPILFESL, UNRATE, DGS2, and FEDFUNDS from FRED and fills the `macro_data` table. The strategist needs this data to compute signals — without it, all documents will be skipped.
 
-### Step 3 — Ingest some Fed statements
+**Step 3 — Ingest some Fed statements**
 
 ```bash
 python -m agents.monitor_fed --mode recent
@@ -103,7 +118,7 @@ python -m agents.monitor_fed --mode recent
 
 This scrapes recent FOMC statements into the `documents` table. To load history instead, see the [command reference](#7-command-reference).
 
-### Step 4 — Score tone and generate signals
+**Step 4 — Score tone and generate signals**
 
 ```bash
 python agents/w_agent.py --db fedwatcher.db --limit 5
@@ -112,28 +127,52 @@ python agents/strategist.py --db fedwatcher.db
 
 The first command runs the weight-aware analyst (tone scoring); the second runs the strategist, which produces the rate-move nowcast in the `signals` table.
 
-### Step 5 — Start the backend and look at the results
+**Step 5 — Start the backend and look at the results**
 
 ```bash
-uvicorn app.main:app --reload
+python run.py dev
 ```
 
-The API is now live on `http://127.0.0.1:8000`. Try `http://127.0.0.1:8000/api/health` to confirm it is up, then explore the other [endpoints](#6-using-the-api).
-
-> **Shortcut.** Steps 2–4 can be run as a single cycle with `python run.py pipeline --once`, and `python run.py dev` starts the API together with a local dashboard proxy.
+The dashboard is now live on `http://127.0.0.1:8080`. The FastAPI backend runs on port 8000 behind the scenes, and the dashboard proxy forwards `/api/*` requests to it automatically. Try `http://127.0.0.1:8000/api/health` to confirm the API is up.
 
 ---
 
 ## 4. Running the pipeline day to day
 
-For ongoing use, you typically do not run each agent by hand — you let the pipeline cycle through them. The `run.py` launcher wraps the common workflows:
+For ongoing use, you typically do not run each agent by hand — you let the pipeline cycle through them. The `run.py` launcher wraps the common workflows.
+
+### Full pipeline
+
+The `pipeline` command runs the complete chain: **FRED → MonitorFed → Analyst → Strategist**.
 
 ```bash
-python run.py pipeline --once    # run one Monitor → Analyst → Strategist cycle
+python run.py pipeline --once    # run one cycle and exit
 python run.py pipeline           # repeat continuously (every 24h by default)
 ```
 
 To control the cadence of the continuous mode, pass `--refresh-hours`.
+
+### Including FakeFed synthetic statements
+
+To also ingest statements from the FakeFed test site during the pipeline, add `--include-fakefed`:
+
+```bash
+python run.py pipeline --once --include-fakefed
+```
+
+This inserts `MonitorFakeFedAgent` between the Fed monitor and the analyst, so synthetic statements get scored alongside real ones.
+
+### Rescoring signals from scratch
+
+If you need to regenerate all signals (for example after a schema change or strategist code update), use `--rescore`:
+
+```bash
+python run.py pipeline --once --rescore
+```
+
+This deletes all existing rows in the `signals` table before running the strategist, so every document gets a fresh signal.
+
+### Individual stages
 
 Need to run just one stage? These map to individual steps:
 
@@ -167,6 +206,12 @@ Point the FakeFed monitor at the test site to pull its statements into the same 
 python -m agents.monitor_fakefed
 ```
 
+Or include FakeFed in a full pipeline run:
+
+```bash
+python run.py pipeline --once --include-fakefed
+```
+
 From here the analyst and strategist treat the synthetic statements exactly like real ones, so you can validate the whole pipeline on predictable, controllable input.
 
 ### Publishing and removing test statements
@@ -184,7 +229,7 @@ Both are admin-only. They are guarded by the `FAKEFED_PUBLISH_PASSWORD` environm
 
 ## 6. Using the API
 
-With the backend running (`uvicorn app.main:app --reload`), the following endpoints are available. The read endpoints are open; the FakeFed write endpoints require the admin header described above.
+With the backend running (`python run.py dev` or `uvicorn app.main:app --reload`), the following endpoints are available. The read endpoints are open; the FakeFed write endpoints require the admin header described above.
 
 | Endpoint | What it returns |
 |---|---|
@@ -215,6 +260,7 @@ A consolidated list of the commands used throughout this guide.
 
 ```bash
 python run.py setup                 # guided install: .env, DB, weights, optional pipeline
+python run.py setup --non-interactive  # accept all defaults (no prompts)
 python scripts/init_db.py           # create fedwatcher.db from db/schema.sql
 ```
 
@@ -238,15 +284,18 @@ python agents/strategist.py --db fedwatcher.db          # generate rate-move now
 ### Pipeline launcher (`run.py`)
 
 ```bash
-python run.py dev                # FastAPI + local dashboard proxy on 127.0.0.1:8080
-python run.py pipeline --once    # one Monitor → Analyst → Strategist cycle
-python run.py pipeline           # repeat every 24h (configurable with --refresh-hours)
-python run.py analyze --limit 5  # run the analyst on unprocessed statements
-python run.py macro              # download/update FRED macro data
-python run.py weights            # show current analyst section weights
+python run.py pipeline --once                # one FRED -> Monitor -> Analyst -> Strategist cycle
+python run.py pipeline                       # repeat every 24h (configurable with --refresh-hours)
+python run.py pipeline --once --include-fakefed  # include FakeFed synthetic statements
+python run.py pipeline --once --rescore      # regenerate all signals from scratch
+python run.py dev                            # FastAPI + local dashboard proxy on 127.0.0.1:8080
+python run.py dev --reload                   # same, with uvicorn file-watch reload
+python run.py analyze --limit 5              # run the analyst on unprocessed statements
+python run.py macro                          # download/update FRED macro data
+python run.py weights                        # show current analyst section weights
 ```
 
-### Backend
+### Backend (standalone)
 
 ```bash
 uvicorn app.main:app --reload    # start the FastAPI backend on 127.0.0.1:8000

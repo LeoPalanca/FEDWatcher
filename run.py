@@ -416,15 +416,17 @@ def post_setup_actions(env_values: dict[str, str]) -> None:
         default=DEFAULT_LOOKBACK_DAYS,
         minimum=1,
     )
-    if prompt_choice("Download/update FRED macro data now?", ("y", "n"), "y") == "y":
-        run_macro_download(env_values=env_values)
-    if prompt_choice("Start 24h Monitor -> Analyst -> Strategist loop now?", ("y", "n"), "y") == "y":
+    include_fakefed = (
+        prompt_choice("Include FakeFed synthetic statements?", ("y", "n"), "n") == "y"
+    )
+    if prompt_choice("Start 24h pipeline loop now?", ("y", "n"), "y") == "y":
         start_dashboard = prompt_choice("Start the localhost dashboard now?", ("y", "n"), "y") == "y"
         if start_dashboard:
             start_pipeline_thread(
                 env_values=env_values,
                 analyst_limit=analyst_limit,
                 lookback_days=lookback_days,
+                include_fakefed=include_fakefed,
             )
             dev(argparse.Namespace(api_port=API_PORT, web_port=WEB_PORT, reload=False))
         else:
@@ -433,6 +435,7 @@ def post_setup_actions(env_values: dict[str, str]) -> None:
                 once=False,
                 analyst_limit=analyst_limit,
                 lookback_days=lookback_days,
+                include_fakefed=include_fakefed,
             )
         return
     if prompt_choice("Run LLM analysis on unprocessed statements now?", ("y", "n"), "n") == "y":
@@ -447,6 +450,7 @@ def start_pipeline_thread(
     env_values: dict[str, str],
     analyst_limit: int,
     lookback_days: int,
+    include_fakefed: bool = False,
 ) -> threading.Thread:
     def target() -> None:
         try:
@@ -455,13 +459,14 @@ def start_pipeline_thread(
                 once=False,
                 analyst_limit=analyst_limit,
                 lookback_days=lookback_days,
+                include_fakefed=include_fakefed,
             )
         except SystemExit as exc:
             warn(f"Pipeline stopped with exit code {exc.code}.")
 
     thread = threading.Thread(target=target, name="fedwatcher-pipeline", daemon=True)
     thread.start()
-    ok("24h Monitor -> Analyst -> Strategist loop started in the background.")
+    ok("24h FRED -> Monitor -> Analyst -> Strategist loop started in the background.")
     return thread
 
 
@@ -494,11 +499,21 @@ def run_pipeline_cycle(
     env_values: dict[str, str] | None = None,
     analyst_limit: int = 2,
     lookback_days: int = DEFAULT_LOOKBACK_DAYS,
+    include_fakefed: bool = False,
+    rescore: bool = False,
 ) -> None:
     env = env_values or load_env()
     init_db()
+    if not env.get("FRED_API_KEY"):
+        warn("FRED_API_KEY is empty. Skipping FRED macro refresh.")
+    else:
+        run_command_step(
+            "MonitorFredAgent: FRED macro data",
+            [sys.executable, "-m", "agents.monitor_fred", "--db", str(DB_PATH)],
+            env_values=env,
+        )
     run_command_step(
-        "MonitorAgent: Fed documents",
+        "MonitorFedAgent: Fed documents",
         [
             sys.executable,
             "-m",
@@ -512,6 +527,12 @@ def run_pipeline_cycle(
         ],
         env_values=env,
     )
+    if include_fakefed:
+        run_command_step(
+            "MonitorFakeFedAgent: synthetic statements",
+            [sys.executable, "-m", "agents.monitor_fakefed", "--db", str(DB_PATH)],
+            env_values=env,
+        )
     if not env.get("OPENROUTER_API_KEY"):
         warn("OPENROUTER_API_KEY is empty. Skipping AnalystAgent LLM step.")
     else:
@@ -527,6 +548,11 @@ def run_pipeline_cycle(
             ],
             env_values=env,
         )
+    if rescore:
+        info("Rescoring: clearing existing signals before regeneration.")
+        with sqlite3.connect(DB_PATH) as conn:
+            conn.execute("DELETE FROM signals")
+            conn.commit()
     run_command_step(
         "StrategistAgent: signal update",
         [sys.executable, "agents/strategist.py", "--db", str(DB_PATH)],
@@ -540,16 +566,24 @@ def run_pipeline_loop(
     analyst_limit: int = 2,
     lookback_days: int = DEFAULT_LOOKBACK_DAYS,
     refresh_seconds: int = REFRESH_SECONDS,
+    include_fakefed: bool = False,
+    rescore: bool = False,
 ) -> None:
     print()
     print(color("FedWatcher agent pipeline", BOLD))
-    print("Order: MonitorAgent -> AnalystAgent -> StrategistAgent")
+    steps = "FRED -> MonitorFed"
+    if include_fakefed:
+        steps += " -> FakeFed"
+    steps += " -> Analyst -> Strategist"
+    print(f"Order: {steps}")
     print(f"MonitorAgent lookback: {lookback_days} days")
     if once:
         run_pipeline_cycle(
             env_values=env_values,
             analyst_limit=analyst_limit,
             lookback_days=lookback_days,
+            include_fakefed=include_fakefed,
+            rescore=rescore,
         )
         return
     print(f"Refresh: every {refresh_seconds // 3600}h. Press Ctrl+C to stop.")
@@ -562,6 +596,8 @@ def run_pipeline_loop(
                 env_values=env_values,
                 analyst_limit=analyst_limit,
                 lookback_days=lookback_days,
+                include_fakefed=include_fakefed,
+                rescore=rescore,
             )
             print(color(f"Next cycle in {refresh_seconds // 3600}h.", MUTED))
             time.sleep(refresh_seconds)
@@ -703,7 +739,7 @@ def main() -> None:
     subparsers.add_parser("macro", help="Download/update FRED macro data.")
     pipeline_parser = subparsers.add_parser(
         "pipeline",
-        help="Run Monitor -> Analyst -> Strategist once or every 24h.",
+        help="Run FRED -> Monitor -> Analyst -> Strategist once or every 24h.",
     )
     pipeline_parser.add_argument("--once", action="store_true", help="Run one cycle and exit.")
     pipeline_parser.add_argument("--limit", type=int, default=2, help="Maximum statements for AnalystAgent per cycle.")
@@ -718,6 +754,16 @@ def main() -> None:
         type=float,
         default=24.0,
         help="Refresh interval for loop mode. Default: 24.",
+    )
+    pipeline_parser.add_argument(
+        "--include-fakefed",
+        action="store_true",
+        help="Also run MonitorFakeFedAgent to ingest synthetic FakeFed statements.",
+    )
+    pipeline_parser.add_argument(
+        "--rescore",
+        action="store_true",
+        help="Delete existing signals and regenerate them from scratch.",
     )
     subparsers.add_parser("weights", help="Show current analyst section weights.")
 
@@ -744,6 +790,8 @@ def main() -> None:
             analyst_limit=args.limit,
             lookback_days=args.lookback_days,
             refresh_seconds=int(args.refresh_hours * 3600),
+            include_fakefed=args.include_fakefed,
+            rescore=args.rescore,
         )
     elif args.command == "weights":
         header()
