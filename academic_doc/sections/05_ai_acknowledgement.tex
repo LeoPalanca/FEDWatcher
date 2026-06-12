@@ -6,6 +6,8 @@ In accordance with the course brief, we acknowledge that generative AI was used 
 \begin{description}[leftmargin=1.4em,style=nextline,itemsep=1pt]
   \item[Anthropic Claude (Claude Code, Opus 4.6, 4.7, 4.8)] Used as the primary pair-programming agent: code edits, refactors, AGENTS.md drafting, the May~27 server consolidation (database merge, systemd repointing, archive download), and the draft of this very document. Invoked through the Claude Code CLI, not the chat UI, so that the full conversation, tool calls and diffs are reviewable.
   \item[OpenAI GPT-OSS-120B and DeepSeek-v4 Flash (via OpenRouter)] These two open-weight models were used together as the reasoning LLMs in the dual-model AnalystAgent, and DeepSeek additionally powers the LLM call that generates the natural-language narrative for the frontend. Access goes through OpenRouter so that the API key is provider-agnostic.
+  \item[OpenAI Codex and GPT-5.5] Used for assistance with boilerplate code generation, scripting, and general brainstorming of modeling choices.
+  \item[Google Antigravity (Gemini 3.5 Flash)] Used as an agentic coding assistant for repository maintenance, documentation compilation, and implementing specific script integrations.
   \item[GitHub Copilot] Used opportunistically in-editor for line-level completions, mostly in \texttt{explorer.js} and the FRED ingestion scripts.
 \end{description}
 

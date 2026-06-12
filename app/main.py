@@ -46,8 +46,8 @@ class FakeFedStatementRequest(BaseModel):
     @field_validator("release_date")
     @classmethod
     def validate_release_date(cls, v: date) -> date:
-        if v > date(2025, 5, 31):
-            raise ValueError("Release date cannot be after May 31, 2025.")
+        if v > date(2026, 5, 31):
+            raise ValueError("Release date cannot be after May 31, 2026.")
         return v
 
 
@@ -518,6 +518,17 @@ def delete_fakefed_statement(
                 except Exception:
                     pass
             conn.execute("DELETE FROM documents WHERE id = ?", (doc_id,))
+            try:
+                conn.execute("DELETE FROM signals")
+            except Exception:
+                pass
+
+    # Regenerate signals for all remaining documents sequentially to keep EWMA consistent
+    try:
+        from agents.strategist import process_unprocessed_documents
+        process_unprocessed_documents(db_path=database_path())
+    except Exception as e:
+        print(f"Warning: could not regenerate signals after deletion: {e}")
 
     return {
         "status": "deleted",

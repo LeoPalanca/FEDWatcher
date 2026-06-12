@@ -184,6 +184,101 @@ class TestApi(unittest.TestCase):
 
         self.assertEqual(response.status_code, 400)
 
+    def test_delete_fakefed_statement_regenerates_signals(self):
+        with sqlite3.connect(self.db_path) as conn:
+            conn.executescript(
+                """
+                DROP TABLE IF EXISTS macro_data;
+                CREATE TABLE macro_data (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    observation_month TEXT UNIQUE NOT NULL,
+                    core_cpi_yoy REAL,
+                    unemployment_rate REAL,
+                    us2y_yield REAL,
+                    policy_rate REAL
+                );
+                CREATE TABLE IF NOT EXISTS sentiment_w (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    document_id INTEGER,
+                    tone_score REAL,
+                    FOREIGN KEY (document_id) REFERENCES documents(id)
+                );
+                CREATE TABLE IF NOT EXISTS signals (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    document_id INTEGER,
+                    smoothed_tone REAL,
+                    tone_implied_next_rate REAL,
+                    market_implied_next_rate REAL,
+                    divergence REAL,
+                    signal_direction TEXT,
+                    market_verdict TEXT,
+                    narrative TEXT,
+                    prob_cut_50 REAL,
+                    prob_cut_25 REAL,
+                    prob_hold REAL,
+                    prob_hike_25 REAL,
+                    prob_hike_50 REAL,
+                    FOREIGN KEY (document_id) REFERENCES documents(id)
+                );
+                INSERT INTO macro_data (observation_month, core_cpi_yoy, unemployment_rate, us2y_yield, policy_rate)
+                VALUES ('2025-05', 2.5, 4.0, 4.5, 5.0);
+                INSERT INTO documents (id, central_bank, doc_type, release_date, url, raw_text, processed)
+                VALUES 
+                  (10, 'FED', 'statement', '2025-05-10', 'https://fakefed.ellep.it/newsevents/pressreleases/monetary20250510a.htm', 'doc A', 0),
+                  (11, 'FED', 'statement', '2025-05-20', 'https://fakefed.ellep.it/newsevents/pressreleases/monetary20250520a.htm', 'doc B', 0);
+                INSERT INTO sentiment_w (document_id, tone_score)
+                VALUES 
+                  (10, 0.5),
+                  (11, -0.2);
+                """
+            )
+
+        from agents.strategist import process_unprocessed_documents
+        process_unprocessed_documents(db_path=self.db_path)
+
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute("SELECT * FROM signals ORDER BY document_id").fetchall()
+            self.assertEqual(len(rows), 2)
+            self.assertEqual(rows[0]["document_id"], 10)
+            self.assertEqual(rows[1]["document_id"], 11)
+
+        # Setup mock fakefed root
+        fakefed_root = Path(self.tmp_dir.name) / "fakefed"
+        shutil.copytree("fakefed", fakefed_root)
+        os.environ["FAKEFED_ROOT"] = str(fakefed_root)
+
+        doc_a_file = fakefed_root / "newsevents" / "pressreleases" / "monetary20250510a.htm"
+        doc_a_file.parent.mkdir(parents=True, exist_ok=True)
+        doc_a_file.touch()
+
+        # Delete Doc A (monetary20250510a.htm) via API
+        response = self.client.delete(
+            "/api/fakefed/statements/monetary20250510a.htm",
+            headers={"X-FakeFed-Password": "test-password"},
+        )
+        self.assertEqual(response.status_code, 200)
+
+        # Verify that Doc A is removed, and signals are recalculated
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            
+            # Check Doc A is deleted
+            doc_row = conn.execute("SELECT * FROM documents WHERE id = 10").fetchone()
+            self.assertIsNone(doc_row)
+            
+            # Check sentiment_w for Doc A is deleted
+            sent_row = conn.execute("SELECT * FROM sentiment_w WHERE document_id = 10").fetchone()
+            self.assertIsNone(sent_row)
+            
+            # Check signals has been regenerated and contains only Doc B (id=11)
+            signal_rows = conn.execute("SELECT * FROM signals ORDER BY document_id").fetchall()
+            self.assertEqual(len(signal_rows), 1)
+            self.assertEqual(signal_rows[0]["document_id"], 11)
+            
+            # Since Doc B is now the first document, its smoothed tone must be exactly its raw tone (-0.2)
+            self.assertAlmostEqual(signal_rows[0]["smoothed_tone"], -0.2)
+
 
 if __name__ == "__main__":
     unittest.main()
