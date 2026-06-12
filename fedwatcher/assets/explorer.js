@@ -1275,8 +1275,22 @@
       body.innerHTML = `<tr><td class="empty" colspan="${displayCols.length}">No rows ${filter ? "match filter" : "yet"}.</td></tr>`;
       return;
     }
+    let anyInterpolated = false;
     for (const r of rows) {
       const tr = document.createElement("tr");
+      // macro_data carries an interpolated_fields column. Non-empty means at
+      // least one numeric value in this row was filled from the average of
+      // adjacent months (sources/fred.py). Flag the row so the soft-amber
+      // .has-interpolated style fires.
+      const interpRaw = String(r.interpolated_fields ?? "").trim();
+      if (interpRaw) {
+        tr.classList.add("has-interpolated");
+        const interpCols = new Set(
+          interpRaw.split(",").map((s) => s.trim()).filter(Boolean)
+        );
+        tr.dataset.interpolatedFields = [...interpCols].join(",");
+        anyInterpolated = true;
+      }
       for (const c of displayCols) {
         const td = document.createElement("td");
         const v = r[c];
@@ -1288,6 +1302,10 @@
       tr.addEventListener("click", () => openModal(def, tbl, r));
       body.appendChild(tr);
     }
+    // Toggle the legend below the table only when the displayed rows actually
+    // contain interpolated values, so the caption never appears spuriously.
+    const legendEl = document.getElementById("table-legend");
+    if (legendEl) legendEl.hidden = !anyInterpolated;
   }
   function setRowCount(n) {
     const t = $("row-count-text"); if (t) t.textContent = String(n);

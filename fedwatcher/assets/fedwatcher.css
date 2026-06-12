@@ -757,6 +757,33 @@ section.ds {
 .data-table tbody tr:hover { background: var(--c-paper-2); }
 .data-table tbody tr.has-interpolated { background: color-mix(in oklab, var(--c-warn-soft), transparent 42%); }
 .data-table tbody tr.has-interpolated:hover { background: color-mix(in oklab, var(--c-warn-soft), transparent 22%); }
+
+/* §03 Data — caption under the macro_data table explaining the amber row
+   highlight. Hidden by default; renderTable() unhides it once rows with a
+   non-empty interpolated_fields column are present. */
+.table-legend {
+  align-items: center;
+  border-top: 1px solid var(--c-line);
+  color: var(--c-ink-3);
+  display: flex;
+  font-family: var(--f-sans);
+  font-size: 12px;
+  gap: var(--s-2);
+  line-height: 1.5;
+  padding: var(--s-3) var(--s-4);
+}
+.table-legend[hidden] { display: none; }
+.legend-swatch {
+  border-radius: 3px;
+  display: inline-block;
+  flex-shrink: 0;
+  height: 12px;
+  width: 18px;
+}
+.legend-swatch-interpolated {
+  background: color-mix(in oklab, var(--c-warn-soft), transparent 22%);
+  border: 1px solid color-mix(in oklab, var(--c-warn), transparent 60%);
+}
 .data-table tbody tr:last-child td { border-bottom: 0; }
 .data-table .num { font-family: var(--f-mono); font-feature-settings: var(--tnum); text-align: right; }
 .data-table th.num, .data-table td.num { text-align: right; }
