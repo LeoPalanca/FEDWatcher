@@ -143,6 +143,8 @@ def is_same_domain(url: str) -> bool:
 def is_statement_link(href: str, label: str) -> bool:
     href_l = href.lower()
     label_l = label.lower()
+    if "fomccalendars.htm" in href_l:
+        return False
     return (
         "pressreleases/monetary" in href_l
         or "fomc" in href_l
@@ -218,9 +220,23 @@ def extract_release_date(
 
 
 def extract_main_statement_text(soup: BeautifulSoup) -> str:
-    for tag in soup(["script", "style", "nav", "footer", "header"]):
+    article = soup.find("article")
+    if not article:
+        for tag in soup(["script", "style", "nav", "footer", "header", "noscript"]):
+            tag.decompose()
+        return clean_text(soup.get_text(" "))
+
+    for tag in article(["script", "style", "nav", "footer", "header", "noscript"]):
         tag.decompose()
-    return clean_text(soup.get_text(" "))
+
+    for tag in article(["h1"]):
+        tag.decompose()
+    for meta in article.find_all(class_="press-meta"):
+        meta.decompose()
+    for tools in article.find_all(class_="release-tools"):
+        tools.decompose()
+
+    return clean_text(article.get_text(" "))
 
 
 def scrape_statement_page(url: str) -> FakeFedStatement | None:

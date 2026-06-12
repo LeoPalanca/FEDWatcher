@@ -120,6 +120,13 @@ class TestApi(unittest.TestCase):
         shutil.copytree("fakefed", fakefed_root)
         os.environ["FAKEFED_ROOT"] = str(fakefed_root)
 
+        fallback_file = fakefed_root / "newsevents" / "pressreleases" / "monetary20260519a.htm"
+        fallback_file.parent.mkdir(parents=True, exist_ok=True)
+        fallback_file.touch()
+
+        test_file = fakefed_root / "newsevents" / "pressreleases" / "monetary20260604a.htm"
+        test_file.touch()
+
         response = self.client.delete(
             "/api/fakefed/statements/monetary20260604a.htm",
             headers={"X-FakeFed-Password": "test-password"},

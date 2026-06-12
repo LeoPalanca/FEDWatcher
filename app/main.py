@@ -241,19 +241,20 @@ def upsert_calendar_statement(root: Path, payload: FakeFedStatementRequest, href
     calendar_path = root / "monetarypolicy" / "fomccalendars.htm"
     calendar_html = calendar_path.read_text(encoding="utf-8")
     row = calendar_synthetic_row(payload, href)
-    row_pattern = (
-        r'            <tr(?: data-statement-href="[^"]+")?>\n'
+    escaped_href = re.escape(href)
+    specific_pattern = (
+        r'            <tr data-statement-href="' + escaped_href + r'">\n'
         r'              <td class="month">[^<]+</td>\n'
         r'              <td class="date">\d+</td>\n'
         r'              <td class="doc-links">\n'
-        r'                Synthetic test statement: <a href="/newsevents/pressreleases/monetary\d{8}a\.htm">HTML</a>.*?\n'
+        r'                Synthetic test statement: <a href="' + escaped_href + r'">HTML</a>.*?\n'
         r'                Educational FakeFed upload for scraper and dashboard testing\.\n'
         r'              </td>\n'
         r'            </tr>'
     )
 
-    if re.search(row_pattern, calendar_html, flags=re.DOTALL):
-        calendar_html = re.sub(row_pattern, row, calendar_html, count=1, flags=re.DOTALL)
+    if re.search(specific_pattern, calendar_html, flags=re.DOTALL):
+        calendar_html = re.sub(specific_pattern, row, calendar_html, count=1, flags=re.DOTALL)
     else:
         calendar_html = calendar_html.replace(
             "            <tr>\n              <td class=\"month\">June</td>\n              <td class=\"date\">16-17*</td>",

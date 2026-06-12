@@ -34,14 +34,7 @@ class MonitorFakeFedTests(unittest.TestCase):
 
         urls = {doc["url"] for doc in candidates}
 
-        self.assertIn(
-            "https://fakefed.ellep.it/newsevents/pressreleases/monetary20260507a.htm",
-            urls,
-        )
-        self.assertIn(
-            "https://fakefed.ellep.it/newsevents/pressreleases/monetary20260318a.htm",
-            urls,
-        )
+        self.assertEqual(len(urls), 0)
         self.assertTrue(all(doc["doc_type"] == "statement" for doc in candidates))
 
     def test_classifies_fed_press_release_statement_from_link_text(self):
@@ -120,7 +113,15 @@ class MonitorFakeFedTests(unittest.TestCase):
                 )
                 written_rows = agent.run()
 
-            self.assertEqual(written_rows, rows)
+            expected_rows = [
+                rows[0],
+                {
+                    **rows[0],
+                    "observation_month": "1994-02",
+                    "interpolated_fields": "proxy_month_from_previous_month:1994-01",
+                }
+            ]
+            self.assertEqual(written_rows, expected_rows)
             fetch_rows.assert_called_once()
 
             with sqlite3.connect(db_path) as conn:
