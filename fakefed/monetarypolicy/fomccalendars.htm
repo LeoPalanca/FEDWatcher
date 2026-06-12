@@ -135,7 +135,17 @@
             if (response.status === 401 || response.status === 403) {
               localStorage.removeItem(passwordKey);
             }
-            throw new Error(payload.detail || "Remove failed.");
+            var detailMsg = payload.detail;
+            if (detailMsg && typeof detailMsg === "object") {
+              if (Array.isArray(detailMsg)) {
+                detailMsg = detailMsg.map(function (err) {
+                  return (err.loc ? err.loc.join(".") + ": " : "") + err.msg;
+                }).join("; ");
+              } else {
+                detailMsg = JSON.stringify(detailMsg);
+              }
+            }
+            throw new Error(detailMsg || "Remove failed.");
           }
           var row = button.closest("tr");
           if (row) row.remove();

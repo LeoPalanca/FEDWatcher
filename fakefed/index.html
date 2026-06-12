@@ -223,7 +223,17 @@ The Committee expects that further large increases in the target range will like
             if (response.status === 401 || response.status === 403) {
               localStorage.removeItem(passwordKey);
             }
-            throw new Error(payload.detail || "Publish failed.");
+            var detailMsg = payload.detail;
+            if (detailMsg && typeof detailMsg === "object") {
+              if (Array.isArray(detailMsg)) {
+                detailMsg = detailMsg.map(function (err) {
+                  return (err.loc ? err.loc.join(".") + ": " : "") + err.msg;
+                }).join("; ");
+              } else {
+                detailMsg = JSON.stringify(detailMsg);
+              }
+            }
+            throw new Error(detailMsg || "Publish failed.");
           }
 
           latestStatementLinks().forEach(function (link) {
