@@ -941,7 +941,7 @@ section.ds {
 }
 
 /* Document modal — bigger panel for prose */
-.modal-panel.modal-doc { max-width: 820px; max-height: 86vh; }
+.modal-panel.modal-doc { max-width: 820px; max-height: calc(100vh - 128px); }
 .doc-actions {
   align-items: center;
   display: flex;
@@ -1022,11 +1022,16 @@ footer.page-foot {
 
 /* === MODAL === */
 .modal {
-  align-items: center;
+  /* Pin to the top with an 88 px safe zone so the panel always sits below the
+     sticky topbar (height ≈ 64 px + breathing room). Replaces the previous
+     align-items: center + z-index: 100 setup, which let any modal whose
+     height approached 90vh tuck behind the topbar (z-index 1000) and crop
+     the title row. */
+  align-items: flex-start;
   display: flex;
   inset: 0;
   justify-content: center;
-  padding: var(--s-5);
+  padding: 88px var(--s-5) var(--s-5);
   position: fixed;
   z-index: 100;
 }
@@ -1045,7 +1050,8 @@ footer.page-foot {
   box-shadow: var(--sh-4);
   display: flex;
   flex-direction: column;
-  max-height: min(720px, 90vh);
+  /* 128 px = 88 px top safe zone + ~40 px bottom breathing room. */
+  max-height: min(720px, calc(100vh - 128px));
   max-width: 680px;
   overflow: hidden;
   position: relative;
