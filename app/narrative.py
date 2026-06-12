@@ -109,8 +109,8 @@ How to write the copy
   what the modal outcome is, and how that compares to what the market is
   pricing.
 - The breakdown headline + paragraphs explain the *shape* of the next-move
-  distribution: where mass concentrates, how skewed it is, what would have
-  to change to flip the modal outcome.
+  distribution: where mass concentrates, how skewed it is, explain the predicted 
+  move in terms of forward guidance, inflation and labor market outcomes.
 
 Style rules
 -----------

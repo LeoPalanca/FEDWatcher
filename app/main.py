@@ -498,6 +498,20 @@ def delete_fakefed_statement(
     if not file_existed and not calendar_removed:
         raise HTTPException(status_code=404, detail="FakeFed statement not found.")
 
+    url = f"https://fakefed.ellep.it{href}"
+    with connect() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT id FROM documents WHERE url = ?", (url,))
+        doc_row = cursor.fetchone()
+        if doc_row:
+            doc_id = doc_row[0]
+            for table in ["sentiment", "sentiment2", "sentiment3", "sentiment_w", "signals"]:
+                try:
+                    conn.execute(f"DELETE FROM {table} WHERE document_id = ?", (doc_id,))
+                except Exception:
+                    pass
+            conn.execute("DELETE FROM documents WHERE id = ?", (doc_id,))
+
     return {
         "status": "deleted",
         "filename": safe_filename,

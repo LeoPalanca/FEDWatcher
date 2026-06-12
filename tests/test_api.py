@@ -127,6 +127,16 @@ class TestApi(unittest.TestCase):
         test_file = fakefed_root / "newsevents" / "pressreleases" / "monetary20260604a.htm"
         test_file.touch()
 
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute(
+                """
+                INSERT INTO documents (central_bank, doc_type, release_date, url, raw_text, processed)
+                VALUES ('FED', 'statement', '2026-06-04', 
+                        'https://fakefed.ellep.it/newsevents/pressreleases/monetary20260604a.htm', 
+                        'policy text', 0)
+                """
+            )
+
         response = self.client.delete(
             "/api/fakefed/statements/monetary20260604a.htm",
             headers={"X-FakeFed-Password": "test-password"},
@@ -142,6 +152,11 @@ class TestApi(unittest.TestCase):
                 / "monetary20260604a.htm"
             ).exists()
         )
+
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT 1 FROM documents WHERE url LIKE '%monetary20260604a%'")
+            self.assertIsNone(cursor.fetchone())
 
         calendar_html = (
             fakefed_root / "monetarypolicy" / "fomccalendars.htm"
