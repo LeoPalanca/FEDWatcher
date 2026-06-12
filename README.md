@@ -6,7 +6,8 @@ Agentic sentiment analysis and monetary policy nowcasting for Federal Reserve do
 > USI Universita della Svizzera italiana  
 > Repository: https://github.com/LeoPalanca/FEDWatcher
 
-Project workflow: [AGENTS.md](AGENTS.md)
+Project workflow: [AGENTS.md](AGENTS.md)  
+User guide (install · usage · API): [USER_GUIDE.md](USER_GUIDE.md)
 
 ## Project Overview
 
@@ -19,587 +20,355 @@ The project answers:
 > Can LLM-extracted Fed communication tone, combined with CPI and unemployment data, help
 > estimate the likely direction and size of the next FOMC policy-rate move?
 
-The implementation target is intentionally lean:
+The implementation is intentionally lean:
 
-- Federal Reserve documents first, ECB later only as a stretch goal.
-- Three runtime agents: `MonitorAgent`, `AnalystAgent`, `StrategistAgent`.
-- FastAPI backend for dashboard/API access.
+- Federal Reserve FOMC statements only; ECB as a stretch goal only.
+- Runtime agents: `MonitorFedAgent`, `MonitorFakeFedAgent`, `MonitorFredAgent`, weight-aware
+  `AnalystAgent`, `StrategistAgent`.
+- FastAPI backend for dashboard/API access, including accountability and AI-generated
+  narrative endpoints.
 - SQLite database for reproducible local development.
-- FRED macro data, especially `CPILFESL` and `UNRATE`.
-- Ordered or multinomial model over rate-move buckets.
+- FRED macro data: `CPILFESL`, `UNRATE`, `DGS2`, and `FEDFUNDS`.
+- Ordered probit model over rate-move buckets, with a live accountability/backtest endpoint.
 
 ## Current Status
 
-This repository is still in active development.
+### Implemented
 
-Implemented:
-
-- Initial SQL schema and database scripts.
+- SQL schema in `db/schema.sql` (single source of truth) and `scripts/init_db.py` to create
+  `fedwatcher.db` from it.
+- `run.py`: local setup/launcher CLI (`setup`, `dev`, `analyze`, `macro`, `pipeline`,
+  `weights`). Writes `.env`, initializes the database, configures `AnalystAgent` section
+  weights, and can run the Monitor → Analyst → Strategist loop plus a local dashboard proxy.
 - Agent/contributor workflow in `AGENTS.md`.
-- SQLite-native `MonitorAgent` in `agents/monitor.py` for source-aware live document
-  fetching from the official Fed site or FakeFed.
-- Static FakeFed fixture site in `fakefed/` for end-to-end fake statement tests.
-- Static FedWatcher brief homepage/dashboard in `fedwatcher/` for the first
-  `fedwatcher.ellep.it` deployment. It includes a full SQLite explorer backed by the
-  FastAPI API.
-- Read-only FastAPI backend in `app/` exposing SQLite tables, documents, and a dashboard
-  snapshot through `/api/tables`, `/api/tables/{table}`, `/api/documents`, and
-  `/api/snapshot`.
-- Historical official Fed document backfill in `scripts/inital_data_download.py` using
-  FedTools.
-- Direct Federal Reserve historical-page backfill in
-  `agents/monitor-fed-historical-pages.py` for ranges FedTools misses, including
-  the 2015-2020 statements.
-- FRED monthly macro/rate ingestion in `sources/fred.py` and `scripts/backfill_fred.py`:
-  stores `CPILFESL`, `UNRATE`, and monthly-average `DGS2` in `macro_data`.
-- `AnalystAgent` in `agents/analyst.py`:
-  - document segmentation: splits FOMC statements into weighted sections (`forward_guidance`, `inflation`, `labor_market`, `general`) for downstream tone scoring.
-  - LLM tone scoring calls the OpenRouter API (`OPENROUTER_API_KEY`) with the segmented sections and extracts a numeric `tone_score` in `[-1.0, +1.0]` (dovish → hawkish), plus `overall_tone`, `inflation_assessment`, `labor_market_assessment`, `forward_guidance`, `key_phrases`, and `confidence`.
-  - Returns a typed `ToneResult` with a `to_db_row()` helper ready for the `sentiment` table.
-- `Dual-model AnalystAgent` in `agents/dual_model_analyst.py` *(testing)*: calls two OpenRouter models and averages their results; writes to `sentiment2`.
-- `DeepSeek AnalystAgent` in `agents/analyst_ds.py` *(testing)*: single-model pipeline using `deepseek/deepseek-v4-flash`; writes to `sentiment3` using `documents.processed3`.
-- `StrategistAgent` in `agents/strategist.py`:
-  - EWMA time-aware tone smoothing (`S_t = α_t·tone_t + (1−α_t)·S_{t−1}`,
-    `α_t = 1 − exp(−ln(2)/21 · Δt)`), where Δt is the calendar-day gap between FOMC releases.
-  - Ordered-probit nowcast over rate-move buckets `{-50, -25, 0, +25, +50}` bps,
-    with latent index `η = β_S·S + β_π·(CPI_yoy − 2) + β_u·(U − U_baseline)`.
-    Default `β` and cut points are sign-coherent placeholders pending calibration on historical FOMC outcomes.
-  - Tone-implied next-meeting rate `current_rate + Σ_k P(Y=j_k)·j_k / 100`.
-  - Divergence signal vs the market proxy (`DGS2`), with `aligned` / `hawkish` / `dovish` classification.
-  - Returns a typed `PolicySignal` with a `to_db_row()` helper ready for the `signals` table.
+- `MonitorFedAgent` in `agents/monitor_fed.py`: single entrypoint with three modes
+  (`--mode recent|calendar|historical`):
+  - `recent` (cron default): FedTools 90-day lookback for FOMC statements.
+  - `calendar`: live scrape of the official FOMC calendar page.
+  - `historical`: FedTools full-history backfill plus `fomchistorical{year}.htm` scraping
+    for 1994–2014.
+  Classifies, deduplicates (HTML over PDF), and stores FOMC statements only — minutes,
+  press conferences, and implementation notes are filtered out. Runs via
+  `scripts/run_fed_documents_update.sh` every 5 minutes on the server.
+- `MonitorFakeFedAgent` in `agents/monitor_fakefed.py`: scrapes the FakeFed FOMC calendar
+  (`https://fakefed.ellep.it`) and ingests synthetic statements released after 2026-05-21
+  into the same `documents` table, for scraper/analyst testing without touching the live
+  Fed site.
+- `MonitorFredAgent` in `agents/monitor_fred.py`: fetches `CPILFESL`, `UNRATE`,
+  monthly-average `DGS2`, and `FEDFUNDS`, aligns them into monthly rows, fills isolated
+  one-month gaps by averaging adjacent months, and creates one forward proxy month after
+  the latest real observation. Upserts into `macro_data`; proxy values are overwritten once
+  real FRED data arrives.
+- **Weight-aware `AnalystAgent`** in `agents/w_agent.py` (production pipeline):
+  - Loads per-`doc_type` section weights dynamically from the `weights` table.
+  - Segments FOMC statements into weighted sections (`forward_guidance`, `inflation`,
+    `labor_market`, `general`).
+  - Calls DeepSeek via OpenRouter (`OPENROUTER_API_KEY`) for per-section tone scores in
+    `[-1.0, +1.0]`.
+  - Computes `tone_score` as a weighted average in Python — weights can be updated in the
+    DB without re-running the LLM.
+  - Writes to `sentiment_w` and marks `documents.processed_w = 1`.
+  - Runs automatically via cron every 5 minutes with `flock` to prevent overlapping runs.
+    Logs to `logs/w_agent.log`.
+- `StrategistAgent` in `agents/strategist.py`: EWMA tone smoothing + ordered-probit nowcast
+  over `{-50, -25, 0, +25, +50}` bps buckets. Computes the tone-implied next rate and the
+  divergence vs the FEDFUNDS-based market proxy, and replays the full EWMA chain to write
+  one row per new document into the `signals` table. Runs via `scripts/run_strategist.sh`
+  every 5 minutes with `flock`. Logs to `logs/strategist.log`.
+- FastAPI backend in `app/`:
+  - `app/main.py`: `/api/health`, `/api/tables`, `/api/tables/{table}`, `/api/documents`,
+    and `/api/snapshot`, plus admin-protected `POST`/`DELETE /api/fakefed/statements` for
+    publishing or removing synthetic FakeFed statements (guarded by
+    `FAKEFED_PUBLISH_PASSWORD`).
+  - `app/accountability.py`: `/api/accountability` — track-record metrics (hit rate, MAE
+    in bps, Brier score) comparing `StrategistAgent` signals against realized FOMC outcomes
+    inferred from FEDFUNDS, excluding intermeeting/emergency moves.
+  - `app/narrative.py`: `/api/narrative` — AI-generated hero and §02 Breakdown copy
+    (DeepSeek via OpenRouter) layered over deterministically computed fields, cached per
+    latest `signals` row id, with a deterministic fallback when no API key or signal is
+    available.
+- Static FakeFed fixture site in `fakefed/` (4 synthetic statements published so far:
+  March, May ×2, and June 2026) for end-to-end scraper tests without hitting the live Fed
+  website.
+- Static homepage/dashboard in `fedwatcher/` deployed at `fedwatcher.ellep.it`, backed
+  entirely by the FastAPI API (no stale JSON snapshots).
+- Automated test suite in `tests/`: `test_api.py`, `test_fred_source.py`,
+  `test_monitor_fakefed.py`.
+- Deployment tooling: `scripts/deploy.sh` (frontend/backend/FakeFed sync over SSH or
+  `--local`), `scripts/setup_deploy_user.sh` (one-time VPS deploy-user provisioning),
+  `deploy/fedwatcher-api.service` (systemd unit), `deploy/nginx/`.
+- Academic documentation source in `academic_doc/` (LaTeX project plan, diary, methods,
+  results, lessons, AI acknowledgement; `make` builds `main.pdf`).
 
-Planned next:
+### Legacy / Testing Variants
 
-- Add FRED ingestion for policy-rate target series such as `DFEDTARU`, `DFEDTARL`,
-  and `DFF`.
-- Calibrate `StrategistAgent` β coefficients and cut points on historical FOMC rate-move outcomes.
-- Build the dashboard against the FastAPI API, including an admin-protected FakeFed fetch
-  action that appends synthetic documents to the same document feed.
-- Add backtesting and academic documentation.
+These agents were used during development and testing. The production pipeline uses
+`w_agent.py`.
+
+- `agents/analyst.py` — single-model analyst, writes to `sentiment`. Cron wrapper:
+  `scripts/run_analyst.sh`.
+- `agents/dual_model_analyst.py` — two-model average, writes to `sentiment2`.
+- `agents/analyst_ds.py` — DeepSeek-only single model, writes to `sentiment3`.
+
+### Planned Next
+
+- Calibrate `StrategistAgent` β coefficients and cut points on historical FOMC outcomes —
+  `/api/accountability` now provides the hit-rate/MAE/Brier baseline to calibrate against.
+- Fill in the `%% TODO` markers in `academic_doc/sections/03_results.tex` with backtest
+  results and the divergence case study.
+- Resolve the empty `dashboard/` placeholder directory (remove it or define its purpose).
+- ECB support remains a stretch goal only.
 
 ## Architecture
 
-FedWatcher keeps FastAPI because it was covered in class, gives the web app a clean backend
-interface, and can satisfy an additional project criterion if we add authentication or rate
-limits.
-
-The simplification is not "no API". The simplification is:
-
-- keep FastAPI as the backend boundary;
-- keep three real runtime agents;
-- remove the separate `PublisherAgent`;
-- avoid PostgreSQL, Docker, OIS curves, and ECB support until the Fed MVP works;
-- make the finance model and data sources reproducible.
-
 ```text
-Fed website -> MonitorAgent -> documents table
-                              |
-                              v
-                         AnalystAgent
-                              |
-                              v
-FRED API -> macro_data/market_data -> StrategistAgent -> signals table
-                              |
-                              v
-                         FastAPI backend
-                              |
-                              v
-                           Dashboard
+Fed website  ──► MonitorFedAgent     ──┐
+FakeFed site ──► MonitorFakeFedAgent ──┤──► documents table
+                                        │
+                                        ▼
+                                w_agent (AnalystAgent)
+                                weights table ─────────────┘
+                                        │
+                                        ▼
+                                sentiment_w table
+                                        │
+FRED API ──► MonitorFredAgent ──► macro_data ──────────────┐
+                                        │                   │
+                                        ▼                   │
+                                StrategistAgent ◄───────────┘
+                                        │
+                                        ▼
+                                  signals table
+                                        │
+                                        ▼
+                  FastAPI backend (main · accountability · narrative)
+                                        │
+                                        ▼
+                                    Dashboard
 ```
 
-FastAPI is not the agent orchestrator. The current API is read-only and exposes stored data
-and model results. Controlled pipeline actions can be added later behind authentication. The
-pipeline itself remains a plain Python workflow that is easy to test.
+FastAPI is not the agent orchestrator. It is mostly a read-only boundary that exposes
+stored data to the dashboard (plus the FakeFed admin write/delete endpoints). The pipeline
+itself is a plain Python/cron workflow.
 
 ## Runtime Agents
 
-### MonitorAgent
+### MonitorFedAgent (`agents/monitor_fed.py`)
 
-Finds new Fed documents and stores their metadata/raw text.
+- Single entrypoint with `--mode recent|calendar|historical`.
+- `recent` (cron default): FedTools 90-day lookback.
+- `calendar`: live scrape of the official FOMC calendar page.
+- `historical`: FedTools full-history backfill plus `fomchistorical{year}.htm` scraping for
+  1994–2014.
+- Classifies links as `statement` (minutes, press conferences, and implementation notes are
+  skipped).
+- Deduplicates by date/type, preferring HTML over PDF, and upserts records into `documents`.
 
-Responsibilities:
+### MonitorFakeFedAgent (`agents/monitor_fakefed.py`)
 
-- Scrape official Federal Reserve or FakeFed FOMC pages.
-- Detect FOMC statements (minutes and speeches are filtered out).
-- Deduplicate documents by date/type.
-- Fetch HTML text and store document records in SQLite.
+- Scrapes the FakeFed FOMC calendar at `https://fakefed.ellep.it`.
+- Ingests statements released after 2026-05-21 into the same `documents` table used by
+  `MonitorFedAgent`, so the analyst/strategist pipeline can be exercised end-to-end on
+  synthetic data.
 
-### AnalystAgent
+### MonitorFredAgent (`agents/monitor_fred.py`)
 
-Uses an LLM as a text-analysis model. **Implemented.**
+- Fetches `CPILFESL`, `UNRATE`, monthly-average `DGS2`, and `FEDFUNDS` from FRED.
+- Aligns series into monthly rows starting `1994-01`, fills isolated one-month gaps by
+  averaging adjacent months, and creates exactly one forward proxy month after the latest
+  real FRED month.
+- Upserts into `macro_data`; proxy values are non-permanent and are overwritten once real
+  FRED data is published.
 
-Responsibilities:
+### AnalystAgent — weight-aware (`agents/w_agent.py`)
 
-- Segment the document into weighted sections (`forward_guidance`, `inflation`, `labor_market`, `general` / `policy_discussion`).
-- Call an OpenRouter-hosted LLM through the OpenAI client with the segmented sections.
-- Extract a numeric `tone_score` in `[-1.0, +1.0]` (dovish → hawkish) plus `overall_tone`, `inflation_assessment`, `labor_market_assessment`, `forward_guidance`, `key_phrases`, and `confidence`.
-- Return a typed `ToneResult`; call `result.to_db_row()` to get a dict ready for the `sentiment` table.
+- Loads section weights from the `weights` table (falls back to hardcoded defaults if the
+  table is empty).
+- Segments the document by sentence classification into weighted sections.
+- Calls DeepSeek via OpenRouter for per-section scores.
+- Computes `tone_score` as a weighted average, excluding zero-scored sections to avoid
+  neutral bias on short documents.
+- Writes to `sentiment_w`; marks `processed_w = 1` on success.
 
-Three pipeline variants exist for testing purposes: `analyst.py` (single model, `sentiment`), `dual_model_analyst.py` (two-model average, `sentiment2`), and `analyst_ds.py` (DeepSeek only, `sentiment3`).
+### StrategistAgent (`agents/strategist.py`)
 
-Future work: calibrate the section weights against historical 2-year Treasury yield reactions around FOMC releases. The current weights are transparent runtime assumptions; a proper event-study calibration should use daily or intraday 2Y yield changes and compare the empirical contribution of `forward_guidance`, `inflation`, `labor_market`, and `general` / `policy_discussion`.
+- EWMA tone smoothing: `S_t = α_t · tone_t + (1 − α_t) · S_{t-1}`,
+  `α_t = 1 − exp(−ln(2)/21 · Δt)`.
+- Ordered-probit nowcast with latent index
+  `η = β_S·S + β_π·(CPI_yoy − 2) + β_u·(U − U_baseline)`.
+- Tone-implied next rate: `current_rate + Σ_k P(Y=j_k) · j_k / 100`.
+- Divergence vs the FEDFUNDS-based market proxy (`DGS2`).
+- Replays the full EWMA chain over `sentiment_w` history and writes one `signals` row per
+  document that doesn't already have one.
+- Default β and cut points are sign-coherent placeholders; calibration against
+  `/api/accountability` is the next step.
 
-### StrategistAgent
+## Automation
 
-Combines text tone, macro data, and market proxies. **Implemented.**
+All agents run on the Bavaria server via cron. Scripts are in `scripts/`.
 
-Responsibilities:
+| Script | Agent | Cron | Log |
+|---|---|---|---|
+| `run_fed_documents_update.sh` | MonitorFedAgent (`--mode recent`) | every 5 min | `logs/fed_documents_update.log` |
+| `run_w_agent.sh` | w_agent (AnalystAgent) | every 5 min, `flock` | `logs/w_agent.log` |
+| `run_strategist.sh` | StrategistAgent | every 5 min, `flock` | `logs/strategist.log` |
+| `run_fred_backfill.sh` | MonitorFredAgent | manual / periodic | `logs/fred_backfill.log` |
+| `run_fakefed_documents_update.sh` | MonitorFakeFedAgent | manual, `flock` | `logs/fakefed_documents_update.log` |
+| `run_analyst.sh` | legacy `analyst.py` | manual (legacy) | `logs/analyst.log` |
 
-- Smooth tone through time.
-- Build model features from CPI and unemployment.
-- Estimate probabilities over rate-move buckets.
-- Compute tone-implied policy rate.
-- Compare against market-rate proxies.
-- Generate dashboard-ready signals.
+`run_w_agent.sh` and `run_strategist.sh` use `flock` to prevent overlapping runs when a
+batch takes longer than the cron interval.
 
-No separate `PublisherAgent` is planned. Persisting outputs and serving them to the dashboard
-is application plumbing handled by `pipeline.py`, `db.py`, and FastAPI.
-
-## Current And Planned File Structure
+## File Structure
 
 ```text
 FEDWatcher/
 ├── AGENTS.md
 ├── README.md
+├── run.py                            # local setup/launcher CLI
 ├── .env.example
 ├── requirements.txt
 │
-├── fakefed/                    # Static synthetic Fed website fixture
-├── fedwatcher/                 # Static homepage/dashboard placeholder
-├── deploy/
-│   └── nginx/                  # Nginx templates for VM deployment
-├── docs/
-│   └── fakefed_deployment.md
-│
-├── app/                        # FastAPI backend
-│   ├── db.py                   # SQLite connection helpers
-│   └── main.py                 # read-only API app
-│
 ├── agents/
-│   ├── monitor.py              # MonitorAgent
-│   ├── analyst.py              # AnalystAgent (single model, sentiment)
-│   ├── dual_model_analyst.py   # AnalystAgent (two-model average, sentiment2) - testing
-│   ├── analyst_ds.py           # AnalystAgent (DeepSeek only, sentiment3) - testing
-│   └── strategist.py           # planned StrategistAgent
+│   ├── monitor_fed.py               # MonitorFedAgent (recent/calendar/historical)
+│   ├── monitor_fakefed.py           # MonitorFakeFedAgent (FakeFed ingestion)
+│   ├── monitor_fred.py              # MonitorFredAgent (FRED macro ingestion)
+│   ├── w_agent.py                   # weight-aware AnalystAgent (production)
+│   ├── strategist.py                # StrategistAgent (EWMA + ordered probit)
+│   ├── analyst.py                   # legacy single-model analyst → sentiment
+│   ├── dual_model_analyst.py        # legacy two-model analyst → sentiment2
+│   └── analyst_ds.py                # legacy DeepSeek-only analyst → sentiment3
+│
+├── app/                              # FastAPI backend
+│   ├── db.py                        # SQLite connection helpers
+│   ├── main.py                      # core API + FakeFed publish/delete admin endpoints
+│   ├── accountability.py            # /api/accountability track-record metrics
+│   └── narrative.py                 # /api/narrative AI-generated dashboard copy
 │
 ├── sources/
-│   ├── fed.py                  # planned Fed scraping helpers
-│   └── fred.py                 # FRED fetch + transformations
+│   └── fred.py                      # FRED fetch + transformations
 │
-├── models/                     # planned nowcast model package
-│   └── nowcast.py              # ordered/multinomial model
+├── db/
+│   └── schema.sql                   # single source of truth for the schema
 │
-├── fedwatcher/                 # current static dashboard frontend
+├── scripts/
+│   ├── init_db.py                   # create tables from db/schema.sql
+│   ├── clean_db.py                  # wipe selected tables for a clean rerun
+│   ├── show_db_structure.py         # print schema/table overview
+│   ├── read_one_document.py         # inspect a single document row
+│   ├── update_weights.py            # manage analyst section weights
+│   ├── compare_sentiments.sh        # compare sentiment/sentiment2/sentiment3/sentiment_w
+│   ├── run_fed_documents_update.sh  # cron: MonitorFedAgent (recent) with logging
+│   ├── run_fakefed_documents_update.sh # FakeFed ingestion with flock
+│   ├── run_fred_backfill.sh         # MonitorFredAgent macro refresh
+│   ├── run_w_agent.sh               # cron: w_agent with logging + flock
+│   ├── run_strategist.sh            # cron: StrategistAgent with logging + flock
+│   ├── run_analyst.sh               # legacy: analyst.py cron wrapper
+│   ├── deploy.sh                    # frontend/backend/FakeFed deploy (SSH or --local)
+│   ├── setup_deploy_user.sh         # one-time VPS deploy-user provisioning
+│   └── test_db.py
 │
-├── db.py                       # planned SQLite interface
-├── pipeline.py                 # planned workflow runner
-└── scripts/
-    ├── init_db.py
-    ├── backfill_fred.py
-    └── inital_data_download.py # historical FedTools document backfill
+├── tests/
+│   ├── test_api.py
+│   ├── test_fred_source.py
+│   └── test_monitor_fakefed.py
+│
+├── fakefed/                          # synthetic Fed fixture site
+├── fedwatcher/                       # static dashboard (fedwatcher.ellep.it)
+├── dashboard/                        # reserved, currently empty
+├── deploy/
+│   ├── nginx/                       # Nginx config templates
+│   └── fedwatcher-api.service       # systemd unit for the FastAPI backend
+├── docs/
+│   ├── fakefed_deployment.md
+│   ├── dashboard_modes.md
+│   └── design-system.html
+└── academic_doc/                     # LaTeX academic report (make → main.pdf)
+    ├── main.tex
+    └── sections/
 ```
+
+## Database
+
+SQLite database: `fedwatcher.db`.
+
+| Table | Description |
+|---|---|
+| `documents` | All Fed/FakeFed documents: URL, type, release date, raw text, processing flags |
+| `sentiment_w` | Per-section tone scores from the weight-aware analyst (production) |
+| `weights` | Section weights per `doc_type`, loaded dynamically by `w_agent.py` |
+| `macro_data` | Monthly FRED macro: core CPI, unemployment, 2Y yield, FEDFUNDS policy rate |
+| `signals` | StrategistAgent output: smoothed tone, tone/market-implied rates, divergence, rate-move probabilities |
+| `sentiment` | Legacy: single-model analyst output |
+| `sentiment2` | Legacy: dual-model analyst output |
+| `sentiment3` | Legacy: DeepSeek-only analyst output |
+
+`db/schema.sql` is the authoritative definition — see [AGENTS.md](AGENTS.md) for the schema
+contract.
 
 ## Data Sources
 
 ### Federal Reserve Documents
 
-Primary source:
+- Source: https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+- Types ingested: FOMC statements only.
+- Press conferences and implementation notes are excluded.
 
-- https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm
+### FRED Macro Data
 
-Core document types:
-
-| Document | Use |
-|---|---|
-| FOMC statements | Direct policy action and forward guidance (the only document type ingested) |
-
-### FRED Macro and Rates Data
-
-Core series:
-
-| Series | Meaning | Use |
+| Series | Meaning | Stored as |
 |---|---|---|
-| `CPILFESL` | Core CPI index | Inflation predictor |
-| `UNRATE` | Unemployment rate | Labor-market predictor |
-| `DFEDTARU` | Fed target range upper bound | Current target rate |
-| `DFEDTARL` | Fed target range lower bound | Current target rate |
-| `DFF` | Effective Fed Funds Rate | Realized short rate |
-| `DGS2` | 2-year Treasury yield | Market-rate proxy |
-| `SOFR` | Secured Overnight Financing Rate | Short-rate proxy |
-
-Optional later:
-
-| Series | Meaning | Use |
-|---|---|---|
-| `CPIAUCSL` | Headline CPI index | Robustness check |
-| `NROU` or `NROUST` | Natural unemployment estimate | Unemployment gap |
-
-Core transformations:
-
-```text
-core_cpi_yoy = 100 * (CPILFESL_t / CPILFESL_t-12 - 1)
-core_cpi_mom = 100 * (CPILFESL_t / CPILFESL_t-1 - 1)
-unemployment_rate = UNRATE_t
-unemployment_gap = UNRATE_t - NROU_t       # optional once NROU/NROUST is added
-policy_midpoint = (DFEDTARU_t + DFEDTARL_t) / 2
-market_policy_gap = DGS2_t - policy_midpoint
-```
-
-Implemented FRED storage starts at `1994-01` to align with the earliest Fed statement
-history. The fetcher pulls one hidden prior year of `CPILFESL` so stored `1994` rows can
-still calculate `core_cpi_yoy`; those lookback rows are not stored in `macro_data`.
-`UNRATE` is monthly, and `DGS2` is fetched from FRED at monthly frequency using average
-aggregation, so the 2-year Treasury yield is aligned to the same monthly row. The fetcher
-creates a continuous monthly index and fills only isolated one-month gaps by averaging the
-previous and following month. Filled fields are recorded in `interpolated_fields`; longer
-gaps stay null and are highlighted as missing in the dashboard table.
-
-| Column | Source | Frequency |
-|---|---|---|
-| `observation_month` | derived from FRED date | monthly key, `YYYY-MM` |
-| `core_cpi_index` | `CPILFESL` | monthly |
-| `core_cpi_mom` | `CPILFESL` transform | monthly percent change |
-| `core_cpi_yoy` | `CPILFESL` transform | year-over-year percent change |
-| `unemployment_rate` | `UNRATE` | monthly percentage rate |
-| `us2y_yield` | `DGS2` | monthly average percentage yield |
-| `interpolated_fields` | fetcher metadata | comma-separated fields filled from adjacent months |
-
-All data transformations should keep units explicit. Interest-rate and inflation variables
-must consistently use either percentage points or basis points.
+| `CPILFESL` | Core CPI index | `core_cpi_index`, `core_cpi_mom`, `core_cpi_yoy` |
+| `UNRATE` | Unemployment rate | `unemployment_rate` |
+| `DGS2` | 2-year Treasury yield (monthly avg) | `us2y_yield` |
+| `FEDFUNDS` | Effective Fed Funds Rate | `policy_rate` |
 
 ## Finance Model
 
-The presentation slide uses a latent-variable/multinomial framework. FedWatcher should follow
-that design rather than a binary hike/not-hike model.
-
-Target outcome:
+### Tone Smoothing (EWMA)
 
 ```text
-j in {-50, -25, 0, +25, +50}
+S_t = α_t · tone_t + (1 − α_t) · S_{t-1}
+α_t = 1 − exp(−ln(2)/21 · Δt)
 ```
 
-where `j` is the next FOMC rate move in basis points.
+where Δt is the calendar-day gap between FOMC releases.
 
-Model:
+### Ordered-Probit Nowcast
 
 ```text
-Y*_t = X_t beta + epsilon_t
-
-P(Y_t = j | X_t) =
-    exp(X_t beta_j) / (1 + sum_k exp(X_t beta_k))
-
-Y*_t = beta_1 S_t + beta_2 Delta CPI_t + beta_3 Ugap_t + epsilon_t
+η_t = β_S · S_t + β_π · (CPI_yoy_t − 2) + β_u · (U_t − U_baseline)
+P(Y_t = j_k) = Φ(c_k − η_t) − Φ(c_{k−1} − η_t)
+j ∈ {−50, −25, 0, +25, +50} bps
 ```
 
-Tone smoothing:
+### Tone-Implied Rate
 
 ```text
-S_t = alpha_t * tone_score_t + (1 - alpha_t) * S_{t-1}
-alpha_t = 1 - exp(-lambda * Delta t)
-lambda = ln(2) / h
-h = 21
+tone_implied_rate_t = current_rate_t + Σ_k P(Y_t = j_k) · j_k / 100
 ```
 
-Interpretation:
+## User Guide
 
-- `S_t` is the time-weighted smoothed Fed tone score.
-- `Delta CPI_t` is based on `CPILFESL`.
-- `Ugap_t` starts as `UNRATE_t`; later it can become `UNRATE_t - NROU_t`.
-- The model should be ordered logit/probit or multinomial logit.
-
-Tone-implied rate:
-
-```text
-tone_implied_rate_t =
-    current_rate_t + sum_j P(Y_t = j) * magnitude_j
-```
-
-This avoids the earlier binary-logit problem where `P(cut)` was needed but not estimated.
-
-## FastAPI Scope
-
-Implemented read-only endpoints:
-
-```text
-GET /api/health
-GET /api/tables
-GET /api/tables/{table}?limit=100&offset=0&search=...
-GET /api/documents?limit=100&offset=0&search=...
-GET /api/snapshot
-```
-
-Planned controlled endpoints:
-
-```text
-POST /api/pipeline/run
-GET  /api/agents/status
-```
-
-If we want the course criterion "own API with authentication or rate limits", add one small
-control:
-
-- Bearer token for `POST /pipeline/run`; or
-- simple request rate limiting.
-
-## Dashboard
-
-The dashboard should use FastAPI as its data source and show:
-
-- current tone gauge;
-- Fed tone time series;
-- core CPI and unemployment context;
-- next-meeting rate-move probabilities;
-- tone-implied rate vs market-rate proxy;
-- divergence history;
-- document explorer with extracted evidence phrases.
-
-The current frontend in `fedwatcher/` is static HTML/CSS/JS, but its data source is the
-FastAPI backend. It does not use stale database JSON snapshots.
-
-## Database
-
-Target database: SQLite.
-
-Tables:
-
-```text
-documents
-sentiment
-macro_data
-market_data
-signals
-```
-
-This is enough to demonstrate SQL, ETL, joins, and reproducible local development without
-requiring a database server.
-
-## Installation
-
-Prerequisites:
-
-- Python 3.10+
-- FRED API key
-- OpenRouter API key (`OPENROUTER_API_KEY`) for LLM sentiment extraction.
-
-Setup:
-
-```bash
-git clone https://github.com/LeoPalanca/FEDWatcher.git
-cd FEDWatcher
-
-python -m venv venv
-source venv/bin/activate
-
-python run.py setup --install
-```
-
-`python run.py setup` creates `.env`, asks for `OPENROUTER_API_KEY` and `FRED_API_KEY`,
-can install Python requirements, initializes `fedwatcher.db` from `db/schema.sql`, and lets
-you choose the statement-focused AnalystAgent section-weight preset or enter custom
-statement weights that sum to 1.0. It then offers to download FRED macro data and start
-the 24-hour MonitorAgent -> AnalystAgent -> StrategistAgent refresh loop. When the loop is
-enabled, setup first asks for the maximum number of statements AnalystAgent may process in
-each run and how many days back MonitorAgent should fetch, so LLM calls and document
-lookback are capped before any pipeline starts. It can also start the localhost dashboard
-while the loop runs in the background. If you skip the loop, it can still run one capped LLM
-analysis batch and start the local dashboard. For unattended setup, use:
-
-```bash
-python run.py setup --non-interactive --no-install --weights default
-```
-
-To inspect the active section weights later:
-
-```bash
-python run.py weights
-```
-
-The `.env.example` contains the target SQLite/API/FRED variables plus legacy MySQL fields
-kept for old prototype compatibility. The setup helper writes the local `.env` from those
-defaults and your answers.
-
-For AI calls:
-
-```text
-OPENROUTER_API_KEY=
-```
-
-## Usage
-
-Current prototype commands:
-
-```bash
-python scripts/init_db.py
-python scripts/inital_data_download.py
-python agents/monitor-fed-historical-pages.py --start-year 2015 --end-year 2020
-python scripts/backfill_fred.py
-python scripts/backfill_fred.py --dry-run
-uvicorn app.main:app --reload
-python agents/monitor.py
-python agents/monitor.py --refresh-macro
-python agents/analyst.py --limit 5
-python agents/dual_model_analyst.py --limit 5   # two-model average, testing
-python agents/analyst_ds.py --limit 5            # DeepSeek only, testing
-```
-
-Local dashboard launcher:
-
-```bash
-python run.py dev
-```
-
-This starts FastAPI on `127.0.0.1:8000` and a local static dashboard proxy on
-`http://127.0.0.1:8080`, so the frontend can call `/api/...` exactly as it does in
-production. Open `http://127.0.0.1:8080` for the dashboard; `127.0.0.1:8000` is only the
-API service.
-
-Statement LLM analysis can also be launched directly:
-
-```bash
-python run.py analyze --limit 5
-```
-
-FRED macro ingestion and the agent refresh pipeline can also be launched directly:
-
-```bash
-python run.py macro
-python run.py pipeline --once
-python run.py pipeline --lookback-days 365
-```
-
-`python run.py pipeline` runs one cycle immediately in this order:
-MonitorAgent fetches recent Fed documents, AnalystAgent scores unprocessed statements with
-the LLM, and StrategistAgent updates policy signals. It then repeats every 24 hours. The
-default AnalystAgent cap is 2 statements per cycle and the default MonitorAgent lookback is
-90 days; override them with `--limit` and `--lookback-days`.
-
-FakeFed test target:
-
-```bash
-FED_BASE_URL=https://fakefed.ellep.it python agents/monitor.py
-```
-
-The FastAPI backend is read-only for now, so it does not change agent execution. Agents keep
-writing to SQLite; the API exposes those stored rows to the dashboard.
-
-## Deployment
-
-The VPS deployment helper is `scripts/deploy.sh`. It can sync the static dashboard,
-FastAPI backend code, and FakeFed static fixture site either over SSH or directly from the
-VM with `--local`.
-
-Expected VPS layout:
-
-```text
-/var/www/fedwatcher   static public dashboard
-/var/www/fakefed      synthetic FakeFed fixture site
-/home/programming/FEDWatcher
-                      FastAPI/backend working tree
-```
-
-Common commands:
-
-```bash
-bash scripts/deploy.sh --frontend --reload-nginx
-bash scripts/deploy.sh --backend --restart
-bash scripts/deploy.sh --all --restart --reload-nginx
-bash scripts/deploy.sh --all --local --restart --reload-nginx
-bash scripts/deploy.sh --all --dry-run
-```
-
-Backend deploys preserve local runtime state by excluding `.env`, SQLite databases,
-virtual environments, logs, caches, `fedwatcher/`, and `fakefed/`. The production FastAPI
-service template expects `/home/programming/FEDWatcher/venv` and is defined in
-`deploy/fedwatcher-api.service`.
-
-## Development Workflow
-
-Use [AGENTS.md](AGENTS.md) as the contributor and coding-agent rulebook.
-
-Important rules:
-
-- Use `/Users/leonardo/FEDWatcher` as the active working copy.
-- Update this README whenever architecture, setup, usage, data sources, or model assumptions
-  change.
-- Keep `/Users/leonardo/FEDWatcher_Hide` as local-only teacher/course context; do not commit it.
-- Do not commit `.env`, `.DS_Store`, local databases, generated outputs, or secrets.
-- Commit regularly with meaningful messages.
-
-## FakeFed Test Site
-
-`fakefed/` is a synthetic static website that preserves the Fed URL paths needed by the
-scraper. It is used to test fake statements without touching the live Federal Reserve
-website.
-
-Important URLs:
-
-- `https://fakefed.ellep.it/monetarypolicy/fomccalendars.htm`
-- `https://fakefed.ellep.it/newsevents/pressreleases/monetary20260507a.htm`
-
-Deployment notes and the Nginx template are in
-`docs/fakefed_deployment.md` and `deploy/nginx/fakefed.ellep.it.conf`.
-
-The final dashboard should support two modes:
-
-- clean app mode using the official Federal Reserve source;
-- educational demo mode with admin-only FakeFed controls for writing synthetic statements.
-
-For the next dashboard integration, the top-right FakeFed control should authenticate an
-admin, trigger the backend to run `MonitorAgent` against `https://fakefed.ellep.it`, append
-the fetched synthetic documents to the same document feed as official Fed documents, and
-label every FakeFed row as synthetic/test content. If LLM credentials are configured, the
-backend can run analysis after fetch; otherwise the fetched rows remain pending analysis.
-
-The mode split is documented in `docs/dashboard_modes.md`.
-
-## FedWatcher Homepage Dashboard
-
-`fedwatcher/` contains a static brief homepage/dashboard for the first public deployment at
-`https://fedwatcher.ellep.it`. It presents the project concept, current placeholder signal
-panels, AnalystAgent section-weight legend, macro context, rate-move buckets, document feed,
-a full SQLite table explorer, and the planned admin-only educational FakeFed mode.
-
-This static page is temporary, but it now reads live database-backed JSON from the FastAPI
-backend. The old static database snapshots were removed so the website and SQLite database
-cannot drift apart.
+Installation instructions, usage examples, the FakeFed test site, and the full FastAPI
+endpoint reference now live in a dedicated [User Guide](USER_GUIDE.md).
 
 ## Course Criteria Coverage
 
 | Criterion | How FedWatcher satisfies it |
 |---|---|
-| Advanced LLM | `AnalystAgent` extracts structured Fed policy tone |
-| Advanced ML/statistics | ordered/multinomial nowcast over rate-move buckets |
-| Real-time/data processing | scheduled Fed monitoring and FRED refresh pipeline |
-| Non-trivial database | SQLite with multiple related tables |
-| Own API | FastAPI backend for dashboard and pipeline access |
-| Advanced visualization | dashboard for tone, macro variables, probabilities, divergence, documents |
-| Agentic project | `AGENTS.md`, runtime agents, regular GitHub process, AI-authored PR |
+| Advanced LLM | weight-aware `AnalystAgent` extracts per-section structured Fed policy tone; `app/narrative.py` generates dashboard copy |
+| Advanced ML/statistics | ordered-probit nowcast over rate-move buckets with EWMA tone smoothing, backtested via `/api/accountability` |
+| Real-time/data processing | cron-scheduled Fed/FakeFed monitoring and FRED refresh pipeline |
+| Non-trivial database | SQLite with multiple related tables (`documents`, `sentiment_w`, `weights`, `macro_data`, `signals`) |
+| Own API | FastAPI backend for dashboard, accountability, narrative, and FakeFed admin access |
+| Advanced visualization | dashboard for tone, macro, probabilities, divergence, document explorer |
+| Agentic project | `AGENTS.md`, runtime agents, regular GitHub process, AI-authored contributions |
 
-## Academic Documentation Plan
+## References
 
-The PDF submission should cover:
-
-- project plan;
-- project diary;
-- GitHub process and AI-agent usage;
-- data sources and citations;
-- economics and finance model;
-- implementation choices;
-- sample results and interpretation;
-- limitations and lessons learned.
-
-External code, datasets, tutorials, and AI tools must be cited.
-
-## References To Add
-
-The final academic documentation should cite the relevant central-bank communication and
-monetary-policy literature. Candidate references:
-
-- Gurkaynak, Sack, and Swanson on monetary policy surprises.
+- Gürkaynak, Sack, and Swanson on monetary policy surprises.
 - Lucca and Trebbi on automated FOMC communication measurement.
 - Hansen and McMahon on Fed communication text analysis.
 - Shapiro and Wilson on text-based measures of central-bank communication.
 - Taylor on policy-rule benchmarks.
-
-The literature section should be checked carefully before final submission so every citation
-supports the claim being made.
