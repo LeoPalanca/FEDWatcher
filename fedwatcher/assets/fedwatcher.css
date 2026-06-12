@@ -88,7 +88,7 @@ a:hover { color: var(--c-accent-hover); }
   color: var(--c-ink-strong);
   display: inline-flex;
   font-family: var(--f-serif);
-  font-size: 22px;
+  font-size: 26px;
   font-weight: 500;
   letter-spacing: -0.02em;
 }
@@ -1159,7 +1159,24 @@ footer.page-foot {
   .two-col { grid-template-columns: 1fr; }
 }
 @media (max-width: 640px) {
-  .top-nav { display: none; }
+  .topbar-inner {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: var(--s-3) var(--s-5);
+    padding: var(--s-3) var(--s-4);
+  }
+  .wordmark {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  .top-nav {
+    display: inline-flex;
+    gap: var(--s-4);
+    margin-left: 0;
+  }
+  .source-switch {
+    margin-left: 0;
+  }
   .metric-grid,
   .db-overview,
   .principles,

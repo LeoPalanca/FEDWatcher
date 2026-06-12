@@ -51,7 +51,7 @@ The implementation is intentionally lean:
   press conferences, and implementation notes are filtered out. Runs via
   `scripts/run_fed_documents_update.sh` every 5 minutes on the server.
 - `MonitorFakeFedAgent` in `agents/monitor_fakefed.py`: scrapes the FakeFed FOMC calendar
-  (`https://fakefed.ellep.it`) and ingests synthetic statements released after 2026-05-21
+  (`https://fakefed.ellep.it`) and ingests synthetic statements released after 2025-01-01
   into the same `documents` table, for scraper/analyst testing without touching the live
   Fed site.
 - `MonitorFredAgent` in `agents/monitor_fred.py`: fetches `CPILFESL`, `UNRATE`,
@@ -167,7 +167,7 @@ itself is a plain Python/cron workflow.
 ### MonitorFakeFedAgent (`agents/monitor_fakefed.py`)
 
 - Scrapes the FakeFed FOMC calendar at `https://fakefed.ellep.it`.
-- Ingests statements released after 2026-05-21 into the same `documents` table used by
+- Ingests statements released after 2025-01-01 into the same `documents` table used by
   `MonitorFedAgent`, so the analyst/strategist pipeline can be exercised end-to-end on
   synthetic data.
 

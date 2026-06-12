@@ -195,7 +195,7 @@ def _compute_breakdown_stats(probs: dict[str, float]) -> dict[str, Any]:
 
 def _hero_pills(tone: float | None, stats: dict[str, Any]) -> list[dict[str, str]]:
     tone_label = _classify_tone(tone)
-    tone_val = f"tone {tone:+.2f}" if tone is not None else "tone —"
+    tone_val = f"tone implied {tone:+.2f}" if tone is not None else "tone implied —"
     tone_kind = "hawkish" if (tone or 0) > 0.15 else "dovish" if (tone or 0) < -0.15 else "neutral"
     return [
         {"label": f"{tone_label} · {tone_val}", "kind": tone_kind},

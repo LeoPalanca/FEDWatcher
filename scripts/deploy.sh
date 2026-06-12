@@ -445,12 +445,20 @@ main() {
 
     if [[ "$DEPLOY_BACKEND" == true ]]; then
         echo -e "\n${BOLD}=== Deploying Backend ===${NC}"
-        deploy_dir "./" "$DEFAULT_BACKEND_DEST/" false "${BACKEND_EXCLUDES[@]}"
+        local backend_sudo=false
+        if [[ "$REMOTE_USER" != "programming" ]]; then
+            backend_sudo=true
+        fi
+        deploy_dir "./" "$DEFAULT_BACKEND_DEST/" "$backend_sudo" "${BACKEND_EXCLUDES[@]}"
+        if [[ "$backend_sudo" == true ]]; then
+            run_sudo chown -R programming:programming "$DEFAULT_BACKEND_DEST"
+        fi
     fi
 
     if [[ "$DEPLOY_FAKEFED" == true ]]; then
         echo -e "\n${BOLD}=== Deploying FakeFed ===${NC}"
         deploy_dir "fakefed/" "$DEFAULT_FAKEFED_DEST/" true "${FAKEFED_EXCLUDES[@]}"
+        run_sudo chown -R programming:programming "$DEFAULT_FAKEFED_DEST"
     fi
 
     if [[ "$RESTART_BACKEND" == true ]]; then

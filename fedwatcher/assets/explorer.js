@@ -1406,7 +1406,7 @@
       if (d.doc_type === "minutes" || d.doc_type === "speech") return false;
       if (docFilter !== "all" && d.doc_type !== docFilter) return false;
       if (!docQuery) return true;
-      const hay = `${d.release_date} ${d.doc_type} ${d.central_bank} ${d.raw_text || ""}`.toLowerCase();
+      const hay = `${d.release_date} ${d.doc_type} ${d.central_bank} ${sourceLabelFor(d)} ${d.url || ""} ${d.raw_text || ""}`.toLowerCase();
       return hay.includes(docQuery);
     });
     if (count) count.textContent = `${filtered.length} doc${filtered.length === 1 ? "" : "s"}`;

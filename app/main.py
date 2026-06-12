@@ -10,7 +10,7 @@ from typing import Any
 
 from fastapi import FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from .db import connect, database_path, row_to_dict
 from .narrative import router as narrative_router
@@ -42,6 +42,13 @@ app.include_router(narrative_router)
 class FakeFedStatementRequest(BaseModel):
     release_date: date
     statement_text: str = Field(min_length=20, max_length=20_000)
+
+    @field_validator("release_date")
+    @classmethod
+    def validate_release_date(cls, v: date) -> date:
+        if v > date(2025, 5, 31):
+            raise ValueError("Release date cannot be after May 31, 2025.")
+        return v
 
 
 def fakefed_root() -> Path:

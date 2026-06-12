@@ -32,7 +32,7 @@ CALENDAR_URL = "https://fakefed.ellep.it/monetarypolicy/fomccalendars.htm"
 
 # Only insert documents released after this date — guard against pre-launch
 # FakeFed fixtures bleeding into the live documents table.
-CUTOFF_DATE = date(2026, 5, 21)
+CUTOFF_DATE = date(2025, 1, 1)
 
 HEADERS = {
     "User-Agent": "FedWatcher-FakeFed-Ingestion/1.0",

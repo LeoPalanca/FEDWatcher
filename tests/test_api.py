@@ -80,7 +80,7 @@ class TestApi(unittest.TestCase):
             "/api/fakefed/statements",
             headers={"X-FakeFed-Password": "test-password"},
             json={
-                "release_date": "2026-06-10",
+                "release_date": "2025-05-20",
                 "statement_text": (
                     "Inflation is extremely elevated.\n\n"
                     "The Committee decided to raise the target range by 125 basis points."
@@ -90,27 +90,27 @@ class TestApi(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         payload = response.json()
-        self.assertEqual(payload["filename"], "monetary20260610a.htm")
+        self.assertEqual(payload["filename"], "monetary20250520a.htm")
 
         statement_path = (
-            fakefed_root / "newsevents" / "pressreleases" / "monetary20260610a.htm"
+            fakefed_root / "newsevents" / "pressreleases" / "monetary20250520a.htm"
         )
         statement_html = statement_path.read_text(encoding="utf-8")
-        self.assertIn("Press Release - June 10, 2026", statement_html)
+        self.assertIn("Press Release - May 20, 2025", statement_html)
         self.assertIn("125 basis points", statement_html)
 
         index_html = (fakefed_root / "index.html").read_text(encoding="utf-8")
         calendar_html = (
             fakefed_root / "monetarypolicy" / "fomccalendars.htm"
         ).read_text(encoding="utf-8")
-        self.assertIn("monetary20260610a.htm", index_html)
-        self.assertIn("monetary20260610a.htm", calendar_html)
-        self.assertIn('<td class="date">10</td>', calendar_html)
+        self.assertIn("monetary20250520a.htm", index_html)
+        self.assertIn("monetary20250520a.htm", calendar_html)
+        self.assertIn('<td class="date">20</td>', calendar_html)
 
     def test_publish_fakefed_statement_requires_password(self):
         response = self.client.post(
             "/api/fakefed/statements",
-            json={"release_date": "2026-06-10", "statement_text": "x" * 40},
+            json={"release_date": "2025-05-20", "statement_text": "x" * 40},
         )
 
         self.assertEqual(response.status_code, 401)

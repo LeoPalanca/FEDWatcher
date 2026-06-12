@@ -196,7 +196,7 @@ The live test site is served at:
 https://fakefed.ellep.it/monetarypolicy/fomccalendars.htm
 ```
 
-It currently hosts 4 synthetic statements (March, May ×2, and June 2026). Note that `MonitorFakeFedAgent` only ingests statements released **after 2026-05-21**.
+It is used for publishing synthetic statements. Note that `MonitorFakeFedAgent` only ingests statements released **after 2025-01-01**.
 
 ### Ingesting from FakeFed
 
