@@ -122,7 +122,7 @@ Style rules
   context.
 - Title: at most ten to twelve words.
 - Description: one or two short sentences.
-- When citing numbers, keep them to two decimals and include units
+- When citing numbers, use exactly two decimal places and include units
   (bps, %).
 - Always explicitly name the stance — hawkish, dovish, or neutral.
 
