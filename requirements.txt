@@ -2,7 +2,6 @@ openai
 fastapi
 uvicorn
 sqlalchemy
-mysql-connector-python
 python-dotenv
 requests
 beautifulsoup4
