@@ -2,8 +2,8 @@
   <rect width="1200" height="230" fill="#0D0C0A"/>
   <rect x="0" y="0" width="1200" height="3" fill="#5FB3D9"/>
 
-  <text x="80" y="92" font-family="Georgia, 'Source Serif 4', 'Times New Roman', serif" font-size="72" font-weight="500" fill="#F5F2EC" letter-spacing="-1.5">Fed<tspan font-style="italic" font-weight="300" fill="#5FB3D9">Watcher</tspan><tspan fill="#5FB3D9">.</tspan></text>
-  <text x="83" y="134" font-family="ui-monospace, 'JetBrains Mono', Menlo, monospace" font-size="17" fill="#B8B2A9" letter-spacing="2.6">FOMC SENTIMENT — RATE-MOVE NOWCAST</text>
-  <rect x="83" y="158" width="392" height="1" fill="#2A2724"/>
-  <text x="83" y="186" font-family="ui-monospace, 'JetBrains Mono', Menlo, monospace" font-size="13" fill="#8A857D" letter-spacing="1.6">PYTHON · FASTAPI · SQLITE · LLM AGENTS</text>
+  <text x="80" y="104" font-family="Georgia, 'Source Serif 4', 'Times New Roman', serif" font-size="72" font-weight="500" fill="#F5F2EC" letter-spacing="-1.5">Fed<tspan font-style="italic" font-weight="300" fill="#5FB3D9">Watcher</tspan><tspan fill="#5FB3D9">.</tspan></text>
+  <text x="83" y="146" font-family="ui-monospace, 'JetBrains Mono', Menlo, monospace" font-size="17" fill="#B8B2A9" letter-spacing="2.6">FOMC SENTIMENT — RATE-MOVE NOWCAST</text>
+  <rect x="83" y="170" width="392" height="1" fill="#2A2724"/>
+  <text x="83" y="198" font-family="ui-monospace, 'JetBrains Mono', Menlo, monospace" font-size="13" fill="#8A857D" letter-spacing="1.6">PYTHON · FASTAPI · SQLITE · LLM AGENTS</text>
 </svg>
