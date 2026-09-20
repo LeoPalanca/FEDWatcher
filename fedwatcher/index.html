@@ -26,9 +26,8 @@
       <a href="#method">Method</a>
       <a href="#feed">Feed</a>
     </nav>
-    <div class="source-switch" id="source-switch" aria-label="Document source">
-      <a href="https://fakefed.ellep.it" target="_blank" class="badge badge-outline" style="text-decoration: none;">FakeFed</a>
-    </div>
+    <!-- Filled by explorer.js only when the backend reports FAKEFED_ENABLED=true. -->
+    <div class="source-switch" id="source-switch" aria-label="Document source"></div>
   </div>
 </header>
 
@@ -339,7 +338,7 @@
   <section class="ds" id="feed">
     <div class="sec-head">
       <h2 class="sec-title"><span class="sec-num-pretty">05</span><span class="sec-name">Feed</span></h2>
-      <p class="sec-desc">Live ingestion target. FOMC statements and synthetic FakeFed fixtures flow through the analyst agent and accumulate here.</p>
+      <p class="sec-desc">Live ingestion target. FOMC statements flow through the analyst agent and accumulate here.</p>
     </div>
     <div class="feed-toolbar">
       <div class="toggle" id="feed-filter" role="tablist" aria-label="Document type">
@@ -356,6 +355,10 @@
 
   <footer class="page-foot">
     <span>FedWatcher · not investment advice</span>
+    <span class="page-foot-repo">
+      Open source · run locally · retune weights · ingest your own docs ·
+      <a href="https://github.com/LeoPalanca/FEDWatcher" target="_blank" rel="noopener noreferrer">GitHub ↗</a>
+    </span>
     <span class="page-foot-authors" id="page-foot-authors">
       <a href="https://www.linkedin.com/in/johnnymagon/" target="_blank" rel="noopener noreferrer">Magon</a> ·
       <a href="https://www.linkedin.com/in/lorenzomottinelli/" target="_blank" rel="noopener noreferrer">Mottinelli</a> ·

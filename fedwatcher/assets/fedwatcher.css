@@ -1039,12 +1039,20 @@ section.ds {
 footer.page-foot {
   color: var(--c-ink-3);
   display: flex;
+  flex-wrap: wrap;
   font-family: var(--f-mono);
   font-size: 11px;
+  gap: var(--s-4) var(--s-6);
   justify-content: space-between;
   letter-spacing: 0.1em;
   padding: var(--s-9) 0;
   text-transform: uppercase;
+}
+
+/* Self-host invite: FakeFed and the manual ingestion pipeline only exist on a
+   local instance, so the footer points at the repo instead. */
+.page-foot-repo {
+  text-align: center;
 }
 
 /* === MODAL === */

@@ -61,7 +61,7 @@ OPENROUTER_API_KEY=your-openrouter-key
 FRED_API_KEY=your-fred-key
 ```
 
-> **Server-only extras.** If you are deploying the FakeFed publish/delete admin endpoints, also set `FAKEFED_PUBLISH_PASSWORD` (required by `app/main.py`) and, optionally, `FAKEFED_ROOT` — the directory statements are written to. `FAKEFED_ROOT` defaults to `/var/www/fakefed` on the server and falls back to the local `fakefed/` directory. You do **not** need these for normal local development.
+> **FakeFed extras (self-host only).** FakeFed is off unless you set `FAKEFED_ENABLED=true`. With the flag unset — the public deploy's configuration — the admin endpoints return 404, the ingestion agent refuses to run, synthetic documents are filtered out of the read API, and the dashboard hides the FakeFed source. To use it locally, also set `FAKEFED_PUBLISH_PASSWORD` (required by `app/main.py`) and, optionally, `FAKEFED_ROOT` — the directory statements are written to. `FAKEFED_ROOT` defaults to `/var/www/fakefed` on the server and falls back to the local `fakefed/` directory.
 
 ### Step 3 (optional) — Let the guided setup do it for you
 
@@ -154,7 +154,7 @@ To control the cadence of the continuous mode, pass `--refresh-hours`.
 
 ### Including FakeFed synthetic statements
 
-To also ingest statements from the FakeFed test site during the pipeline, add `--include-fakefed`:
+Requires `FAKEFED_ENABLED=true` in `.env`; without it the step is skipped with a warning. To also ingest statements from the FakeFed test site during the pipeline, add `--include-fakefed`:
 
 ```bash
 python run.py pipeline --once --include-fakefed
@@ -187,6 +187,8 @@ In production these same agents run unattended via cron on the server — see th
 ---
 
 ## 5. Working with the FakeFed test site
+
+> **Self-host feature.** Everything in this section requires `FAKEFED_ENABLED=true` in your `.env`. The public deploy at `fedwatcher.ellep.it` runs with the flag off: no FakeFed source in the dashboard, and `POST`/`DELETE /api/fakefed/statements` return 404 there. The fixture site itself stays online at `fakefed.ellep.it` (marked `noindex`) so the feature can be switched back on later.
 
 `fakefed/` is a synthetic, static copy of the Fed website. It mirrors the real Fed URL structure so you can test the scraper and the downstream pipeline end to end **without touching the live federalreserve.gov site**.
 
@@ -233,15 +235,15 @@ With the backend running (`python run.py dev` or `uvicorn app.main:app --reload`
 
 | Endpoint | What it returns |
 |---|---|
-| `GET /api/health` | Liveness check — use this to confirm the backend is up. |
+| `GET /api/health` | Liveness check, plus `fakefed: true/false` — the dashboard uses it to decide whether to show the FakeFed source control. |
 | `GET /api/tables` | The list of database tables. |
 | `GET /api/tables/{table}` | Rows from one table, with pagination and search (`?limit=100&offset=0&search=...`). |
-| `GET /api/documents` | Fed and FakeFed documents, with pagination and search. |
+| `GET /api/documents` | Fed documents (plus FakeFed ones when `FAKEFED_ENABLED=true`), with pagination and search. |
 | `GET /api/snapshot` | A combined latest-state payload built for the dashboard. |
 | `GET /api/accountability` | Track-record metrics — hit rate, MAE (bps), and Brier score against realized FOMC outcomes. |
 | `GET /api/narrative` | AI-generated dashboard copy, cached per latest `signals` row. |
-| `POST /api/fakefed/statements` | **Admin.** Publish a synthetic FakeFed statement. Requires `X-Fakefed-Password`. |
-| `DELETE /api/fakefed/statements/{filename}` | **Admin.** Remove a synthetic FakeFed statement. Requires `X-Fakefed-Password`. |
+| `POST /api/fakefed/statements` | **Admin, self-host only.** Publish a synthetic FakeFed statement. Requires `FAKEFED_ENABLED=true` and `X-Fakefed-Password`; 404 otherwise. |
+| `DELETE /api/fakefed/statements/{filename}` | **Admin, self-host only.** Remove a synthetic FakeFed statement. Same requirements. |
 
 A quick way to confirm everything works:
 

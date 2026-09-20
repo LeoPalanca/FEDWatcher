@@ -16,6 +16,9 @@
   const URL_SNAPSHOT       = "/api/snapshot";
   const URL_DOCUMENTS      = "/api/documents?limit=1000";
   const URL_FAKEFED        = "/assets/fakefed-documents.json";
+  // Reports whether the backend runs with FAKEFED_ENABLED=true. FakeFed is a
+  // self-host-only demo of the ingestion pipeline; the public deploy keeps it off.
+  const URL_HEALTH         = "/api/health";
   // AI-generated dashboard prose (hero + §02 Breakdown summary).
   const URL_NARRATIVE      = "/api/narrative";
 
@@ -100,6 +103,8 @@
   let feedExpanded = false;
   let fakeFedLoaded = false;
   let fakeFedEnabled = false;
+  // Backend-reported availability of the FakeFed source (fail-closed).
+  let fakeFedAvailable = false;
 
   let activeBucket = "0";
 
@@ -127,11 +132,13 @@
 
   async function load() {
     try {
-      const [d, docs, narr] = await Promise.all([
+      const [d, docs, narr, health] = await Promise.all([
         fetchJson(URL_SNAPSHOT, {}),
         fetchJson(URL_DOCUMENTS, []),
         fetchJson(URL_NARRATIVE, NARRATIVE),
+        fetchJson(URL_HEALTH, {}),
       ]);
+      fakeFedAvailable = Boolean(health && health.fakefed);
       DATA = d;
       stripTrailingEmptyRows(DATA);
       OFFICIAL_DOCS = normalizeDocumentsPayload(docs);
@@ -165,6 +172,7 @@
     hydrateHero();
     renderFeed();
     wireFeed();
+    renderSourceSwitch();
     wireSourceSwitch();
     renderNarrative(NARRATIVE);
   }
@@ -1361,6 +1369,16 @@
     });
     const s = $("feed-search");
     if (s) s.addEventListener("input", () => { docQuery = s.value.toLowerCase(); renderFeed(); });
+  }
+
+  // The FakeFed control only exists when the backend says FakeFed is enabled,
+  // so a public deploy never renders it at all.
+  function renderSourceSwitch() {
+    const root = $("source-switch"); if (!root) return;
+    if (!fakeFedAvailable) { root.innerHTML = ""; return; }
+    root.innerHTML = '<button type="button" class="badge badge-outline" ' +
+      'data-source="fakefed" aria-pressed="false" ' +
+      'title="Synthetic test statements from the FakeFed fixture site">FakeFed</button>';
   }
 
   function wireSourceSwitch() {

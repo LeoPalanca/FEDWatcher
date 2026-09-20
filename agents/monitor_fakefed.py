@@ -27,6 +27,8 @@ if str(PROJECT_ROOT) not in os.sys.path:
     os.sys.path.insert(0, str(PROJECT_ROOT))
 
 
+from sources.fred import load_dotenv_if_available
+
 BASE_URL = "https://fakefed.ellep.it/"
 CALENDAR_URL = "https://fakefed.ellep.it/monetarypolicy/fomccalendars.htm"
 
@@ -423,7 +425,20 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def fakefed_enabled() -> bool:
+    """Mirror of app.main.fakefed_enabled: FakeFed is a self-host demo feature."""
+
+    return os.getenv("FAKEFED_ENABLED", "").strip().lower() in {"1", "true", "yes", "on"}
+
+
 def main() -> None:
+    load_dotenv_if_available(PROJECT_ROOT / ".env")
+    if not fakefed_enabled():
+        raise SystemExit(
+            "FakeFed ingestion is disabled. Set FAKEFED_ENABLED=true in .env to "
+            "run the synthetic-statement pipeline on a self-hosted instance."
+        )
+
     args = parse_args()
     agent = MonitorFakeFedAgent(db_path=args.db, dry_run=args.dry_run)
     agent.run()

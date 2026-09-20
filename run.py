@@ -528,11 +528,17 @@ def run_pipeline_cycle(
         env_values=env,
     )
     if include_fakefed:
-        run_command_step(
-            "MonitorFakeFedAgent: synthetic statements",
-            [sys.executable, "-m", "agents.monitor_fakefed", "--db", str(DB_PATH)],
-            env_values=env,
-        )
+        if env.get("FAKEFED_ENABLED", "").strip().lower() not in {"1", "true", "yes", "on"}:
+            warn(
+                "FAKEFED_ENABLED is not set. Skipping MonitorFakeFedAgent. "
+                "Set FAKEFED_ENABLED=true in .env to ingest synthetic statements."
+            )
+        else:
+            run_command_step(
+                "MonitorFakeFedAgent: synthetic statements",
+                [sys.executable, "-m", "agents.monitor_fakefed", "--db", str(DB_PATH)],
+                env_values=env,
+            )
     if not env.get("OPENROUTER_API_KEY"):
         warn("OPENROUTER_API_KEY is empty. Skipping AnalystAgent LLM step.")
     else:

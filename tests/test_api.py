@@ -39,6 +39,9 @@ class TestApi(unittest.TestCase):
             )
         os.environ["FEDWATCHER_DB_PATH"] = str(self.db_path)
         os.environ["FAKEFED_PUBLISH_PASSWORD"] = "test-password"
+        # FakeFed is off by default (public deploys); these tests exercise the
+        # self-host configuration unless they explicitly disable it.
+        os.environ["FAKEFED_ENABLED"] = "true"
 
         from app.main import app
 
@@ -48,6 +51,7 @@ class TestApi(unittest.TestCase):
         os.environ.pop("FEDWATCHER_DB_PATH", None)
         os.environ.pop("FAKEFED_PUBLISH_PASSWORD", None)
         os.environ.pop("FAKEFED_ROOT", None)
+        os.environ.pop("FAKEFED_ENABLED", None)
         self.tmp_dir.cleanup()
 
     def test_tables_lists_database_tables(self):
@@ -278,6 +282,86 @@ class TestApi(unittest.TestCase):
             
             # Since Doc B is now the first document, its smoothed tone must be exactly its raw tone (-0.2)
             self.assertAlmostEqual(signal_rows[0]["smoothed_tone"], -0.2)
+
+
+
+class TestApiFakeFedDisabled(unittest.TestCase):
+    """Public-deploy configuration: FAKEFED_ENABLED unset."""
+
+    def setUp(self):
+        self.tmp_dir = tempfile.TemporaryDirectory()
+        self.db_path = Path(self.tmp_dir.name) / "fedwatcher.db"
+        with sqlite3.connect(self.db_path) as conn:
+            conn.executescript(
+                """
+                CREATE TABLE documents (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    central_bank TEXT,
+                    doc_type TEXT,
+                    release_date TEXT,
+                    url TEXT UNIQUE,
+                    raw_text TEXT,
+                    processed INTEGER DEFAULT 0
+                );
+                INSERT INTO documents
+                    (central_bank, doc_type, release_date, url, raw_text, processed)
+                VALUES
+                    ('FED', 'statement', '2026-05-01',
+                     'https://www.federalreserve.gov/monetary20260501a.htm', 'real', 0),
+                    ('FED', 'statement', '2026-05-02',
+                     'https://fakefed.ellep.it/newsevents/pressreleases/monetary20260502a.htm',
+                     'synthetic', 0);
+                """
+            )
+        os.environ["FEDWATCHER_DB_PATH"] = str(self.db_path)
+        os.environ["FAKEFED_PUBLISH_PASSWORD"] = "test-password"
+        os.environ.pop("FAKEFED_ENABLED", None)
+
+        from app.main import app
+
+        self.client = TestClient(app)
+
+    def tearDown(self):
+        os.environ.pop("FEDWATCHER_DB_PATH", None)
+        os.environ.pop("FAKEFED_PUBLISH_PASSWORD", None)
+        self.tmp_dir.cleanup()
+
+    def test_health_reports_fakefed_disabled(self):
+        payload = self.client.get("/api/health").json()
+        self.assertFalse(payload["fakefed"])
+
+    def test_publish_endpoint_is_hidden(self):
+        response = self.client.post(
+            "/api/fakefed/statements",
+            headers={"X-FakeFed-Password": "test-password"},
+            json={"release_date": "2025-05-20", "statement_text": "x" * 40},
+        )
+        self.assertEqual(response.status_code, 404)
+
+    def test_delete_endpoint_is_hidden(self):
+        response = self.client.delete(
+            "/api/fakefed/statements/monetary20260604a.htm",
+            headers={"X-FakeFed-Password": "test-password"},
+        )
+        self.assertEqual(response.status_code, 404)
+
+    def test_documents_endpoint_hides_synthetic_rows(self):
+        payload = self.client.get("/api/documents").json()
+        urls = [row["url"] for row in payload["rows"]]
+        self.assertEqual(payload["row_count"], 1)
+        self.assertNotIn(
+            "https://fakefed.ellep.it/newsevents/pressreleases/monetary20260502a.htm",
+            urls,
+        )
+
+    def test_snapshot_hides_synthetic_rows(self):
+        payload = self.client.get("/api/snapshot").json()
+        urls = [row["url"] for row in payload["documents"]["rows"]]
+        self.assertEqual(len(urls), 1)
+        self.assertNotIn(
+            "https://fakefed.ellep.it/newsevents/pressreleases/monetary20260502a.htm",
+            urls,
+        )
 
 
 if __name__ == "__main__":

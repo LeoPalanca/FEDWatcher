@@ -1,59 +1,54 @@
 # Dashboard Modes
 
-FedWatcher should support two presentation modes:
+FedWatcher ships one codebase with two configurations, selected by the `FAKEFED_ENABLED`
+environment variable.
 
-1. Clean app mode for the final working product.
-2. Educational demo mode for fake statement experiments and course presentation.
+| | `FAKEFED_ENABLED` unset/false | `FAKEFED_ENABLED=true` |
+|---|---|---|
+| Intended use | public deploy (`fedwatcher.ellep.it`) | self-hosted instance, course demo |
+| Document source | official Federal Reserve only | official Fed + synthetic FakeFed |
+| `POST`/`DELETE /api/fakefed/statements` | 404 | available, password-protected |
+| `MonitorFakeFedAgent` | refuses to run | ingests FakeFed statements |
+| `/api/documents`, `/api/snapshot` | synthetic rows filtered out | all rows |
+| Dashboard header | no source control | FakeFed source toggle |
 
-## Clean App Mode
+## Public Mode (default)
 
-Clean mode is the normal public version at `fedwatcher.ellep.it`.
+The public site is read-only: dashboard, signals, macro context, and document history over
+official Fed documents. No admin controls, no synthetic content, no write endpoints. The
+footer links to the repository so anyone can run the full pipeline themselves.
 
-It should:
+## Self-Host / Demo Mode
 
-- use the official Federal Reserve website as the document source;
-- hide fake-data controls;
-- show the dashboard, signals, macro context, and document history;
-- avoid admin-only upload/write controls.
+Set `FAKEFED_ENABLED=true` (and `FAKEFED_PUBLISH_PASSWORD`) in `.env`. This is the mode
+used to explain and test the pipeline:
 
-## Educational Demo Mode
-
-Educational mode is for testing and explaining the pipeline.
-
-It should:
-
-- let an admin choose between `official Fed` and `FakeFed`;
-- make the currently selected source visible in the UI;
-- allow an admin to write or update a synthetic FakeFed statement;
-- trigger the ingestion pipeline against the selected source;
-- clearly label synthetic content as fake/test content.
-
-The source selector should be a modal or admin panel, not a normal public-user control.
+- the dashboard shows a FakeFed source toggle, merging synthetic statements into the feed;
+- an admin can write or update a synthetic FakeFed statement through the API;
+- the ingestion pipeline can be triggered against the FakeFed source;
+- synthetic content is labelled as fake test content everywhere it appears.
 
 ## Admin Access
 
-Admin-only actions:
+Admin-only actions (self-host mode only):
 
-- select source: official Fed or FakeFed;
-- create/update a fake statement;
+- create/update/delete a fake statement;
 - run document ingestion;
 - inspect ingestion status/errors.
 
-Minimum protection for the course project:
+Protection:
 
-- require an `API_TOKEN` or admin password from environment variables;
-- never commit credentials;
-- keep VM credentials only in `/Users/leonardo/FEDWatcher_Hide/.env`.
+- `FAKEFED_PUBLISH_PASSWORD` is required on every write, sent as `X-Fakefed-Password`;
+- `FAKEFED_ENABLED` must be true, otherwise the routes do not exist at all;
+- never commit credentials; VM credentials stay in `/Users/leonardo/FEDWatcher_Hide/.env`.
 
-## Implementation Direction
+## Implementation
 
-The first implementation can be simple:
-
-- FastAPI exposes protected admin endpoints.
-- The dashboard opens an admin modal only after successful admin authentication.
-- FakeFed write/update saves static HTML on the VM or writes through a controlled backend route.
-
-For the final presentation, keep a clean mode toggle so the same codebase can demonstrate both:
-
-- real app behavior;
-- educational fake-statement behavior.
+- `app/main.py`: `fakefed_enabled()` / `require_fakefed_enabled()` guard the write routes;
+  `hide_fakefed_rows()` filters synthetic documents out of the read paths; `/api/health`
+  reports the flag.
+- `fedwatcher/assets/explorer.js`: `renderSourceSwitch()` injects the FakeFed control only
+  when `/api/health` reports `fakefed: true` (fail-closed if the fetch fails).
+- `agents/monitor_fakefed.py`: `main()` exits unless the flag is set.
+- `fakefed.ellep.it` stays deployed with `X-Robots-Tag: noindex` and no `/api/` proxy, so
+  the feature can be re-enabled later without redeploying the fixture site.

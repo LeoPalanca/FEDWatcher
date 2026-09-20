@@ -51,6 +51,17 @@ class FakeFedStatementRequest(BaseModel):
         return v
 
 
+def fakefed_enabled() -> bool:
+    """FakeFed is a self-host demo feature; public deploys leave it off."""
+
+    return os.getenv("FAKEFED_ENABLED", "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def require_fakefed_enabled() -> None:
+    if not fakefed_enabled():
+        raise HTTPException(status_code=404, detail="Not Found")
+
+
 def fakefed_root() -> Path:
     configured = os.getenv("FAKEFED_ROOT")
     if configured:
@@ -341,9 +352,20 @@ def get_columns(conn, table: str) -> list[str]:
     return [row["name"] for row in rows]
 
 
+def hide_fakefed_rows(conn, table: str) -> bool:
+    """With FakeFed off, synthetic documents stay out of the public read paths."""
+
+    return (
+        table == "documents"
+        and not fakefed_enabled()
+        and has_column(conn, table, "url")
+    )
+
+
 def get_row_count(conn, table: str) -> int:
+    clause = " WHERE url NOT LIKE '%fakefed%'" if hide_fakefed_rows(conn, table) else ""
     row = conn.execute(
-        f"SELECT COUNT(*) AS n FROM {quote_identifier(table)}").fetchone()
+        f"SELECT COUNT(*) AS n FROM {quote_identifier(table)}{clause}").fetchone()
     return int(row["n"])
 
 
@@ -368,13 +390,18 @@ def fetch_rows(
     search: str | None = None,
 ) -> list[dict[str, Any]]:
     params: list[Any] = []
-    where = ""
+    clauses: list[str] = []
 
     if search:
         searchable = [
             f"CAST({quote_identifier(column)} AS TEXT) LIKE ?" for column in columns]
-        where = "WHERE " + " OR ".join(searchable)
+        clauses.append("(" + " OR ".join(searchable) + ")")
         params.extend([f"%{search}%"] * len(columns))
+
+    if hide_fakefed_rows(conn, table):
+        clauses.append("url NOT LIKE '%fakefed%'")
+
+    where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
 
     order_clause = default_order_clause(conn, table)
     params.extend([limit, offset])
@@ -392,8 +419,12 @@ def fetch_rows(
 
 
 @app.get("/api/health")
-def health() -> dict[str, str]:
-    return {"status": "ok", "database": str(database_path())}
+def health() -> dict[str, Any]:
+    return {
+        "status": "ok",
+        "database": str(database_path()),
+        "fakefed": fakefed_enabled(),
+    }
 
 
 @app.get("/api/tables")
@@ -458,6 +489,7 @@ def publish_fakefed_statement(
     payload: FakeFedStatementRequest,
     x_fakefed_password: str | None = Header(default=None),
 ) -> dict[str, Any]:
+    require_fakefed_enabled()
     require_publish_password(x_fakefed_password)
 
     root = fakefed_root()
@@ -486,6 +518,7 @@ def delete_fakefed_statement(
     filename: str,
     x_fakefed_password: str | None = Header(default=None),
 ) -> dict[str, Any]:
+    require_fakefed_enabled()
     require_publish_password(x_fakefed_password)
 
     root = fakefed_root()

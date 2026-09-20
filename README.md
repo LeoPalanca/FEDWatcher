@@ -79,7 +79,9 @@ The implementation is intentionally lean:
   - `app/main.py`: `/api/health`, `/api/tables`, `/api/tables/{table}`, `/api/documents`,
     and `/api/snapshot`, plus admin-protected `POST`/`DELETE /api/fakefed/statements` for
     publishing or removing synthetic FakeFed statements (guarded by
-    `FAKEFED_PUBLISH_PASSWORD`).
+    `FAKEFED_PUBLISH_PASSWORD`, and only reachable when `FAKEFED_ENABLED=true` — they
+    return 404 on the public deploy, where synthetic rows are also filtered out of
+    `/api/documents` and `/api/snapshot`).
   - `app/accountability.py`: `/api/accountability` — track-record metrics (hit rate, MAE
     in bps, Brier score) comparing `StrategistAgent` signals against realized FOMC outcomes
     inferred from FEDFUNDS, excluding intermeeting/emergency moves.
@@ -89,7 +91,8 @@ The implementation is intentionally lean:
     available.
 - Static FakeFed fixture site in `fakefed/` (4 synthetic statements published so far:
   March, May ×2, and June 2026) for end-to-end scraper tests without hitting the live Fed
-  website.
+  website. Self-host feature: enabled with `FAKEFED_ENABLED=true`, off on the public
+  deploy, where the dashboard hides the source entirely.
 - Static homepage/dashboard in `fedwatcher/` deployed at `fedwatcher.ellep.it`, backed
   entirely by the FastAPI API (no stale JSON snapshots).
 - Automated test suite in `tests/`: `test_api.py`, `test_fred_source.py`,
@@ -164,8 +167,10 @@ itself is a plain Python/cron workflow.
   skipped).
 - Deduplicates by date/type, preferring HTML over PDF, and upserts records into `documents`.
 
-### MonitorFakeFedAgent (`agents/monitor_fakefed.py`)
+### MonitorFakeFedAgent (`agents/monitor_fakefed.py`) — self-host only
 
+- **Gated behind `FAKEFED_ENABLED`** (default off). The agent exits immediately unless the
+  flag is set, so the public deploy can never ingest synthetic documents.
 - Scrapes the FakeFed FOMC calendar at `https://fakefed.ellep.it`.
 - Ingests statements released after 2025-01-01 into the same `documents` table used by
   `MonitorFedAgent`, so the analyst/strategist pipeline can be exercised end-to-end on
@@ -352,6 +357,29 @@ tone_implied_rate_t = current_rate_t + Σ_k P(Y_t = j_k) · j_k / 100
 
 Installation instructions, usage examples, the FakeFed test site, and the full FastAPI
 endpoint reference now live in a dedicated [User Guide](USER_GUIDE.md).
+
+### Try the pipeline yourself
+
+`fedwatcher.ellep.it` is the read-only public deploy. To drive the pipeline end-to-end —
+including the synthetic FakeFed source, which is disabled in public — run it locally:
+
+```bash
+git clone https://github.com/LeoPalanca/FEDWatcher.git
+cd FEDWatcher
+python run.py setup            # writes .env, installs deps, initialises the DB
+```
+
+Then in `.env` set `FAKEFED_ENABLED=true` (plus `FAKEFED_PUBLISH_PASSWORD` if you want the
+admin publish/delete endpoints), and:
+
+```bash
+python run.py pipeline --once --include-fakefed   # full run incl. synthetic statements
+python -m agents.monitor_fakefed --db fedwatcher.db   # or ingest FakeFed on its own
+```
+
+Tune the scoring yourself by editing the section `WEIGHTS` dicts in `agents/analyst.py`
+(and the `analyst_ds.py` / `dual_model_analyst.py` variants), then re-run the analyst and
+`agents/strategist.py` to regenerate signals from the same documents.
 
 ## Course Criteria Coverage
 
