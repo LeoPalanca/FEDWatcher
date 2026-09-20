@@ -415,6 +415,11 @@ Tune the scoring yourself by editing the section `WEIGHTS` dicts in `agents/anal
 | Advanced visualization | dashboard for tone, macro, probabilities, divergence, document explorer |
 | Agentic project | `AGENTS.md`, runtime agents, regular GitHub process, AI-authored contributions |
 
+## License
+
+Apache License 2.0 — see [LICENSE](LICENSE). You may use, modify and redistribute the code,
+including commercially, provided you keep the license and notice and state your changes.
+
 ## References
 
 - Gürkaynak, Sack, and Swanson on monetary policy surprises.
