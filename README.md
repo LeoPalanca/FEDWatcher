@@ -1,10 +1,32 @@
-# FedWatcher
+<div align="center">
 
-Agentic sentiment analysis and monetary policy nowcasting for Federal Reserve documents.
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/banner-dark.svg">
+  <img alt="FedWatcher — FOMC sentiment to rate-move nowcast" src="docs/assets/banner-light.svg" width="100%">
+</picture>
 
-> MSc Economics - Programming in Finance II, 2026  
-> USI Universita della Svizzera italiana  
-> Repository: https://github.com/LeoPalanca/FEDWatcher
+[![Live dashboard](https://img.shields.io/badge/live-fedwatcher.ellep.it-185D79?style=flat-square)](https://fedwatcher.ellep.it)
+![Python](https://img.shields.io/badge/python-3.13-185D79?style=flat-square)
+![FastAPI](https://img.shields.io/badge/api-FastAPI-185D79?style=flat-square)
+![SQLite](https://img.shields.io/badge/db-SQLite-185D79?style=flat-square)
+
+**Agentic sentiment analysis and monetary-policy nowcasting for Federal Reserve documents.**
+
+</div>
+
+> MSc Economics — Programming in Finance II, 2026 · USI Università della Svizzera italiana
+
+Four agents, one question: *can LLM-extracted Fed communication tone, combined with CPI and
+unemployment data, estimate the direction and size of the next FOMC policy-rate move?*
+
+```mermaid
+flowchart LR
+    A["Fed website<br/>FOMC statements"] --> B["MonitorFedAgent<br/>scrape · classify · dedupe"]
+    B --> C["AnalystAgent<br/>section-weighted LLM tone"]
+    F["FRED API<br/>CPI · unemployment · 2Y"] --> D
+    C --> D["StrategistAgent<br/>EWMA · ordered probit"]
+    D --> E["FastAPI + dashboard<br/>fedwatcher.ellep.it"]
+```
 
 Project workflow: [AGENTS.md](AGENTS.md)  
 User guide (install · usage · API): [USER_GUIDE.md](USER_GUIDE.md)
