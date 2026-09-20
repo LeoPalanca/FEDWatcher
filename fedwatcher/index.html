@@ -25,6 +25,7 @@
       <a href="#data">Data</a>
       <a href="#method">Method</a>
       <a href="#feed">Feed</a>
+      <a href="#selfhost">Run it</a>
     </nav>
     <!-- Filled by explorer.js only when the backend reports FAKEFED_ENABLED=true. -->
     <div class="source-switch" id="source-switch" aria-label="Document source"></div>
@@ -353,12 +354,26 @@
     </div>
   </section>
 
+  <!-- §06 RUN IT YOURSELF -->
+  <section class="ds" id="selfhost">
+    <div class="sec-head">
+      <h2 class="sec-title"><span class="sec-num-pretty">06</span><span class="sec-name">Run it yourself</span></h2>
+      <p class="sec-desc">This page is the read-only deployment. The whole pipeline — scrapers, analyst, strategist — runs on your own machine.</p>
+    </div>
+
+    <div class="method-cta">
+      <div class="method-cta-text">
+        <p>Clone the repository and <code>python run.py setup</code> writes the environment, builds the database and starts the agents. Retune the analyst's section weights, ingest documents by hand, or point the scraper at the synthetic FakeFed fixture site to watch a statement travel end to end.</p>
+      </div>
+      <a class="method-open-btn" href="https://github.com/LeoPalanca/FEDWatcher" target="_blank" rel="noopener noreferrer">
+        <span>GitHub</span>
+        <span class="method-open-arrow" aria-hidden="true"></span>
+      </a>
+    </div>
+  </section>
+
   <footer class="page-foot">
     <span>FedWatcher · not investment advice</span>
-    <span class="page-foot-repo">
-      Open source · run locally · retune weights · ingest your own docs ·
-      <a href="https://github.com/LeoPalanca/FEDWatcher" target="_blank" rel="noopener noreferrer">GitHub ↗</a>
-    </span>
     <span class="page-foot-authors" id="page-foot-authors">
       <a href="https://www.linkedin.com/in/johnnymagon/" target="_blank" rel="noopener noreferrer">Magon</a> ·
       <a href="https://www.linkedin.com/in/lorenzomottinelli/" target="_blank" rel="noopener noreferrer">Mottinelli</a> ·

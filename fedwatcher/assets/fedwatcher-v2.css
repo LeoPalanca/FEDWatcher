@@ -1024,6 +1024,16 @@ a.why:hover { color: var(--c-accent); }
   transition: background 0.15s ease;
 }
 .method-open-btn:hover { background: var(--c-ink-strong); }
+/* §06 uses the same pill as a link out to the repository. */
+a.method-open-btn { text-decoration: none; }
+.method-cta-text code {
+  background: var(--c-paper-3);
+  border-radius: var(--r-1, 3px);
+  color: var(--c-ink-strong);
+  font-family: var(--f-mono);
+  font-size: 13px;
+  padding: 1px 5px;
+}
 .method-open-btn:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 3px; }
 .method-open-arrow {
   border-bottom: 1.5px solid currentColor;

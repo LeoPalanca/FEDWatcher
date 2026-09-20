@@ -1049,12 +1049,6 @@ footer.page-foot {
   text-transform: uppercase;
 }
 
-/* Self-host invite: FakeFed and the manual ingestion pipeline only exist on a
-   local instance, so the footer points at the repo instead. */
-.page-foot-repo {
-  text-align: center;
-}
-
 /* === MODAL === */
 .modal {
   /* Pin to the top with an 88 px safe zone so the panel always sits below the
